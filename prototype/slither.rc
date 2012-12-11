@@ -1,0 +1,20 @@
+#[link(name = "slither",
+       vers = "0.1")];
+
+#[crate_type = "exe"];
+
+pub mod myclone;
+pub mod union_find;
+
+pub mod position;
+pub mod board;
+pub mod print;
+pub mod solver;
+
+pub mod slither;
+
+#[cfg(test)]
+mod std {
+    extern mod std(vers = "0.5");
+    pub use std::test;
+}
