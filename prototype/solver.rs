@@ -1,4 +1,4 @@
-use core::pipes::{Channel, stream, SharedChan};
+use core::pipes::{GenericChan, stream, SharedChan};
 use core::task::{spawn_supervised};
 use core::either::{Either, Left, Right};
 
@@ -257,8 +257,8 @@ enum Node {
 }
 
 priv fn solve_by_area_connect(board: &mut Board) -> ~[~[Node]] {
-    let mut area = do vec::from_fn(board.height) |y| {
-        do vec::from_fn(board.width) |x| {
+    let mut area = do vec::from_fn(board.get_height()) |y| {
+        do vec::from_fn(board.get_width()) |x| {
             let p = Position::new((x as int, y as int));
             let sum = match board.get_hint(p) {
                 Some(x) => x,
@@ -303,7 +303,7 @@ priv fn solve_by_area_connect(board: &mut Board) -> ~[~[Node]] {
             match area[pt.y][pt.x] {
                 Value(ref mut v) => {
                     for board.each_x |x| {
-                        for [(x, 0), (x, board.height as int - 1)].each |&t| {
+                        for [(x, 0), (x, board.get_height() as int - 1)].each |&t| {
                             let p = Position::new(t);
                             if board.get_cell_relation(pt, p) == UnknownRel {
                                 v.unknown_rel += [p];
@@ -311,7 +311,7 @@ priv fn solve_by_area_connect(board: &mut Board) -> ~[~[Node]] {
                         }
                     }
                     for board.each_y |y| {
-                        for [(-1, y), (board.width as int - 1, y)].each |&t| {
+                        for [(-1, y), (board.get_width() as int - 1, y)].each |&t| {
                             let p = Position::new(t);
                             if board.get_cell_relation(pt, p) == UnknownRel {
                                 v.unknown_rel += [p];
@@ -468,7 +468,7 @@ priv fn solve_by_logic(board: &mut Board) -> ~[~[Node]] {
     return area;
 }
 
-pub fn solve<T: Channel<~Board>>(chan: &T, board: ~Board) {
+pub fn solve<T: GenericChan<~Board>>(chan: &T, board: ~Board) {
     let mut board = board;
     let area = solve_by_logic(board);
 
@@ -516,7 +516,7 @@ pub fn solve<T: Channel<~Board>>(chan: &T, board: ~Board) {
         }
     }
 
-    let (child_chan, port) = stream();
+    let (port, child_chan) = stream();
     {
         let coord = unknown_area[max_i].coord;
         let child_chan = SharedChan(move child_chan);

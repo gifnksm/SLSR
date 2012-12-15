@@ -7,7 +7,7 @@ use print::{print_board};
 
 fn main() {
     
-    let (chan, port) = stream();
+    let (port, chan) = stream();
     {
         let board = Board::from_stream(io::stdin());
         do spawn_supervised |move chan, move board| {

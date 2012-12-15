@@ -105,7 +105,7 @@ priv fn print_edge_row(writer: Writer, board: &mut Board, y: int) {
         print_corner(writer, board, Position::new((x, y)));
         print_edge_h(writer, board, Position::new((x, y)));
     }
-    print_corner(writer, board, Position::new((board.width as int, y)));
+    print_corner(writer, board, Position::new((board.get_width() as int, y)));
     writer.write_char('\n');
 }
 
@@ -115,7 +115,7 @@ priv fn print_cell_row(writer: Writer, board: &mut Board, y: int) {
         print_edge_v(writer, board, Position::new((x, y)));
         print_cell(writer, board, Position::new((x, y)));
     }
-    print_edge_v(writer, board, Position::new((board.width as int, y)));
+    print_edge_v(writer, board, Position::new((board.get_width() as int, y)));
     writer.write_str(fmt!("%2d\n", y));
 }
 
@@ -125,7 +125,7 @@ pub fn print_board(writer: Writer, board: &mut Board) {
         print_edge_row(writer, board, y);
         print_cell_row(writer, board, y);
     }
-    print_edge_row(writer, board, board.height as int);
+    print_edge_row(writer, board, board.get_height() as int);
     print_label_row(writer, board);
 }
 
