@@ -1,8 +1,6 @@
 #[link(name = "slither",
        vers = "0.2")];
 
-#[crate_type = "lib"];
-
 #[warn(unused_imports)];
 #[warn(non_camel_case_types)];
 #[warn(deprecated_pattern)];
@@ -13,3 +11,6 @@ extern mod std;
 pub mod union_find;
 pub mod point;
 pub mod board;
+
+fn main() {
+}
