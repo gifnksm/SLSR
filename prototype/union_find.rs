@@ -25,8 +25,8 @@ priv enum UFNode<V> {
 impl<V: MyClone> UFNode<V> : MyClone {
     pure fn clone(&const self) -> UFNode<V> {
         match self {
-            &UFKey(k)    => UFKey(k),
-            &UFNValue(v) => UFNValue(v.clone())
+            &UFKey(k)        => UFKey(k),
+            &UFNValue(ref v) => UFNValue(v.clone())
         }
     }
 }

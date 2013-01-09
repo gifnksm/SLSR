@@ -2,7 +2,6 @@ use core::pipes::{GenericChan, stream, SharedChan};
 use core::task::{spawn_supervised};
 use core::either::{Either, Left, Right};
 
-extern mod std;
 use std::sort::{merge_sort};
 
 use union_find::{UnionFind, UFValue};
@@ -478,7 +477,7 @@ pub fn solve<T: GenericChan<~Board>>(chan: &T, board: ~Board) {
 
     for board.each_pos |p| {
         match area[p.y][p.x] {
-            Value(v) => {
+            Value(ref v) => {
                 match board.get_cell_type(v.coord) {
                     Inside => inside_area.push(v),
                     Outside => outside_area.push(v),
@@ -522,9 +521,8 @@ pub fn solve<T: GenericChan<~Board>>(chan: &T, board: ~Board) {
         let child_chan = SharedChan(move child_chan);
         for uint::range(0, 2) |i| {
             let child_chan = child_chan.clone();
-            let input = board.clone();
-            do spawn_supervised |move child_chan, move input| {
-                let mut input = input;
+            do spawn_supervised |move child_chan, copy board| {
+                let mut input = board.clone();
                 if i == 0 {
                     input.set_inside(coord);
                 } else {

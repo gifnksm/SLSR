@@ -1,6 +1,5 @@
 use io::{Writer, WriterUtil};
 
-extern mod std;
 use std::term;
 
 use position::{Position};

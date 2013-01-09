@@ -55,11 +55,11 @@ pub impl Board {
         let width = hint[0].len();
         assert width > 0 && hint.all(|row| row.len() == width);
 
-        assert hint.all(|row| row.all(|c| c.get_default(0) < 4));
+        assert hint.all(|row| row.all(|c| c.get_or_default(0) < 4));
 
         let uf_size = (width + 2) * (height + 2) * 2;
         let sum_of_hint = do hint.foldl(0) |&s, row| {
-            do row.foldl(s) |&s, cell| { s + cell.get_default(0) }
+            do row.foldl(s) |&s, cell| { s + cell.get_or_default(0) }
         };
         return ~Board {
             width: width, height: height,
