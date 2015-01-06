@@ -1,0 +1,12 @@
+[package]
+name = "SLSR"
+version = "0.0.1"
+authors = ["gifnksm <makoto.nksm+github@gmail.com>"]
+license-file="LICENSE"
+readme = "README.md"
+repository = "https://github.com/gifnksm/SLSR"
+description = "Slither Link Solver written in Rust."
+
+[[bin]]
+name = "slither"
+path = "src/slither/main.rs"
