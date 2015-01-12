@@ -105,6 +105,14 @@ impl Board {
         let i = self.cell_id(p);
         self.side_map.set_different(i, OUTSIDE_CELL_ID)
     }
+    pub fn set_type(&mut self, p: Point, ty: CellType) -> bool {
+        match ty {
+            CellType::Inside  => self.set_inside(p),
+            CellType::Outside => self.set_outside(p),
+            CellType::Unknown => panic!(),
+            CellType::Conflict => panic!()
+        }
+    }
     pub fn set_same(&mut self, p0: Point, p1: Point) -> bool {
         let i = self.cell_id(p0);
         let j = self.cell_id(p1);
@@ -114,6 +122,14 @@ impl Board {
         let i = self.cell_id(p0);
         let j = self.cell_id(p1);
         self.side_map.set_different(i, j)
+    }
+    pub fn set_relation(&mut self, p0: Point, p1: Point, rel: CellRelation) -> bool {
+        match rel {
+            CellRelation::Same      => self.set_same(p0, p1),
+            CellRelation::Different => self.set_different(p0, p1),
+            CellRelation::Unknown   => panic!(),
+            CellRelation::Conflict  => panic!()
+        }
     }
 
     pub fn get_relation(&mut self, p0: Point, p1: Point) -> CellRelation {
