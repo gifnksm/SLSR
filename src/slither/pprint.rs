@@ -29,9 +29,13 @@ struct Printer<'a> {
 
 impl<'a> Printer<'a> {
     fn new(board: &'a mut Board, hint: &'a Hint) -> Printer<'a> {
-        let output = match term::stdout() {
-            Some(t) => Output::Pretty(t),
-            None    => Output::Raw(stdio::stdout_raw())
+        let output = if stdio::stdout_raw().isatty() {
+            match term::stdout() {
+                Some(t) => Output::Pretty(t),
+                None    => Output::Raw(stdio::stdout_raw())
+            }
+        } else {
+            Output::Raw(stdio::stdout_raw())
         };
         Printer {
             output: output,
