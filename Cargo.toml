@@ -10,3 +10,7 @@ description = "Slither Link Solver written in Rust."
 [[bin]]
 name = "slither"
 path = "src/slither/main.rs"
+
+[dependencies]
+term = "*"
+union-find = "*"

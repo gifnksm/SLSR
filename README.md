@@ -2,7 +2,12 @@
 
 Slither Link Solver written in Rust
 
-- /prototype - prototype implementation
-- /puzzle - sample puzzles
-- /slither - Slither Link Solver
+```
+$ cargo run < puzzle/example.txt
+```
 
+## ToDos
+
+  * Implements backtracking
+  * Add more example problems
+  * Refactoring
