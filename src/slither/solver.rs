@@ -1,6 +1,5 @@
 use std::{cmp, mem};
 use std::iter::{self, FromIterator};
-use std::collections::HashSet;
 use union_find::{UnionFind, UFValue, Merge};
 use board::{Board, CellRelation, CellType};
 use geom::{Geom, Point, Size, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
@@ -666,8 +665,6 @@ fn fill_by_connection(board: &mut Board, hint: &Hint) {
                 let edges = a.unknown_rel.iter()
                     .filter_map(|&p2| pts.position_elem(&p2))
                     .collect::<Vec<_>>();
-                for &e in edges.iter() {
-                }
                 graph.push(edges);
             }
 

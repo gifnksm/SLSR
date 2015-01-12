@@ -1,6 +1,7 @@
 #![warn(bad_style,
         unused, unused_extern_crates, unused_import_braces,
         unused_qualifications, unused_results, unused_typecasts)]
+#![allow(unstable)]
 
 extern crate "union-find" as union_find;
 extern crate term;
