@@ -323,6 +323,7 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
 #[derive(Show)]
 struct Area {
     coord: Point,
+    side: Side,
     unknown_rel: Vec<Point>,
     sum_of_hint: u32,
     size: usize
@@ -335,8 +336,19 @@ impl UFValue for Area {
         } else {
             rval.coord
         };
+        let side = match (lval.side, rval.side) {
+            (Side::In, Side::In)       => Side::In,
+            (Side::In, Side::Unknown)  => Side::In,
+            (Side::In, _)              => Side::Conflict,
+            (Side::Out, Side::Out)     => Side::Out,
+            (Side::Out, Side::Unknown) => Side::Out,
+            (Side::Out, _)             => Side::Conflict,
+            (Side::Unknown, x)         => x,
+            (Side::Conflict, _)        => Side::Conflict,
+        };
         let area = Area {
             coord: coord,
+            side: side,
             unknown_rel: lval.unknown_rel + &rval.unknown_rel[],
             sum_of_hint: lval.sum_of_hint + rval.sum_of_hint,
             size: lval.size + rval.size
@@ -407,6 +419,7 @@ impl ConnectMap {
 
             Area {
                 coord: p,
+                side: board.get_side(p),
                 unknown_rel: rel,
                 sum_of_hint: sum as u32,
                 size: 1
@@ -494,6 +507,7 @@ fn update_conn(board: &mut Board, map: &mut ConnectMap, p: Point) -> bool {
     let (same, unknown) = filter_rel(board, p, rel);
     {
         let a = map.get_mut(p);
+        a.side = board.get_side(p);
         a.unknown_rel = unknown;
     }
 
@@ -504,20 +518,18 @@ fn update_conn(board: &mut Board, map: &mut ConnectMap, p: Point) -> bool {
     ret
 }
 
-fn create_conn_graph(board: &mut Board, map: &mut ConnectMap, filter_side: Side)
-                     -> (Vec<Point>, Vec<Vec<usize>>)
+fn create_conn_graph(map: &mut ConnectMap, filter_side: Side) -> (Vec<Point>, Vec<Vec<usize>>)
 {
     let mut pts = vec![];
     if filter_side != Side::Out {
         pts.push(Point(-1, -1))
     }
-    for r in (0 .. board.row()) {
-        for c in (0 .. board.column()) {
+
+    for r in (0 .. map.row()) {
+        for c in (0 .. map.column()) {
             let p = Point(r, c);
-            if board.get_side(p) == filter_side {
-                continue
-            }
-            if map.get(p).coord == p {
+            let a = map.get(p);
+            if a.coord == p && a.side != filter_side {
                 pts.push(p);
             }
         }
@@ -535,7 +547,7 @@ fn create_conn_graph(board: &mut Board, map: &mut ConnectMap, filter_side: Side)
     (pts, graph)
 }
 
-fn get_articulation(graph: &[Vec<usize>]) -> (Vec<usize>, Vec<bool>) {
+fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
     if graph.is_empty() { return (vec![], vec![]) }
 
     let mut visited = iter::repeat(false).take(graph.len()).collect::<Vec<_>>();
@@ -543,7 +555,7 @@ fn get_articulation(graph: &[Vec<usize>]) -> (Vec<usize>, Vec<bool>) {
     let mut low = iter::repeat(0).take(graph.len()).collect::<Vec<_>>();
     let mut arts = vec![];
     let mut ord_cnt = 0;
-    dfs(graph, 0, &mut visited[], &mut ord[], &mut low[], &mut ord_cnt, &mut arts);
+    dfs(graph, v, &mut visited[], &mut ord[], &mut low[], &mut ord_cnt, &mut arts);
 
     fn dfs(graph: &[Vec<usize>],
            v: usize, visited: &mut [bool], ord: &mut [usize], low: &mut [usize], 
@@ -585,41 +597,47 @@ fn get_articulation(graph: &[Vec<usize>]) -> (Vec<usize>, Vec<bool>) {
     (arts, visited)
 }
 
-fn check_disconn(board: &mut Board, map: &mut ConnectMap,
-                 pts: &[Point], visited: &[bool], filter_side: Side) {
+fn find_disconn_area(map: &mut ConnectMap, pts: &[Point], visited: &[bool]) -> Vec<usize> {
     let mut disconn = vec![];
     for (u, &vis) in visited.iter().enumerate() {
         if !vis { disconn.push(u); }
     }
-    if !disconn.is_empty() {
-        let mut sum = 0;
-        for &v in disconn.iter() {
-            sum += map.get(pts[v]).sum_of_hint;
-        }
-        if sum == 0 {
-            for &v in disconn.iter() {
-                board.set_side(pts[v], filter_side);
-            }
-        } else {
-            let mut conn = vec![];
-            for (u, &vis) in visited.iter().enumerate() {
-                if vis { conn.push(u); }
-            }
-            let mut sum = 0;
-            for &v in conn.iter() {
-                sum += map.get(pts[v]).sum_of_hint;
-            }
-            if sum == 0 {
-                for &v in conn.iter() {
-                    board.set_side(pts[v], filter_side);
-                }
-            }
-        }
+    if disconn.is_empty() {
+        // All area is connected.
+        return disconn
     }
+
+    let mut sum = 0;
+    for &v in disconn.iter() {
+        sum += map.get(pts[v]).sum_of_hint;
+    }
+    if sum == 0 {
+        // Disconnected components does not contain any edges. It is a hole in
+        // the filter_side area.
+        return disconn;
+    }
+
+    let mut conn = vec![];
+    for (u, &vis) in visited.iter().enumerate() {
+        if vis { conn.push(u); }
+    }
+    let mut sum = 0;
+    for &v in conn.iter() {
+        sum += map.get(pts[v]).sum_of_hint;
+    }
+    if sum == 0 {
+        // Conencted area does not contain any edges. It is a hole in the
+        // filter_side area.
+        return conn
+    }
+
+    // Graph is splitted into more than two parts, but both parts contain edges.
+    // This againsts connectivity rule.
+    panic!()
 }
 
 fn splits(graph: &[Vec<usize>], v: usize,
-          board: &mut Board, pts: &[Point], ty: Side) -> bool {
+          map: &mut ConnectMap, pts: &[Point], side: Side) -> bool {
     if graph.is_empty() { return false }
 
     let mut contain_cnt = 0;
@@ -630,19 +648,19 @@ fn splits(graph: &[Vec<usize>], v: usize,
     for &u in graph[v].iter() {
         if u == v || visited[u] { continue }
 
-        if dfs(graph, u, &mut visited[], board, pts, ty) {
+        if dfs(graph, u, &mut visited[], map, pts, side) {
             contain_cnt += 1;
         }
     }
 
     fn dfs(graph: &[Vec<usize>], v: usize, visited: &mut [bool],
-           board: &mut Board, pts: &[Point], ty: Side) -> bool {
-        let mut contains = board.get_side(pts[v]) == ty;
+           map: &mut ConnectMap, pts: &[Point], side: Side) -> bool {
+        let mut contains = map.get(pts[v]).side == side;
         visited[v] = true;
 
         for &u in graph[v].iter() {
             if u == v || visited[u] { continue }
-            contains |= dfs(graph, u, visited, board, pts, ty);
+            contains |= dfs(graph, u, visited, map, pts, side);
         }
         contains
     }
@@ -675,17 +693,18 @@ fn fill_by_connection(board: &mut Board, hint: &Hint) {
                 Side::In
             };
 
-            let (pts, graph) = create_conn_graph(board, &mut map, filter_side);
-            let (arts, visited) = get_articulation(&graph[]);
-            check_disconn(board, &mut map, &pts[], &visited[], filter_side);
+            let (pts, graph) = create_conn_graph(&mut map, filter_side);
+            let (arts, visited) = get_articulation(&graph[], 0);
 
+            let disconn = find_disconn_area(&mut map, &pts[], &visited[]);
+            for &v in disconn.iter() {
+                board.set_side(pts[v], filter_side);
+            }
             for &v in arts.iter() {
                 let p = pts[v];
 
-                if board.get_side(p) == set_side {
-                    continue
-                }
-                if splits(&graph[], v, board, &pts[], set_side) {
+                if map.get(p).side != set_side &&
+                    splits(&graph[], v, &mut map, &pts[], set_side) {
                     board.set_side(p, set_side);
                 }
             }
@@ -719,20 +738,20 @@ fn solve_by_logic(board: &mut Board, hint: &Hint) {
     let mut rev = board.revision();
 
     loop {
+        local_cnt += 1;
         solve_by_local_property(board, hint);
         if board.revision() != rev {
             rev = board.revision();
-            local_cnt += 1;
             continue
         }
 
+        global_cnt += 1;
         solve_by_global_property(board, hint);
         if board.revision() == rev {
             break;
         }
 
         rev = board.revision();
-        global_cnt += 1;
     }
 
     println!("{} {} {}", rev, local_cnt, global_cnt);
