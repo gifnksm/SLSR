@@ -1,63 +1,63 @@
 use std::{cmp, mem};
 use std::iter::{self, FromIterator};
 use union_find::{UnionFind, UFValue, Merge};
-use board::{Board, Relation, Side};
 use geom::{Geom, Point, Size, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
 use hint::Hint;
+use side_map::{SideMap, Relation, Side};
 
-fn fill_by_num_place(board: &mut Board, hint: &Hint) {
+fn fill_by_num_place(side_map: &mut SideMap, hint: &Hint) {
     // Corner points
     let corners = [(Point(0, 0), UCW0),
-                   (Point(board.row() - 1, 0), UCW90),
-                   (Point(board.row() - 1, board.column() - 1), UCW180),
-                   (Point(0, board.column() - 1), UCW270)];
+                   (Point(side_map.row() - 1, 0), UCW90),
+                   (Point(side_map.row() - 1, side_map.column() - 1), UCW180),
+                   (Point(0, side_map.column() - 1), UCW270)];
     for &(p, rot) in corners.iter() {
         match hint[p] {
             Some(0) => {}
             Some(1) => {
-                board.set_same(p, p + rot * UP);
-                board.set_same(p, p + rot * LEFT);
+                side_map.set_same(p, p + rot * UP);
+                side_map.set_same(p, p + rot * LEFT);
             }
             Some(2) => {
-                board.set_different(p + rot * RIGHT, p + rot * (RIGHT + UP));
-                board.set_different(p + rot * DOWN,  p + rot * (DOWN + LEFT));
+                side_map.set_different(p + rot * RIGHT, p + rot * (RIGHT + UP));
+                side_map.set_different(p + rot * DOWN,  p + rot * (DOWN + LEFT));
             }
             Some(3) => {
-                board.set_different(p, p + rot * UP);
-                board.set_different(p, p + rot * LEFT);
+                side_map.set_different(p, p + rot * UP);
+                side_map.set_different(p, p + rot * LEFT);
             }
             _ => {}
         }
     }
 
     // All points
-    for r in (0 .. board.row()) {
-        for c in (0 .. board.column()) {
+    for r in (0 .. side_map.row()) {
+        for c in (0 .. side_map.column()) {
             let p = Point(r, c);
             match hint[p] {
                 Some(0) => {
                     for &rot in [UCW0, UCW90, UCW180, UCW270].iter() {
                         let r  = p + rot * RIGHT;
                         let dr = p + rot * (DOWN + RIGHT);
-                        board.set_same(p, r);
+                        side_map.set_same(p, r);
 
                         //           -
                         // 0 3 =>  0x3|
                         //           -
                         if hint[r] == Some(3) {
-                            board.set_different(r, r + rot * UP);
-                            board.set_different(r, r + rot * (UP + RIGHT));
-                            board.set_different(r, r + rot * RIGHT);
-                            board.set_different(r, r + rot * (DOWN + RIGHT));
-                            board.set_different(r, r + rot * DOWN);
+                            side_map.set_different(r, r + rot * UP);
+                            side_map.set_different(r, r + rot * (UP + RIGHT));
+                            side_map.set_different(r, r + rot * RIGHT);
+                            side_map.set_different(r, r + rot * (DOWN + RIGHT));
+                            side_map.set_different(r, r + rot * DOWN);
                         }
 
                         // 0      0x
                         //     => x -
                         //   3     |3
                         if hint[dr] == Some(3) {
-                            board.set_different(dr, dr + rot * UP);
-                            board.set_different(dr, dr + rot * LEFT);
+                            side_map.set_different(dr, dr + rot * UP);
+                            side_map.set_different(dr, dr + rot * LEFT);
                         }
                     }
                 }
@@ -70,13 +70,13 @@ fn fill_by_num_place(board: &mut Board, hint: &Hint) {
                     for &rot in [UCW0, UCW90].iter() {
                         let r = p + rot * RIGHT;
                         if hint[r] == Some(3) {
-                            board.set_different(p, p + rot * LEFT);
-                            board.set_different(p, r);
-                            board.set_different(r, r + rot * RIGHT);
+                            side_map.set_different(p, p + rot * LEFT);
+                            side_map.set_different(p, r);
+                            side_map.set_different(r, r + rot * RIGHT);
 
-                            board.set_same(p + rot * UP,   r + rot * UP);
-                            board.set_same(p + rot * DOWN, r + rot * DOWN);
-                            board.set_different(p + rot * UP, r + rot * DOWN);
+                            side_map.set_same(p + rot * UP,   r + rot * UP);
+                            side_map.set_same(p + rot * DOWN, r + rot * DOWN);
+                            side_map.set_different(p + rot * UP, r + rot * DOWN);
                         }
                     }
 
@@ -93,26 +93,26 @@ fn fill_by_num_place(board: &mut Board, hint: &Hint) {
                             cnt += 1;
                         }
                         if hint[dr] == Some(3) {
-                            board.set_different(p, p + rot * UP);
-                            board.set_different(p, p + rot * (UP + LEFT));
-                            board.set_different(p, p + rot * LEFT);
+                            side_map.set_different(p, p + rot * UP);
+                            side_map.set_different(p, p + rot * (UP + LEFT));
+                            side_map.set_different(p, p + rot * LEFT);
 
-                            board.set_different(dr, dr + rot * RIGHT);
-                            board.set_different(dr, dr + rot * (RIGHT + DOWN));
-                            board.set_different(dr, dr + rot * DOWN);
+                            side_map.set_different(dr, dr + rot * RIGHT);
+                            side_map.set_different(dr, dr + rot * (RIGHT + DOWN));
+                            side_map.set_different(dr, dr + rot * DOWN);
 
                             let mut t = p;
                             for _ in (0 .. cnt) {
-                                board.set_different(t + rot * RIGHT,
+                                side_map.set_different(t + rot * RIGHT,
                                                     t + rot * DOWN);
                                 t = t + rot * (DOWN + RIGHT);
                             }
 
                             if hint[p + rot * (RIGHT + RIGHT)] == Some(3) {
-                                board.set_same(p + rot * RIGHT, p + rot * (UP + RIGHT));
+                                side_map.set_same(p + rot * RIGHT, p + rot * (UP + RIGHT));
                             }
                             if hint[p + rot * (DOWN + DOWN)] == Some(3) {
-                                board.set_same(p + rot * DOWN, p + rot * (DOWN + LEFT));
+                                side_map.set_same(p + rot * DOWN, p + rot * (DOWN + LEFT));
                             }
                         }
                     }
@@ -123,9 +123,9 @@ fn fill_by_num_place(board: &mut Board, hint: &Hint) {
     }
 }
 
-fn fill_by_line_nums(board: &mut Board, hint: &Hint) {
-    for r in (0 .. board.row()) {
-        for c in (0 .. board.column()) {
+fn fill_by_line_nums(side_map: &mut SideMap, hint: &Hint) {
+    for r in (0 .. side_map.row()) {
+        for c in (0 .. side_map.column()) {
             let p = Point(r, c);
             let mut sames    = [None; 4];
             let mut diffs    = [None; 4];
@@ -135,7 +135,7 @@ fn fill_by_line_nums(board: &mut Board, hint: &Hint) {
             let mut num_unknown = 0;
 
             for &dir in [UP, RIGHT, DOWN, LEFT].iter() {
-                match board.get_relation(p, p + dir) {
+                match side_map.get_relation(p, p + dir) {
                     Relation::Same      => { sames[num_same] = Some(dir); num_same += 1; }
                     Relation::Different => { diffs[num_diff] = Some(dir); num_diff += 1; }
                     Relation::Unknown   => { unknowns[num_unknown] = Some(dir); num_unknown += 1; }
@@ -144,19 +144,19 @@ fn fill_by_line_nums(board: &mut Board, hint: &Hint) {
             }
 
             if num_diff == 3 && num_unknown == 1 {
-                board.set_same(p, p + unknowns[0].unwrap());
+                side_map.set_same(p, p + unknowns[0].unwrap());
                 continue
             }
 
             match hint[p] {
                 Some(x) if (num_diff as u8) == x => {
                     for i in (0 .. num_unknown) {
-                        board.set_same(p, p + unknowns[i].unwrap());
+                        side_map.set_same(p, p + unknowns[i].unwrap());
                     }
                 }
                 Some(x) if (num_same as u8) == 4 - x => {
                     for i in (0 .. num_unknown) {
-                        board.set_different(p, p + unknowns[i].unwrap());
+                        side_map.set_different(p, p + unknowns[i].unwrap());
                     }
                 }
                 _ => {}
@@ -165,9 +165,9 @@ fn fill_by_line_nums(board: &mut Board, hint: &Hint) {
     }
 }
 
-fn fill_by_relation(board: &mut Board, hint: &Hint) {
-    for r in (0 .. board.row()) {
-        for c in (0 .. board.column()) {
+fn fill_by_relation(side_map: &mut SideMap, hint: &Hint) {
+    for r in (0 .. side_map.row()) {
+        for c in (0 .. side_map.column()) {
             let p = Point(r, c);
 
             for &rot in [UCW0, UCW90, UCW180, UCW270].iter() {
@@ -178,31 +178,31 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
                 let ur = p + rot * (UP + RIGHT);
                 let ul = p + rot * (UP + LEFT);
 
-                if board.is_different(p, u) {
-                    if board.is_different(p, r) {
-                        board.set_different(p, ur);
+                if side_map.is_different(p, u) {
+                    if side_map.is_different(p, r) {
+                        side_map.set_different(p, ur);
                     }
-                    if board.is_different(r, ur) {
-                        board.set_same(p, r);
+                    if side_map.is_different(r, ur) {
+                        side_map.set_same(p, r);
                     }
                 }
 
-                match board.get_relation(u, r) {
+                match side_map.get_relation(u, r) {
                     Relation::Same => {
                         match hint[p] {
                             Some(1) => {
-                                board.set_same(p, u);
-                                board.set_same(p, r);
-                                board.set_different(l, d);
+                                side_map.set_same(p, u);
+                                side_map.set_same(p, r);
+                                side_map.set_different(l, d);
                             }
                             Some(2) => {
-                                board.set_same(l, d);
-                                board.set_different(u, l);
+                                side_map.set_same(l, d);
+                                side_map.set_different(u, l);
                             }
                             Some(3) => {
-                                board.set_different(p, u);
-                                board.set_different(p, r);
-                                board.set_different(l, d);
+                                side_map.set_different(p, u);
+                                side_map.set_different(p, r);
+                                side_map.set_different(l, d);
                             }
                             _ => {}
                         }
@@ -210,15 +210,15 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
                     Relation::Different => {
                         match hint[p] {
                             Some(1) => {
-                                board.set_same(p, l);
-                                board.set_same(p, d);
+                                side_map.set_same(p, l);
+                                side_map.set_same(p, d);
                             }
                             Some(2) => {
-                                board.set_different(l, d);
+                                side_map.set_different(l, d);
                             }
                             Some(3) => {
-                                board.set_different(p, l);
-                                board.set_different(p, d);
+                                side_map.set_different(p, l);
+                                side_map.set_different(p, d);
                             }
                             _ => {}
                         }
@@ -227,38 +227,38 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
                     Relation::Conflict => panic!()
                 }
 
-                match board.get_relation(u, ur) {
+                match side_map.get_relation(u, ur) {
                     Relation::Same => {
                         if hint[p] == Some(3) && hint[r] == Some(1) {
-                            board.set_different(p, u);
-                            board.set_same(r, r + rot * RIGHT);
-                            board.set_same(r, r + rot * DOWN);
+                            side_map.set_different(p, u);
+                            side_map.set_same(r, r + rot * RIGHT);
+                            side_map.set_same(r, r + rot * DOWN);
                         }
                     }
                     Relation::Different => {
                         if hint[p] == Some(3) {
-                            board.set_different(p, d);
-                            board.set_different(p, l);
-                            board.set_same(ur, r);
+                            side_map.set_different(p, d);
+                            side_map.set_different(p, l);
+                            side_map.set_same(ur, r);
                         }
                     }
                     Relation::Unknown => {}
                     Relation::Conflict => panic!()
                 }
 
-                match board.get_relation(u, ul) {
+                match side_map.get_relation(u, ul) {
                     Relation::Same => {
                         if hint[p] == Some(3) && hint[l] == Some(1) {
-                            board.set_different(p, u);
-                            board.set_same(l, l + rot * LEFT);
-                            board.set_same(l, l + rot * DOWN);
+                            side_map.set_different(p, u);
+                            side_map.set_same(l, l + rot * LEFT);
+                            side_map.set_same(l, l + rot * DOWN);
                         }
                     }
                     Relation::Different => {
                         if hint[p] == Some(3) {
-                            board.set_different(p, d);
-                            board.set_different(p, r);
-                            board.set_same(ul, l);
+                            side_map.set_different(p, d);
+                            side_map.set_different(p, r);
+                            side_map.set_same(ul, l);
                         }
                     }
                     Relation::Unknown => {}
@@ -273,20 +273,20 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
                 let l = p + rot * LEFT;
                 let dr = p + rot * (DOWN + RIGHT);
 
-                match board.get_relation(u, d) {
+                match side_map.get_relation(u, d) {
                     Relation::Same => {
                         match hint[p] {
                             Some(1) => {
-                                board.set_same(p, u);
-                                board.set_different(l, r);
+                                side_map.set_same(p, u);
+                                side_map.set_different(l, r);
                             }
                             Some(2) => {
-                                board.set_different(u, l);
-                                board.set_same(l, r);
+                                side_map.set_different(u, l);
+                                side_map.set_same(l, r);
                             }
                             Some(3) => {
-                                board.set_different(p, u);
-                                board.set_different(l, r);
+                                side_map.set_different(p, u);
+                                side_map.set_different(l, r);
                             }
                             _ => {}
                         }
@@ -294,15 +294,15 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
                     Relation::Different => {
                         match hint[p] {
                             Some(1) => {
-                                board.set_same(p, l);
-                                board.set_same(p, r);
+                                side_map.set_same(p, l);
+                                side_map.set_same(p, r);
                             }
                             Some(2) => {
-                                board.set_different(l, r);
+                                side_map.set_different(l, r);
                             }
                             Some(3) => {
-                                board.set_different(p, l);
-                                board.set_different(p, r);
+                                side_map.set_different(p, l);
+                                side_map.set_different(p, r);
                             }
                             _ => {}
                         }
@@ -311,9 +311,9 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
                     Relation::Conflict => panic!()
                 }
 
-                if (board.is_different(p, r) || board.is_different(p, d)) &&
-                    (board.is_different(dr, r) || board.is_different(dr, d)) {
-                        board.set_different(r, d);
+                if (side_map.is_different(p, r) || side_map.is_different(p, d)) &&
+                    (side_map.is_different(dr, r) || side_map.is_different(dr, d)) {
+                        side_map.set_different(r, d);
                     }
             }
         }
@@ -385,30 +385,30 @@ impl ConnectMap {
         }
     }
 
-    fn from_board(board: &mut Board, hint: &Hint) -> ConnectMap {
-        let mut map = ConnectMap::new(board.size(), |p| {
+    fn from_side_map(side_map: &mut SideMap, hint: &Hint) -> ConnectMap {
+        let mut conn_map = ConnectMap::new(side_map.size(), |p| {
             let sum = hint[p].unwrap_or(0);
 
             let mut rel = vec![];
-            if board.contains(p) {
+            if side_map.contains(p) {
                 for &r in [UP, RIGHT, DOWN, LEFT].iter() {
-                    if board.get_relation(p, p + r) == Relation::Unknown {
+                    if side_map.get_relation(p, p + r) == Relation::Unknown {
                         rel.push(p + r);
                     }
                 }
             } else {
-                for r in (0 .. board.row()) {
-                    for &c in [0, board.column() - 1].iter() {
+                for r in (0 .. side_map.row()) {
+                    for &c in [0, side_map.column() - 1].iter() {
                         let p2 = Point(r, c);
-                        if board.get_relation(p, p2) == Relation::Unknown {
+                        if side_map.get_relation(p, p2) == Relation::Unknown {
                             rel.push(p2);
                         }
                     }
                 }
-                for c in (0 .. board.column()) {
-                    for &r in [0, board.row() - 1].iter() {
+                for c in (0 .. side_map.column()) {
+                    for &r in [0, side_map.row() - 1].iter() {
                         let p2 = Point(r, c);
-                        if board.get_relation(p, p2) == Relation::Unknown {
+                        if side_map.get_relation(p, p2) == Relation::Unknown {
                             rel.push(p2);
                         }
                     }
@@ -419,25 +419,25 @@ impl ConnectMap {
 
             Area {
                 coord: p,
-                side: board.get_side(p),
+                side: side_map.get_side(p),
                 unknown_rel: rel,
                 sum_of_hint: sum as u32,
                 size: 1
             }
         });
 
-        for r in (0 .. board.row()) {
-            for c in (0 .. board.column()) {
+        for r in (0 .. side_map.row()) {
+            for c in (0 .. side_map.column()) {
                 let p = Point(r, c);
                 for &r in [UP, RIGHT, DOWN, LEFT].iter() {
                     let p2 = p + r;
-                    if board.get_relation(p, p2) == Relation::Same {
-                        map.union(p, p2);
+                    if side_map.get_relation(p, p2) == Relation::Same {
+                        conn_map.union(p, p2);
                     }
                 }
             }
         }
-        map
+        conn_map
     }
 
     fn union(&mut self, p0: Point, p1: Point) -> bool {
@@ -475,14 +475,14 @@ impl Geom for ConnectMap {
     fn size(&self) -> Size { self.size }
 }
 
-fn filter_rel(board: &mut Board, p: Point, rel: Vec<Point>)
+fn filter_rel(side_map: &mut SideMap, p: Point, rel: Vec<Point>)
               -> (Vec<Point>, Vec<Point>)
 {
     let mut unknown = vec![];
     let mut same = vec![];
 
     for p2 in rel.into_iter() {
-        match board.get_relation(p, p2) {
+        match side_map.get_relation(p, p2) {
             Relation::Same => same.push(p2),
             Relation::Different => {}
             Relation::Unknown => unknown.push(p2),
@@ -497,38 +497,38 @@ fn filter_rel(board: &mut Board, p: Point, rel: Vec<Point>)
     (same, unknown)
 }
 
-fn update_conn(board: &mut Board, map: &mut ConnectMap, p: Point) -> bool {
+fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: Point) -> bool {
     let rel = {
-        let a = map.get_mut(p);
+        let a = conn_map.get_mut(p);
         if a.coord != p { return false }
         mem::replace(&mut a.unknown_rel, vec![])
-    }.map_in_place(|p| map.get(p).coord);
+    }.map_in_place(|p| conn_map.get(p).coord);
 
-    let (same, unknown) = filter_rel(board, p, rel);
+    let (same, unknown) = filter_rel(side_map, p, rel);
     {
-        let a = map.get_mut(p);
-        a.side = board.get_side(p);
+        let a = conn_map.get_mut(p);
+        a.side = side_map.get_side(p);
         a.unknown_rel = unknown;
     }
 
     let mut ret = false;
     for &p2 in same.iter() {
-        ret |= map.union(p, p2);
+        ret |= conn_map.union(p, p2);
     }
     ret
 }
 
-fn create_conn_graph(map: &mut ConnectMap, filter_side: Side) -> (Vec<Point>, Vec<Vec<usize>>)
+fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side) -> (Vec<Point>, Vec<Vec<usize>>)
 {
     let mut pts = vec![];
     if filter_side != Side::Out {
         pts.push(Point(-1, -1))
     }
 
-    for r in (0 .. map.row()) {
-        for c in (0 .. map.column()) {
+    for r in (0 .. conn_map.row()) {
+        for c in (0 .. conn_map.column()) {
             let p = Point(r, c);
-            let a = map.get(p);
+            let a = conn_map.get(p);
             if a.coord == p && a.side != filter_side {
                 pts.push(p);
             }
@@ -537,7 +537,7 @@ fn create_conn_graph(map: &mut ConnectMap, filter_side: Side) -> (Vec<Point>, Ve
 
     let mut graph = vec![];
     for &p in pts.iter() {
-        let a = map.get(p);
+        let a = conn_map.get(p);
         let edges = a.unknown_rel.iter()
             .filter_map(|&p2| pts.position_elem(&p2))
             .collect::<Vec<_>>();
@@ -597,7 +597,7 @@ fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
     (arts, visited)
 }
 
-fn find_disconn_area(map: &mut ConnectMap, pts: &[Point], visited: &[bool]) -> Vec<usize> {
+fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool]) -> Vec<usize> {
     let mut disconn = vec![];
     for (u, &vis) in visited.iter().enumerate() {
         if !vis { disconn.push(u); }
@@ -609,7 +609,7 @@ fn find_disconn_area(map: &mut ConnectMap, pts: &[Point], visited: &[bool]) -> V
 
     let mut sum = 0;
     for &v in disconn.iter() {
-        sum += map.get(pts[v]).sum_of_hint;
+        sum += conn_map.get(pts[v]).sum_of_hint;
     }
     if sum == 0 {
         // Disconnected components does not contain any edges. It is a hole in
@@ -623,7 +623,7 @@ fn find_disconn_area(map: &mut ConnectMap, pts: &[Point], visited: &[bool]) -> V
     }
     let mut sum = 0;
     for &v in conn.iter() {
-        sum += map.get(pts[v]).sum_of_hint;
+        sum += conn_map.get(pts[v]).sum_of_hint;
     }
     if sum == 0 {
         // Conencted area does not contain any edges. It is a hole in the
@@ -637,7 +637,7 @@ fn find_disconn_area(map: &mut ConnectMap, pts: &[Point], visited: &[bool]) -> V
 }
 
 fn splits(graph: &[Vec<usize>], v: usize,
-          map: &mut ConnectMap, pts: &[Point], side: Side) -> bool {
+          conn_map: &mut ConnectMap, pts: &[Point], side: Side) -> bool {
     if graph.is_empty() { return false }
 
     let mut contain_cnt = 0;
@@ -648,19 +648,19 @@ fn splits(graph: &[Vec<usize>], v: usize,
     for &u in graph[v].iter() {
         if u == v || visited[u] { continue }
 
-        if dfs(graph, u, &mut visited[], map, pts, side) {
+        if dfs(graph, u, &mut visited[], conn_map, pts, side) {
             contain_cnt += 1;
         }
     }
 
     fn dfs(graph: &[Vec<usize>], v: usize, visited: &mut [bool],
-           map: &mut ConnectMap, pts: &[Point], side: Side) -> bool {
-        let mut contains = map.get(pts[v]).side == side;
+           conn_map: &mut ConnectMap, pts: &[Point], side: Side) -> bool {
+        let mut contains = conn_map.get(pts[v]).side == side;
         visited[v] = true;
 
         for &u in graph[v].iter() {
             if u == v || visited[u] { continue }
-            contains |= dfs(graph, u, visited, map, pts, side);
+            contains |= dfs(graph, u, visited, conn_map, pts, side);
         }
         contains
     }
@@ -668,21 +668,21 @@ fn splits(graph: &[Vec<usize>], v: usize,
     contain_cnt > 1
 }
 
-fn fill_by_connection(board: &mut Board, hint: &Hint) {
-    let mut map = ConnectMap::from_board(board, hint);
+fn fill_by_connection(side_map: &mut SideMap, hint: &Hint) {
+    let mut conn_map = ConnectMap::from_side_map(side_map, hint);
 
-    let mut rev = board.revision();
+    let mut rev = side_map.revision();
     loop {
         let mut updated = false;
-        for r in (0 .. board.row()) {
-            for c in (0 .. board.column()) {
-                updated |= update_conn(board, &mut map, Point(r, c));
+        for r in (0 .. side_map.row()) {
+            for c in (0 .. side_map.column()) {
+                updated |= update_conn(side_map, &mut conn_map, Point(r, c));
             }
         }
-        updated |= update_conn(board, &mut map, Point(-1, -1));
+        updated |= update_conn(side_map, &mut conn_map, Point(-1, -1));
 
         if updated {
-            debug_assert_eq!(rev, board.revision());
+            debug_assert_eq!(rev, side_map.revision());
             continue
         }
 
@@ -693,25 +693,25 @@ fn fill_by_connection(board: &mut Board, hint: &Hint) {
                 Side::In
             };
 
-            let (pts, graph) = create_conn_graph(&mut map, filter_side);
+            let (pts, graph) = create_conn_graph(&mut conn_map, filter_side);
             let (arts, visited) = get_articulation(&graph[], 0);
 
-            let disconn = find_disconn_area(&mut map, &pts[], &visited[]);
+            let disconn = find_disconn_area(&mut conn_map, &pts[], &visited[]);
             for &v in disconn.iter() {
-                board.set_side(pts[v], filter_side);
+                side_map.set_side(pts[v], filter_side);
             }
             for &v in arts.iter() {
                 let p = pts[v];
 
-                if map.get(p).side != set_side &&
-                    splits(&graph[], v, &mut map, &pts[], set_side) {
-                    board.set_side(p, set_side);
+                if conn_map.get(p).side != set_side &&
+                    splits(&graph[], v, &mut conn_map, &pts[], set_side) {
+                    side_map.set_side(p, set_side);
                 }
             }
         }
 
-        if board.revision() != rev {
-            rev = board.revision();
+        if side_map.revision() != rev {
+            rev = side_map.revision();
             continue
         }
 
@@ -719,46 +719,46 @@ fn fill_by_connection(board: &mut Board, hint: &Hint) {
     }
 }
 
-fn solve_by_logic_once(board: &mut Board, hint: &Hint) {
-    fill_by_num_place(board, hint);
+fn solve_by_logic_once(side_map: &mut SideMap, hint: &Hint) {
+    fill_by_num_place(side_map, hint);
 }
 
-fn solve_by_local_property(board: &mut Board, hint: &Hint) {
-    fill_by_line_nums(board, hint);
-    fill_by_relation(board, hint);
+fn solve_by_local_property(side_map: &mut SideMap, hint: &Hint) {
+    fill_by_line_nums(side_map, hint);
+    fill_by_relation(side_map, hint);
 }
 
-fn solve_by_global_property(board: &mut Board, hint: &Hint) {
-    fill_by_connection(board, hint);
+fn solve_by_global_property(side_map: &mut SideMap, hint: &Hint) {
+    fill_by_connection(side_map, hint);
 }
 
-fn solve_by_logic(board: &mut Board, hint: &Hint) {
+fn solve_by_logic(side_map: &mut SideMap, hint: &Hint) {
     let mut local_cnt = 0;
     let mut global_cnt = 0;
-    let mut rev = board.revision();
+    let mut rev = side_map.revision();
 
     loop {
         local_cnt += 1;
-        solve_by_local_property(board, hint);
-        if board.revision() != rev {
-            rev = board.revision();
+        solve_by_local_property(side_map, hint);
+        if side_map.revision() != rev {
+            rev = side_map.revision();
             continue
         }
 
         global_cnt += 1;
-        solve_by_global_property(board, hint);
-        if board.revision() == rev {
+        solve_by_global_property(side_map, hint);
+        if side_map.revision() == rev {
             break;
         }
 
-        rev = board.revision();
+        rev = side_map.revision();
     }
 
     println!("{} {} {}", rev, local_cnt, global_cnt);
 }
 
-pub fn solve(board: &mut Board, hint: &Hint) {
-    solve_by_logic_once(board, hint);
-    solve_by_logic(board, hint);
+pub fn solve(side_map: &mut SideMap, hint: &Hint) {
+    solve_by_logic_once(side_map, hint);
+    solve_by_logic(side_map, hint);
 }
 

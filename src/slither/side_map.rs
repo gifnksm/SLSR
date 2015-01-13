@@ -21,16 +21,15 @@ pub enum Side {
     In, Out, Unknown, Conflict
 }
 
-
 #[derive(Clone)]
-struct SideMap {
+struct SideMapInner {
     uf: UnionFind,
     revision: u32
 }
 
-impl SideMap {
-    fn new(size: usize) -> SideMap {
-        SideMap { uf: UnionFind::new(size * 2), revision: 0 }
+impl SideMapInner {
+    fn new(size: usize) -> SideMapInner {
+        SideMapInner { uf: UnionFind::new(size * 2), revision: 0 }
     }
 
     fn revision(&self) -> u32 { self.revision }
@@ -57,33 +56,33 @@ impl SideMap {
 }
 
 #[derive(Clone)]
-pub struct Board {
+pub struct SideMap {
     size: Size,
-    side_map: SideMap
+    inner: SideMapInner
 }
 
-impl Board {
-    pub fn new(size: Size) -> Board {
+impl SideMap {
+    pub fn new(size: Size) -> SideMap {
         assert!(size.0 > 0 && size.1 > 0);
         let num_cell = (size.0 * size.1 + 1) as usize;
-        Board {
+        SideMap {
             size: size,
-            side_map: SideMap::new(num_cell)
+            inner: SideMapInner::new(num_cell)
         }
     }
 
     fn is_outside(&mut self, p: Point) -> bool {
         let i = self.cell_id(p);
-        self.side_map.is_same(i, OUTSIDE_CELL_ID)
+        self.inner.is_same(i, OUTSIDE_CELL_ID)
     }
     fn is_inside(&mut self, p: Point) -> bool {
         let i = self.cell_id(p);
-        self.side_map.is_different(i, OUTSIDE_CELL_ID)
+        self.inner.is_different(i, OUTSIDE_CELL_ID)
     }
     pub fn is_same(&mut self, p0: Point, p1: Point) -> bool {
         let i = self.cell_id(p0);
         let j = self.cell_id(p1);
-        self.side_map.is_same(i, j)
+        self.inner.is_same(i, j)
     }
     pub fn is_same_all(&mut self, ps: &[Point]) -> bool {
         match ps {
@@ -94,51 +93,7 @@ impl Board {
     pub fn is_different(&mut self, p0: Point, p1: Point) -> bool {
         let i = self.cell_id(p0);
         let j = self.cell_id(p1);
-        self.side_map.is_different(i, j)
-    }
-
-    pub fn set_outside(&mut self, p: Point) -> bool {
-        let i = self.cell_id(p);
-        self.side_map.set_same(i, OUTSIDE_CELL_ID)
-    }
-    pub fn set_inside(&mut self, p: Point) -> bool {
-        let i = self.cell_id(p);
-        self.side_map.set_different(i, OUTSIDE_CELL_ID)
-    }
-    pub fn set_side(&mut self, p: Point, ty: Side) -> bool {
-        match ty {
-            Side::In       => self.set_inside(p),
-            Side::Out      => self.set_outside(p),
-            Side::Unknown  => panic!(),
-            Side::Conflict => panic!()
-        }
-    }
-    pub fn set_same(&mut self, p0: Point, p1: Point) -> bool {
-        let i = self.cell_id(p0);
-        let j = self.cell_id(p1);
-        self.side_map.set_same(i, j)
-    }
-    pub fn set_different(&mut self, p0: Point, p1: Point) -> bool {
-        let i = self.cell_id(p0);
-        let j = self.cell_id(p1);
-        self.side_map.set_different(i, j)
-    }
-    pub fn set_relation(&mut self, p0: Point, p1: Point, rel: Relation) -> bool {
-        match rel {
-            Relation::Same      => self.set_same(p0, p1),
-            Relation::Different => self.set_different(p0, p1),
-            Relation::Unknown   => panic!(),
-            Relation::Conflict  => panic!()
-        }
-    }
-
-    pub fn get_relation(&mut self, p0: Point, p1: Point) -> Relation {
-        match (self.is_same(p0, p1), self.is_different(p0, p1)) {
-            (false, false) => Relation::Unknown,
-            (true,  false) => Relation::Same,
-            (false, true)  => Relation::Different,
-            (true,  true)  => Relation::Conflict
-        }
+        self.inner.is_different(i, j)
     }
 
     pub fn get_side(&mut self, p: Point) -> Side {
@@ -149,8 +104,52 @@ impl Board {
             (true,  true)  => Side::Conflict
         }
     }
+    pub fn get_relation(&mut self, p0: Point, p1: Point) -> Relation {
+        match (self.is_same(p0, p1), self.is_different(p0, p1)) {
+            (false, false) => Relation::Unknown,
+            (true,  false) => Relation::Same,
+            (false, true)  => Relation::Different,
+            (true,  true)  => Relation::Conflict
+        }
+    }
 
-    pub fn revision(&self) -> u32 { self.side_map.revision() }
+    pub fn set_outside(&mut self, p: Point) -> bool {
+        let i = self.cell_id(p);
+        self.inner.set_same(i, OUTSIDE_CELL_ID)
+    }
+    pub fn set_inside(&mut self, p: Point) -> bool {
+        let i = self.cell_id(p);
+        self.inner.set_different(i, OUTSIDE_CELL_ID)
+    }
+    pub fn set_side(&mut self, p: Point, ty: Side) -> bool {
+        match ty {
+            Side::In       => self.set_inside(p),
+            Side::Out      => self.set_outside(p),
+            Side::Unknown  => panic!(),
+            Side::Conflict => panic!()
+        }
+    }
+
+    pub fn set_same(&mut self, p0: Point, p1: Point) -> bool {
+        let i = self.cell_id(p0);
+        let j = self.cell_id(p1);
+        self.inner.set_same(i, j)
+    }
+    pub fn set_different(&mut self, p0: Point, p1: Point) -> bool {
+        let i = self.cell_id(p0);
+        let j = self.cell_id(p1);
+        self.inner.set_different(i, j)
+    }
+    pub fn set_relation(&mut self, p0: Point, p1: Point, rel: Relation) -> bool {
+        match rel {
+            Relation::Same      => self.set_same(p0, p1),
+            Relation::Different => self.set_different(p0, p1),
+            Relation::Unknown   => panic!(),
+            Relation::Conflict  => panic!()
+        }
+    }
+
+    pub fn revision(&self) -> u32 { self.inner.revision() }
 
     fn cell_id(&self, p: Point) -> CellId {
         if self.contains(p) {
@@ -161,37 +160,37 @@ impl Board {
     }
 }
 
-impl Geom for Board {
+impl Geom for SideMap {
     fn size(&self) -> Size { self.size }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Board;
+    use super::SideMap;
     use geom::{Size, Point};
 
     #[test]
     fn set_and_check() {
-        let mut board = Board::new(Size(10, 10));
+        let mut side_map = SideMap::new(Size(10, 10));
         let p0 = Point(0, 0);
         let p1 = Point(1, 1);
         let p2 = Point(2, 2);
 
-        board.set_outside(p0);
-        board.set_same(p0, p1);
+        side_map.set_outside(p0);
+        side_map.set_same(p0, p1);
 
-        assert!(board.is_outside(p0));
-        assert!(board.is_outside(p1));
-        assert!(!board.is_inside(p0));
-        assert!(!board.is_inside(p1));
-        assert!(board.is_same(p0, p1));
-        assert!(!board.is_different(p0, p1));
+        assert!(side_map.is_outside(p0));
+        assert!(side_map.is_outside(p1));
+        assert!(!side_map.is_inside(p0));
+        assert!(!side_map.is_inside(p1));
+        assert!(side_map.is_same(p0, p1));
+        assert!(!side_map.is_different(p0, p1));
 
-        assert!(!board.is_same(p1, p2));
-        assert!(!board.is_different(p1, p2));
+        assert!(!side_map.is_same(p1, p2));
+        assert!(!side_map.is_different(p1, p2));
 
-        board.set_inside(p2);
-        assert!(!board.is_same(p1, p2));
-        assert!(board.is_different(p1, p2));
+        side_map.set_inside(p2);
+        assert!(!side_map.is_same(p1, p2));
+        assert!(side_map.is_different(p1, p2));
     }
 }

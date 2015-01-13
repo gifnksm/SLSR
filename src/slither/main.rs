@@ -9,17 +9,17 @@ extern crate term;
 use std::io::stdio;
 use geom::Geom;
 use hint::Hint;
-use board::Board;
+use side_map::SideMap;
 
-mod board;
 mod geom;
 mod hint;
 mod pprint;
+mod side_map;
 mod solver;
 
 fn main() {
     let hint = Hint::from_reader(stdio::stdin()).unwrap();
-    let mut board = Board::new(hint.size());
-    solver::solve(&mut board, &hint);
-    let _ = pprint::print(&mut board, &hint);
+    let mut side_map = SideMap::new(hint.size());
+    solver::solve(&mut side_map, &hint);
+    let _ = pprint::print(&mut side_map, &hint);
 }
