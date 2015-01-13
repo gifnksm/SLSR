@@ -1,7 +1,7 @@
 use std::fmt;
 use std::io::IoResult;
 use std::io::stdio::{self, StdWriter};
-use board::{Board, CellRelation, CellType};
+use board::{Board, Relation, Side};
 use geom::{Geom, Point, UP, LEFT};
 use hint::Hint;
 use term::{self, Terminal, WriterWrapper};
@@ -12,12 +12,12 @@ enum Output<T> {
     Raw(T)
 }
 
-fn type_to_color(ty: CellType) -> (Color, Color) {
+fn type_to_color(ty: Side) -> (Color, Color) {
     match ty {
-        CellType::Inside   => (color::BRIGHT_YELLOW,        color::BLACK),
-        CellType::Outside  => (color::BLACK,        color::BRIGHT_WHITE),
-        CellType::Unknown  => (color::BRIGHT_WHITE, color::BLACK),
-        CellType::Conflict => (color::RED,          color::BRIGHT_WHITE),
+        Side::In       => (color::BRIGHT_YELLOW, color::BLACK),
+        Side::Out      => (color::BLACK,         color::BRIGHT_WHITE),
+        Side::Unknown  => (color::BRIGHT_WHITE,  color::BLACK),
+        Side::Conflict => (color::RED,           color::BRIGHT_WHITE),
     }
 }
 
@@ -44,7 +44,7 @@ impl<'a> Printer<'a> {
         }
     }
 
-    fn write_pretty(&mut self, ty: CellType, s: &str) -> IoResult<()> {
+    fn write_pretty(&mut self, ty: Side, s: &str) -> IoResult<()> {
         match self.output {
             Output::Pretty(ref mut term) => {
                 let (bg, fg) = type_to_color(ty);
@@ -57,7 +57,7 @@ impl<'a> Printer<'a> {
             Output::Raw(ref mut stdout) => stdout.write(s.as_bytes())
         }
     }
-    fn write_pretty_fmt(&mut self, ty: CellType, fmt: fmt::Arguments) -> IoResult<()> {
+    fn write_pretty_fmt(&mut self, ty: Side, fmt: fmt::Arguments) -> IoResult<()> {
         match self.output {
             Output::Pretty(ref mut term) => {
                 let (bg, fg) = type_to_color(ty);
@@ -132,9 +132,9 @@ impl<'a> Printer<'a> {
     fn corner(&mut self, p: Point) -> IoResult<()> {
         let ps = &[p, p + UP, p + LEFT, p + UP + LEFT];
         let ty = if self.board.is_same_all(ps) {
-            self.board.get_type(p)
+            self.board.get_side(p)
         } else {
-            CellType::Unknown
+            Side::Unknown
         };
         try!(self.write_pretty(ty, "+"));
         Ok(())
@@ -142,15 +142,15 @@ impl<'a> Printer<'a> {
 
     fn edge_h(&mut self, p: Point) -> IoResult<()> {
         let ty = if self.board.is_same(p, p + UP) {
-            self.board.get_type(p)
+            self.board.get_side(p)
         } else {
-            CellType::Unknown
+            Side::Unknown
         };
         let s = match self.board.get_relation(p, p + UP) {
-            CellRelation::Same      => " ",
-            CellRelation::Different => "-",
-            CellRelation::Unknown   => "~",
-            CellRelation::Conflict  => "!"
+            Relation::Same      => " ",
+            Relation::Different => "-",
+            Relation::Unknown   => "~",
+            Relation::Conflict  => "!"
         };
         try!(self.write_pretty_fmt(ty, format_args!("{}{}", s, s)));
         Ok(())
@@ -158,22 +158,22 @@ impl<'a> Printer<'a> {
 
     fn edge_v(&mut self, p: Point) -> IoResult<()> {
         let ty = if self.board.is_same(p, p + LEFT) {
-            self.board.get_type(p)
+            self.board.get_side(p)
         } else {
-            CellType::Unknown
+            Side::Unknown
         };
         let s = match self.board.get_relation(p, p + LEFT) {
-            CellRelation::Same      => " ",
-            CellRelation::Different => "|",
-            CellRelation::Unknown   => "?",
-            CellRelation::Conflict  => "!"
+            Relation::Same      => " ",
+            Relation::Different => "|",
+            Relation::Unknown   => "?",
+            Relation::Conflict  => "!"
         };
         try!(self.write_pretty(ty, s));
         Ok(())
     }
 
     fn cell(&mut self, p: Point) -> IoResult<()> {
-        let ty = self.board.get_type(p);
+        let ty = self.board.get_side(p);
         match self.hint[p] {
             Some(x) => try!(self.write_pretty_fmt(ty, format_args!("{} ", x))),
             None    => try!(self.write_pretty(ty, "  "))

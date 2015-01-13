@@ -12,13 +12,13 @@ impl CellId {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Show)]
-pub enum CellRelation {
+pub enum Relation {
     Same, Different, Unknown, Conflict
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Show)]
-pub enum CellType {
-    Inside, Outside, Unknown, Conflict
+pub enum Side {
+    In, Out, Unknown, Conflict
 }
 
 
@@ -105,12 +105,12 @@ impl Board {
         let i = self.cell_id(p);
         self.side_map.set_different(i, OUTSIDE_CELL_ID)
     }
-    pub fn set_type(&mut self, p: Point, ty: CellType) -> bool {
+    pub fn set_side(&mut self, p: Point, ty: Side) -> bool {
         match ty {
-            CellType::Inside  => self.set_inside(p),
-            CellType::Outside => self.set_outside(p),
-            CellType::Unknown => panic!(),
-            CellType::Conflict => panic!()
+            Side::In       => self.set_inside(p),
+            Side::Out      => self.set_outside(p),
+            Side::Unknown  => panic!(),
+            Side::Conflict => panic!()
         }
     }
     pub fn set_same(&mut self, p0: Point, p1: Point) -> bool {
@@ -123,30 +123,30 @@ impl Board {
         let j = self.cell_id(p1);
         self.side_map.set_different(i, j)
     }
-    pub fn set_relation(&mut self, p0: Point, p1: Point, rel: CellRelation) -> bool {
+    pub fn set_relation(&mut self, p0: Point, p1: Point, rel: Relation) -> bool {
         match rel {
-            CellRelation::Same      => self.set_same(p0, p1),
-            CellRelation::Different => self.set_different(p0, p1),
-            CellRelation::Unknown   => panic!(),
-            CellRelation::Conflict  => panic!()
+            Relation::Same      => self.set_same(p0, p1),
+            Relation::Different => self.set_different(p0, p1),
+            Relation::Unknown   => panic!(),
+            Relation::Conflict  => panic!()
         }
     }
 
-    pub fn get_relation(&mut self, p0: Point, p1: Point) -> CellRelation {
+    pub fn get_relation(&mut self, p0: Point, p1: Point) -> Relation {
         match (self.is_same(p0, p1), self.is_different(p0, p1)) {
-            (false, false) => CellRelation::Unknown,
-            (true,  false) => CellRelation::Same,
-            (false, true)  => CellRelation::Different,
-            (true,  true)  => CellRelation::Conflict
+            (false, false) => Relation::Unknown,
+            (true,  false) => Relation::Same,
+            (false, true)  => Relation::Different,
+            (true,  true)  => Relation::Conflict
         }
     }
 
-    pub fn get_type(&mut self, p: Point) -> CellType {
+    pub fn get_side(&mut self, p: Point) -> Side {
         match (self.is_inside(p), self.is_outside(p)) {
-            (false, false) => CellType::Unknown,
-            (true,  false) => CellType::Inside,
-            (false, true)  => CellType::Outside,
-            (true,  true)  => CellType::Conflict
+            (false, false) => Side::Unknown,
+            (true,  false) => Side::In,
+            (false, true)  => Side::Out,
+            (true,  true)  => Side::Conflict
         }
     }
 

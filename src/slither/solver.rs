@@ -1,7 +1,7 @@
 use std::{cmp, mem};
 use std::iter::{self, FromIterator};
 use union_find::{UnionFind, UFValue, Merge};
-use board::{Board, CellRelation, CellType};
+use board::{Board, Relation, Side};
 use geom::{Geom, Point, Size, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
 use hint::Hint;
 
@@ -136,9 +136,9 @@ fn fill_by_line_nums(board: &mut Board, hint: &Hint) {
 
             for &dir in [UP, RIGHT, DOWN, LEFT].iter() {
                 match board.get_relation(p, p + dir) {
-                    CellRelation::Same      => { sames[num_same] = Some(dir); num_same += 1; }
-                    CellRelation::Different => { diffs[num_diff] = Some(dir); num_diff += 1; }
-                    CellRelation::Unknown   => { unknowns[num_unknown] = Some(dir); num_unknown += 1; }
+                    Relation::Same      => { sames[num_same] = Some(dir); num_same += 1; }
+                    Relation::Different => { diffs[num_diff] = Some(dir); num_diff += 1; }
+                    Relation::Unknown   => { unknowns[num_unknown] = Some(dir); num_unknown += 1; }
                     _ => panic!() // FIXME
                 }
             }
@@ -188,7 +188,7 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
                 }
 
                 match board.get_relation(u, r) {
-                    CellRelation::Same => {
+                    Relation::Same => {
                         match hint[p] {
                             Some(1) => {
                                 board.set_same(p, u);
@@ -207,7 +207,7 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
                             _ => {}
                         }
                     }
-                    CellRelation::Different => {
+                    Relation::Different => {
                         match hint[p] {
                             Some(1) => {
                                 board.set_same(p, l);
@@ -223,46 +223,46 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
                             _ => {}
                         }
                     }
-                    CellRelation::Unknown => {}
-                    CellRelation::Conflict => panic!()
+                    Relation::Unknown => {}
+                    Relation::Conflict => panic!()
                 }
 
                 match board.get_relation(u, ur) {
-                    CellRelation::Same => {
+                    Relation::Same => {
                         if hint[p] == Some(3) && hint[r] == Some(1) {
                             board.set_different(p, u);
                             board.set_same(r, r + rot * RIGHT);
                             board.set_same(r, r + rot * DOWN);
                         }
                     }
-                    CellRelation::Different => {
+                    Relation::Different => {
                         if hint[p] == Some(3) {
                             board.set_different(p, d);
                             board.set_different(p, l);
                             board.set_same(ur, r);
                         }
                     }
-                    CellRelation::Unknown => {}
-                    CellRelation::Conflict => panic!()
+                    Relation::Unknown => {}
+                    Relation::Conflict => panic!()
                 }
 
                 match board.get_relation(u, ul) {
-                    CellRelation::Same => {
+                    Relation::Same => {
                         if hint[p] == Some(3) && hint[l] == Some(1) {
                             board.set_different(p, u);
                             board.set_same(l, l + rot * LEFT);
                             board.set_same(l, l + rot * DOWN);
                         }
                     }
-                    CellRelation::Different => {
+                    Relation::Different => {
                         if hint[p] == Some(3) {
                             board.set_different(p, d);
                             board.set_different(p, r);
                             board.set_same(ul, l);
                         }
                     }
-                    CellRelation::Unknown => {}
-                    CellRelation::Conflict => panic!()
+                    Relation::Unknown => {}
+                    Relation::Conflict => panic!()
                 }
             }
 
@@ -274,7 +274,7 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
                 let dr = p + rot * (DOWN + RIGHT);
 
                 match board.get_relation(u, d) {
-                    CellRelation::Same => {
+                    Relation::Same => {
                         match hint[p] {
                             Some(1) => {
                                 board.set_same(p, u);
@@ -291,7 +291,7 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
                             _ => {}
                         }
                     }
-                    CellRelation::Different => {
+                    Relation::Different => {
                         match hint[p] {
                             Some(1) => {
                                 board.set_same(p, l);
@@ -307,8 +307,8 @@ fn fill_by_relation(board: &mut Board, hint: &Hint) {
                             _ => {}
                         }
                     }
-                    CellRelation::Unknown => {}
-                    CellRelation::Conflict => panic!()
+                    Relation::Unknown => {}
+                    Relation::Conflict => panic!()
                 }
 
                 if (board.is_different(p, r) || board.is_different(p, d)) &&
@@ -380,7 +380,7 @@ impl ConnectMap {
             let mut rel = vec![];
             if board.contains(p) {
                 for &r in [UP, RIGHT, DOWN, LEFT].iter() {
-                    if board.get_relation(p, p + r) == CellRelation::Unknown {
+                    if board.get_relation(p, p + r) == Relation::Unknown {
                         rel.push(p + r);
                     }
                 }
@@ -388,7 +388,7 @@ impl ConnectMap {
                 for r in (0 .. board.row()) {
                     for &c in [0, board.column() - 1].iter() {
                         let p2 = Point(r, c);
-                        if board.get_relation(p, p2) == CellRelation::Unknown {
+                        if board.get_relation(p, p2) == Relation::Unknown {
                             rel.push(p2);
                         }
                     }
@@ -396,7 +396,7 @@ impl ConnectMap {
                 for c in (0 .. board.column()) {
                     for &r in [0, board.row() - 1].iter() {
                         let p2 = Point(r, c);
-                        if board.get_relation(p, p2) == CellRelation::Unknown {
+                        if board.get_relation(p, p2) == Relation::Unknown {
                             rel.push(p2);
                         }
                     }
@@ -418,7 +418,7 @@ impl ConnectMap {
                 let p = Point(r, c);
                 for &r in [UP, RIGHT, DOWN, LEFT].iter() {
                     let p2 = p + r;
-                    if board.get_relation(p, p2) == CellRelation::Same {
+                    if board.get_relation(p, p2) == Relation::Same {
                         map.union(p, p2);
                     }
                 }
@@ -470,10 +470,10 @@ fn filter_rel(board: &mut Board, p: Point, rel: Vec<Point>)
 
     for p2 in rel.into_iter() {
         match board.get_relation(p, p2) {
-            CellRelation::Same => same.push(p2),
-            CellRelation::Different => {}
-            CellRelation::Unknown => unknown.push(p2),
-            CellRelation::Conflict => panic!()
+            Relation::Same => same.push(p2),
+            Relation::Different => {}
+            Relation::Unknown => unknown.push(p2),
+            Relation::Conflict => panic!()
         }
     }
 
@@ -504,17 +504,17 @@ fn update_conn(board: &mut Board, map: &mut ConnectMap, p: Point) -> bool {
     ret
 }
 
-fn create_conn_graph(board: &mut Board, map: &mut ConnectMap, filter_ty: CellType)
+fn create_conn_graph(board: &mut Board, map: &mut ConnectMap, filter_side: Side)
                      -> (Vec<Point>, Vec<Vec<usize>>)
 {
     let mut pts = vec![];
-    if filter_ty != CellType::Outside {
+    if filter_side != Side::Out {
         pts.push(Point(-1, -1))
     }
     for r in (0 .. board.row()) {
         for c in (0 .. board.column()) {
             let p = Point(r, c);
-            if board.get_type(p) == filter_ty {
+            if board.get_side(p) == filter_side {
                 continue
             }
             if map.get(p).coord == p {
@@ -586,7 +586,7 @@ fn get_articulation(graph: &[Vec<usize>]) -> (Vec<usize>, Vec<bool>) {
 }
 
 fn check_disconn(board: &mut Board, map: &mut ConnectMap,
-                 pts: &[Point], visited: &[bool], filter_ty: CellType) {
+                 pts: &[Point], visited: &[bool], filter_side: Side) {
     let mut disconn = vec![];
     for (u, &vis) in visited.iter().enumerate() {
         if !vis { disconn.push(u); }
@@ -598,7 +598,7 @@ fn check_disconn(board: &mut Board, map: &mut ConnectMap,
         }
         if sum == 0 {
             for &v in disconn.iter() {
-                board.set_type(pts[v], filter_ty);
+                board.set_side(pts[v], filter_side);
             }
         } else {
             let mut conn = vec![];
@@ -611,7 +611,7 @@ fn check_disconn(board: &mut Board, map: &mut ConnectMap,
             }
             if sum == 0 {
                 for &v in conn.iter() {
-                    board.set_type(pts[v], filter_ty);
+                    board.set_side(pts[v], filter_side);
                 }
             }
         }
@@ -619,7 +619,7 @@ fn check_disconn(board: &mut Board, map: &mut ConnectMap,
 }
 
 fn splits(graph: &[Vec<usize>], v: usize,
-          board: &mut Board, pts: &[Point], ty: CellType) -> bool {
+          board: &mut Board, pts: &[Point], ty: Side) -> bool {
     if graph.is_empty() { return false }
 
     let mut contain_cnt = 0;
@@ -636,8 +636,8 @@ fn splits(graph: &[Vec<usize>], v: usize,
     }
 
     fn dfs(graph: &[Vec<usize>], v: usize, visited: &mut [bool],
-           board: &mut Board, pts: &[Point], ty: CellType) -> bool {
-        let mut contains = board.get_type(pts[v]) == ty;
+           board: &mut Board, pts: &[Point], ty: Side) -> bool {
+        let mut contains = board.get_side(pts[v]) == ty;
         visited[v] = true;
 
         for &u in graph[v].iter() {
@@ -668,25 +668,25 @@ fn fill_by_connection(board: &mut Board, hint: &Hint) {
             continue
         }
 
-        for &set_ty in [CellType::Inside, CellType::Outside].iter() {
-            let filter_ty = if set_ty == CellType::Inside {
-                CellType::Outside
+        for &set_side in [Side::In, Side::Out].iter() {
+            let filter_side = if set_side == Side::In {
+                Side::Out
             } else {
-                CellType::Inside
+                Side::In
             };
 
-            let (pts, graph) = create_conn_graph(board, &mut map, filter_ty);
+            let (pts, graph) = create_conn_graph(board, &mut map, filter_side);
             let (arts, visited) = get_articulation(&graph[]);
-            check_disconn(board, &mut map, &pts[], &visited[], filter_ty);
+            check_disconn(board, &mut map, &pts[], &visited[], filter_side);
 
             for &v in arts.iter() {
                 let p = pts[v];
 
-                if board.get_type(p) == set_ty {
+                if board.get_side(p) == set_side {
                     continue
                 }
-                if splits(&graph[], v, board, &pts[], set_ty) {
-                    board.set_type(p, set_ty);
+                if splits(&graph[], v, board, &pts[], set_side) {
+                    board.set_side(p, set_side);
                 }
             }
         }
