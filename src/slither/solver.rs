@@ -2,17 +2,17 @@ use std::{cmp, mem};
 use std::iter::{self, FromIterator};
 use union_find::{UnionFind, UFValue, Merge};
 use geom::{Geom, Point, Size, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
-use hint::{self, Hint, Edge};
+use hint::Hint;
 use side_map::{SideMap, Relation, Side};
 
-fn fill_by_num_place(side_map: &mut SideMap, hint: &Hint) {
+fn fill_by_num_place(side_map: &mut SideMap) {
     // Corner points
     let corners = [(Point(0, 0), UCW0),
                    (Point(side_map.row() - 1, 0), UCW90),
                    (Point(side_map.row() - 1, side_map.column() - 1), UCW180),
                    (Point(0, side_map.column() - 1), UCW270)];
     for &(p, rot) in corners.iter() {
-        match hint[p] {
+        match side_map.hint()[p] {
             Some(0) => {}
             Some(1) => {
                 side_map.set_same(p, p + rot * UP);
@@ -34,7 +34,7 @@ fn fill_by_num_place(side_map: &mut SideMap, hint: &Hint) {
     for r in (0 .. side_map.row()) {
         for c in (0 .. side_map.column()) {
             let p = Point(r, c);
-            match hint[p] {
+            match side_map.hint()[p] {
                 Some(0) => {
                     for &rot in [UCW0, UCW90, UCW180, UCW270].iter() {
                         let r  = p + rot * RIGHT;
@@ -44,7 +44,7 @@ fn fill_by_num_place(side_map: &mut SideMap, hint: &Hint) {
                         //           -
                         // 0 3 =>  0x3|
                         //           -
-                        if hint[r] == Some(3) {
+                        if side_map.hint()[r] == Some(3) {
                             side_map.set_different(r, r + rot * UP);
                             side_map.set_different(r, r + rot * (UP + RIGHT));
                             side_map.set_different(r, r + rot * RIGHT);
@@ -55,7 +55,7 @@ fn fill_by_num_place(side_map: &mut SideMap, hint: &Hint) {
                         // 0      0x
                         //     => x -
                         //   3     |3
-                        if hint[dr] == Some(3) {
+                        if side_map.hint()[dr] == Some(3) {
                             side_map.set_different(dr, dr + rot * UP);
                             side_map.set_different(dr, dr + rot * LEFT);
                         }
@@ -69,7 +69,7 @@ fn fill_by_num_place(side_map: &mut SideMap, hint: &Hint) {
                     //          x
                     for &rot in [UCW0, UCW90].iter() {
                         let r = p + rot * RIGHT;
-                        if hint[r] == Some(3) {
+                        if side_map.hint()[r] == Some(3) {
                             side_map.set_different(p, p + rot * LEFT);
                             side_map.set_different(p, r);
                             side_map.set_different(r, r + rot * RIGHT);
@@ -88,11 +88,11 @@ fn fill_by_num_place(side_map: &mut SideMap, hint: &Hint) {
                     for &rot in [UCW0, UCW90].iter() {
                         let mut dr = p + rot * (DOWN + RIGHT);
                         let mut cnt = 1;
-                        while hint[dr] == Some(2) {
+                        while side_map.hint()[dr] == Some(2) {
                             dr = dr + rot * (DOWN + RIGHT);
                             cnt += 1;
                         }
-                        if hint[dr] == Some(3) {
+                        if side_map.hint()[dr] == Some(3) {
                             side_map.set_different(p, p + rot * UP);
                             side_map.set_different(p, p + rot * (UP + LEFT));
                             side_map.set_different(p, p + rot * LEFT);
@@ -108,10 +108,10 @@ fn fill_by_num_place(side_map: &mut SideMap, hint: &Hint) {
                                 t = t + rot * (DOWN + RIGHT);
                             }
 
-                            if hint[p + rot * (RIGHT + RIGHT)] == Some(3) {
+                            if side_map.hint()[p + rot * (RIGHT + RIGHT)] == Some(3) {
                                 side_map.set_same(p + rot * RIGHT, p + rot * (UP + RIGHT));
                             }
-                            if hint[p + rot * (DOWN + DOWN)] == Some(3) {
+                            if side_map.hint()[p + rot * (DOWN + DOWN)] == Some(3) {
                                 side_map.set_same(p + rot * DOWN, p + rot * (DOWN + LEFT));
                             }
                         }
@@ -123,7 +123,7 @@ fn fill_by_num_place(side_map: &mut SideMap, hint: &Hint) {
     }
 }
 
-fn fill_by_line_nums(side_map: &mut SideMap, hint: &Hint) {
+fn fill_by_line_nums(side_map: &mut SideMap) {
     for r in (0 .. side_map.row()) {
         for c in (0 .. side_map.column()) {
             let p = Point(r, c);
@@ -148,7 +148,7 @@ fn fill_by_line_nums(side_map: &mut SideMap, hint: &Hint) {
                 continue
             }
 
-            match hint[p] {
+            match side_map.hint()[p] {
                 Some(x) if (num_diff as u8) == x => {
                     for i in (0 .. num_unknown) {
                         side_map.set_same(p, p + unknowns[i].unwrap());
@@ -165,7 +165,7 @@ fn fill_by_line_nums(side_map: &mut SideMap, hint: &Hint) {
     }
 }
 
-fn fill_by_relation(side_map: &mut SideMap, hint: &Hint) {
+fn fill_by_relation(side_map: &mut SideMap) {
     for r in (0 .. side_map.row()) {
         for c in (0 .. side_map.column()) {
             let p = Point(r, c);
@@ -189,7 +189,7 @@ fn fill_by_relation(side_map: &mut SideMap, hint: &Hint) {
 
                 match side_map.get_relation(u, r) {
                     Relation::Same => {
-                        match hint[p] {
+                        match side_map.hint()[p] {
                             Some(1) => {
                                 side_map.set_same(p, u);
                                 side_map.set_same(p, r);
@@ -208,7 +208,7 @@ fn fill_by_relation(side_map: &mut SideMap, hint: &Hint) {
                         }
                     }
                     Relation::Different => {
-                        match hint[p] {
+                        match side_map.hint()[p] {
                             Some(1) => {
                                 side_map.set_same(p, l);
                                 side_map.set_same(p, d);
@@ -229,14 +229,15 @@ fn fill_by_relation(side_map: &mut SideMap, hint: &Hint) {
 
                 match side_map.get_relation(u, ur) {
                     Relation::Same => {
-                        if hint[p] == Some(3) && hint[r] == Some(1) {
+                        if side_map.hint()[p] == Some(3) && 
+                            side_map.hint()[r] == Some(1) {
                             side_map.set_different(p, u);
                             side_map.set_same(r, r + rot * RIGHT);
                             side_map.set_same(r, r + rot * DOWN);
                         }
                     }
                     Relation::Different => {
-                        if hint[p] == Some(3) {
+                        if side_map.hint()[p] == Some(3) {
                             side_map.set_different(p, d);
                             side_map.set_different(p, l);
                             side_map.set_same(ur, r);
@@ -248,14 +249,15 @@ fn fill_by_relation(side_map: &mut SideMap, hint: &Hint) {
 
                 match side_map.get_relation(u, ul) {
                     Relation::Same => {
-                        if hint[p] == Some(3) && hint[l] == Some(1) {
+                        if side_map.hint()[p] == Some(3) &&
+                            side_map.hint()[l] == Some(1) {
                             side_map.set_different(p, u);
                             side_map.set_same(l, l + rot * LEFT);
                             side_map.set_same(l, l + rot * DOWN);
                         }
                     }
                     Relation::Different => {
-                        if hint[p] == Some(3) {
+                        if side_map.hint()[p] == Some(3) {
                             side_map.set_different(p, d);
                             side_map.set_different(p, r);
                             side_map.set_same(ul, l);
@@ -275,7 +277,7 @@ fn fill_by_relation(side_map: &mut SideMap, hint: &Hint) {
 
                 match side_map.get_relation(u, d) {
                     Relation::Same => {
-                        match hint[p] {
+                        match side_map.hint()[p] {
                             Some(1) => {
                                 side_map.set_same(p, u);
                                 side_map.set_different(l, r);
@@ -292,7 +294,7 @@ fn fill_by_relation(side_map: &mut SideMap, hint: &Hint) {
                         }
                     }
                     Relation::Different => {
-                        match hint[p] {
+                        match side_map.hint()[p] {
                             Some(1) => {
                                 side_map.set_same(p, l);
                                 side_map.set_same(p, r);
@@ -385,9 +387,9 @@ impl ConnectMap {
         }
     }
 
-    fn from_side_map(side_map: &mut SideMap, hint: &Hint) -> ConnectMap {
+    fn from_side_map(side_map: &mut SideMap) -> ConnectMap {
         let mut conn_map = ConnectMap::new(side_map.size(), |p| {
-            let sum = hint[p].unwrap_or(0);
+            let sum = side_map.hint()[p].unwrap_or(0);
 
             let mut rel = vec![];
             if side_map.contains(p) {
@@ -668,8 +670,8 @@ fn splits(graph: &[Vec<usize>], v: usize,
     contain_cnt > 1
 }
 
-fn fill_by_connection(side_map: &mut SideMap, hint: &Hint) {
-    let mut conn_map = ConnectMap::from_side_map(side_map, hint);
+fn fill_by_connection(side_map: &mut SideMap) {
+    let mut conn_map = ConnectMap::from_side_map(side_map);
 
     let mut rev = side_map.revision();
     loop {
@@ -719,34 +721,34 @@ fn fill_by_connection(side_map: &mut SideMap, hint: &Hint) {
     }
 }
 
-fn solve_by_logic_once(side_map: &mut SideMap, hint: &Hint) {
-    fill_by_num_place(side_map, hint);
+fn solve_by_logic_once(side_map: &mut SideMap) {
+    fill_by_num_place(side_map);
 }
 
-fn solve_by_local_property(side_map: &mut SideMap, hint: &Hint) {
-    fill_by_line_nums(side_map, hint);
-    fill_by_relation(side_map, hint);
+fn solve_by_local_property(side_map: &mut SideMap) {
+    fill_by_line_nums(side_map);
+    fill_by_relation(side_map);
 }
 
-fn solve_by_global_property(side_map: &mut SideMap, hint: &Hint) {
-    fill_by_connection(side_map, hint);
+fn solve_by_global_property(side_map: &mut SideMap) {
+    fill_by_connection(side_map);
 }
 
-fn solve_by_logic(side_map: &mut SideMap, hint: &Hint) {
+fn solve_by_logic(side_map: &mut SideMap) {
     let mut local_cnt = 0;
     let mut global_cnt = 0;
     let mut rev = side_map.revision();
 
     loop {
         local_cnt += 1;
-        solve_by_local_property(side_map, hint);
+        solve_by_local_property(side_map);
         if side_map.revision() != rev {
             rev = side_map.revision();
             continue
         }
 
         global_cnt += 1;
-        solve_by_global_property(side_map, hint);
+        solve_by_global_property(side_map);
         if side_map.revision() == rev {
             break;
         }
@@ -757,50 +759,12 @@ fn solve_by_logic(side_map: &mut SideMap, hint: &Hint) {
     println!("{} {} {}", rev, local_cnt, global_cnt);
 }
 
-pub fn solve(hint: &mut Hint) {
-     let mut side_map = SideMap::new(hint.size());
-    solve_by_logic_once(&mut side_map, hint);
-    solve_by_logic(&mut side_map, hint);
+pub fn solve(hint: &Hint) -> Hint {
+    let mut side_map = SideMap::from_hint(hint);
 
-    for r in (0 .. hint.row()) {
-        for c in (0 .. hint.column()) {
-            let p = Point(r, c);
+    solve_by_logic_once(&mut side_map);
+    solve_by_logic(&mut side_map);
 
-            hint.side_mut()[p] = match side_map.get_side(p) {
-                Side::In => Some(hint::Side::In),
-                Side::Out => Some(hint::Side::Out),
-                Side::Unknown => None,
-                Side::Conflict => panic!()
-            };
-            hint.edge_h_mut()[p] = match side_map.get_relation(p, p + UP) {
-                Relation::Same => Some(Edge::Cross),
-                Relation::Different => Some(Edge::Line),
-                Relation::Unknown => None,
-                Relation::Conflict => panic!()
-            };
-            hint.edge_v_mut()[p] = match side_map.get_relation(p, p + LEFT) {
-                Relation::Same => Some(Edge::Cross),
-                Relation::Different => Some(Edge::Line),
-                Relation::Unknown => None,
-                Relation::Conflict => panic!()
-            };
-        }
-        let p = Point(r, hint.column());
-        hint.edge_v_mut()[p] = match side_map.get_relation(p, p + LEFT) {
-            Relation::Same => Some(Edge::Cross),
-            Relation::Different => Some(Edge::Line),
-            Relation::Unknown => None,
-            Relation::Conflict => panic!()
-        };
-    }
-    for c in (0 .. hint.column()) {
-        let p = Point(hint.row(), c);
-        hint.edge_h_mut()[p] = match side_map.get_relation(p, p + UP) {
-            Relation::Same => Some(Edge::Cross),
-            Relation::Different => Some(Edge::Line),
-            Relation::Unknown => None,
-            Relation::Conflict => panic!()
-        };
-    }
+    side_map.to_hint()
 }
 

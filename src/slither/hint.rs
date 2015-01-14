@@ -73,10 +73,12 @@ impl Hint {
         Ok(Hint::with_data(size, mat.concat(), side, edge_v, edge_h))
     }
 
+    pub fn cell(&self) -> &Matrix<Cell> { &self.cell }
     pub fn side(&self) -> &Matrix<Option<Side>> { &self.side }
     pub fn edge_h(&self) -> &Matrix<Option<Edge>> { &self.edge_h }
     pub fn edge_v(&self) -> &Matrix<Option<Edge>> { &self.edge_v }
 
+    pub fn cell_mut(&mut self) -> &mut Matrix<Cell> { &mut self.cell }
     pub fn side_mut(&mut self) -> &mut Matrix<Option<Side>> { &mut self.side }
     pub fn edge_h_mut(&mut self) -> &mut Matrix<Option<Edge>> { &mut self.edge_h }
     pub fn edge_v_mut(&mut self) -> &mut Matrix<Option<Edge>> { &mut self.edge_v }

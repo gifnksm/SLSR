@@ -16,7 +16,7 @@ mod side_map;
 mod solver;
 
 fn main() {
-    let mut hint = Hint::from_reader(stdio::stdin()).unwrap();
-    solver::solve(&mut hint);
+    let hint = Hint::from_reader(stdio::stdin()).unwrap();
+    let hint = solver::solve(&hint);
     let _ = pprint::print(&hint);
 }
