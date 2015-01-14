@@ -1,8 +1,11 @@
 use std::{cmp, iter};
 use board::{Board, Edge, Side};
-use connect_map::ConnectMap;
 use geom::{Geom, Point, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
-use side_map::SideMap;
+use solver::connect_map::ConnectMap;
+use solver::side_map::SideMap;
+
+mod connect_map;
+mod side_map;
 
 #[derive(Show)]
 pub struct LogicError;

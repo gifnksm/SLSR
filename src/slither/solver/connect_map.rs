@@ -3,8 +3,8 @@ use std::mem;
 use union_find::{UnionFind, UFValue, Merge};
 use board::{Edge, Side};
 use geom::{Geom, Point, Size, UP, RIGHT, DOWN, LEFT};
-use side_map::SideMap;
 use solver::State;
+use solver::side_map::SideMap;
 
 #[derive(Show)]
 pub struct Area {

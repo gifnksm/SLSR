@@ -10,10 +10,8 @@ use std::io::stdio;
 use board::Board;
 
 mod board;
-mod connect_map;
 mod geom;
 mod pprint;
-mod side_map;
 mod solver;
 
 fn main() {
