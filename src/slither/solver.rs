@@ -2,7 +2,7 @@ use std::{cmp, mem};
 use std::iter::{self, FromIterator};
 use union_find::{UnionFind, UFValue, Merge};
 use geom::{Geom, Point, Size, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
-use hint::Hint;
+use hint::{self, Hint, Edge};
 use side_map::{SideMap, Relation, Side};
 
 fn fill_by_num_place(side_map: &mut SideMap, hint: &Hint) {
@@ -757,8 +757,50 @@ fn solve_by_logic(side_map: &mut SideMap, hint: &Hint) {
     println!("{} {} {}", rev, local_cnt, global_cnt);
 }
 
-pub fn solve(side_map: &mut SideMap, hint: &Hint) {
-    solve_by_logic_once(side_map, hint);
-    solve_by_logic(side_map, hint);
+pub fn solve(hint: &mut Hint) {
+     let mut side_map = SideMap::new(hint.size());
+    solve_by_logic_once(&mut side_map, hint);
+    solve_by_logic(&mut side_map, hint);
+
+    for r in (0 .. hint.row()) {
+        for c in (0 .. hint.column()) {
+            let p = Point(r, c);
+
+            hint.side_mut()[p] = match side_map.get_side(p) {
+                Side::In => Some(hint::Side::In),
+                Side::Out => Some(hint::Side::Out),
+                Side::Unknown => None,
+                Side::Conflict => panic!()
+            };
+            hint.edge_h_mut()[p] = match side_map.get_relation(p, p + UP) {
+                Relation::Same => Some(Edge::Cross),
+                Relation::Different => Some(Edge::Line),
+                Relation::Unknown => None,
+                Relation::Conflict => panic!()
+            };
+            hint.edge_v_mut()[p] = match side_map.get_relation(p, p + LEFT) {
+                Relation::Same => Some(Edge::Cross),
+                Relation::Different => Some(Edge::Line),
+                Relation::Unknown => None,
+                Relation::Conflict => panic!()
+            };
+        }
+        let p = Point(r, hint.column());
+        hint.edge_v_mut()[p] = match side_map.get_relation(p, p + LEFT) {
+            Relation::Same => Some(Edge::Cross),
+            Relation::Different => Some(Edge::Line),
+            Relation::Unknown => None,
+            Relation::Conflict => panic!()
+        };
+    }
+    for c in (0 .. hint.column()) {
+        let p = Point(hint.row(), c);
+        hint.edge_h_mut()[p] = match side_map.get_relation(p, p + UP) {
+            Relation::Same => Some(Edge::Cross),
+            Relation::Different => Some(Edge::Line),
+            Relation::Unknown => None,
+            Relation::Conflict => panic!()
+        };
+    }
 }
 

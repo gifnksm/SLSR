@@ -5,15 +5,16 @@ use std::ops::{Index, IndexMut};
 use geom::{Geom, Point, Size, Matrix};
 
 pub type Cell = Option<u8>;
-#[derive(Clone, Show)]
+#[derive(Copy, Clone, Show, Eq, PartialEq)]
+pub enum Side { In, Out }
+#[derive(Copy, Clone, Show, Eq, PartialEq)]
 pub enum Edge { Line, Cross }
-
-static OUTSIDE: Cell = None;
 
 #[derive(Clone, Show)]
 pub struct Hint {
     size: Size,
     cell: Matrix<Cell>,
+    side: Matrix<Option<Side>>,
     edge_v: Matrix<Option<Edge>>,
     edge_h: Matrix<Option<Edge>>
 }
@@ -22,17 +23,20 @@ impl Hint {
     pub fn new(size: Size) -> Hint {
         assert!(size.0 > 0 && size.1 > 0);
         let cell = Matrix::new_empty(size, None, None);
+        let side = Matrix::new_empty(size, Some(Side::Out), None);
         let edge_v = Matrix::new_empty(Size(size.0, size.1 + 1), Some(Edge::Cross), None);
         let edge_h = Matrix::new_empty(Size(size.0 + 1, size.1), Some(Edge::Cross), None);
-        Hint { size: size, cell: cell, edge_v: edge_v, edge_h: edge_h }
+        Hint { size: size, cell: cell, side: side, edge_v: edge_v, edge_h: edge_h }
     }
 
-    fn with_data(size: Size, cell: Vec<Cell>, edge_v: Vec<Option<Edge>>, edge_h: Vec<Option<Edge>>) -> Hint {
+    fn with_data(size: Size, cell: Vec<Cell>, side: Vec<Option<Side>>,
+                 edge_v: Vec<Option<Edge>>, edge_h: Vec<Option<Edge>>) -> Hint {
         assert!(size.0 > 0 && size.1 > 0);
         let cell = Matrix::new(size, None, cell);
+        let side = Matrix::new(size, Some(Side::Out), side);
         let edge_v = Matrix::new(Size(size.0, size.1 + 1), Some(Edge::Cross), edge_v);
         let edge_h = Matrix::new(Size(size.0 + 1, size.1), Some(Edge::Cross), edge_h);
-        Hint { size: size, cell: cell, edge_v: edge_v, edge_h: edge_h }
+        Hint { size: size, cell: cell, side: side, edge_v: edge_v, edge_h: edge_h }
     }
 
     pub fn from_reader<R: Reader>(reader: R) -> IoResult<Hint> {
@@ -63,13 +67,17 @@ impl Hint {
         let row = mat.len();
         let size = Size(row as i32, column as i32);
 
-        let edge_v = iter::repeat(None).take((row * (column + 1)) as usize).collect();
-        let edge_h = iter::repeat(None).take(((row + 1) * column) as usize).collect();
-        Ok(Hint::with_data(size, mat.concat(), edge_v, edge_h))
+        let side = iter::repeat(None).take(row * column).collect();
+        let edge_v = iter::repeat(None).take(row * (column + 1)).collect();
+        let edge_h = iter::repeat(None).take((row + 1) * column).collect();
+        Ok(Hint::with_data(size, mat.concat(), side, edge_v, edge_h))
     }
 
+    pub fn side(&self) -> &Matrix<Option<Side>> { &self.side }
     pub fn edge_h(&self) -> &Matrix<Option<Edge>> { &self.edge_h }
     pub fn edge_v(&self) -> &Matrix<Option<Edge>> { &self.edge_v }
+
+    pub fn side_mut(&mut self) -> &mut Matrix<Option<Side>> { &mut self.side }
     pub fn edge_h_mut(&mut self) -> &mut Matrix<Option<Edge>> { &mut self.edge_h }
     pub fn edge_v_mut(&mut self) -> &mut Matrix<Option<Edge>> { &mut self.edge_v }
 }
