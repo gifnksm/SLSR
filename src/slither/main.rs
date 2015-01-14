@@ -17,6 +17,6 @@ mod solver;
 
 fn main() {
     let board = Board::from_reader(stdio::stdin()).unwrap();
-    let board = solver::solve(&board);
+    let board = solver::solve(&board).unwrap();
     let _ = pprint::print(&board);
 }

@@ -1,9 +1,27 @@
 use std::{cmp, mem};
 use std::iter::{self, FromIterator};
 use union_find::{UnionFind, UFValue, Merge};
-use board::Board;
+use board::{Board, Edge, Side};
 use geom::{Geom, Point, Size, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
-use side_map::{SideMap, Relation, Side};
+use side_map::SideMap;
+
+#[derive(Show)]
+pub struct LogicError;
+
+#[derive(Copy, Clone, Show, Eq, PartialEq)]
+pub enum State<T> {
+    Fixed(T), Unknown, Conflict
+}
+
+impl<T> State<T> {
+    pub fn into_option(self) -> Result<Option<T>, LogicError> {
+        match self {
+            State::Fixed(st) => Ok(Some(st)),
+            State::Unknown => Ok(None),
+            State::Conflict => Err(LogicError)
+        }
+    }
+}
 
 fn fill_by_num_place(side_map: &mut SideMap) {
     // Corner points
@@ -135,11 +153,11 @@ fn fill_by_line_nums(side_map: &mut SideMap) {
             let mut num_unknown = 0;
 
             for &dir in [UP, RIGHT, DOWN, LEFT].iter() {
-                match side_map.get_relation(p, p + dir) {
-                    Relation::Same      => { sames[num_same] = Some(dir); num_same += 1; }
-                    Relation::Different => { diffs[num_diff] = Some(dir); num_diff += 1; }
-                    Relation::Unknown   => { unknowns[num_unknown] = Some(dir); num_unknown += 1; }
-                    _ => panic!() // FIXME
+                match side_map.get_edge(p, p + dir) {
+                    State::Fixed(Edge::Cross) => { sames[num_same] = Some(dir); num_same += 1; }
+                    State::Fixed(Edge::Line)  => { diffs[num_diff] = Some(dir); num_diff += 1; }
+                    State::Unknown            => { unknowns[num_unknown] = Some(dir); num_unknown += 1; }
+                    State::Conflict => panic!() // FIXME
                 }
             }
 
@@ -165,7 +183,7 @@ fn fill_by_line_nums(side_map: &mut SideMap) {
     }
 }
 
-fn fill_by_relation(side_map: &mut SideMap) {
+fn fill_by_edge(side_map: &mut SideMap) {
     for r in (0 .. side_map.row()) {
         for c in (0 .. side_map.column()) {
             let p = Point(r, c);
@@ -187,8 +205,8 @@ fn fill_by_relation(side_map: &mut SideMap) {
                     }
                 }
 
-                match side_map.get_relation(u, r) {
-                    Relation::Same => {
+                match side_map.get_edge(u, r) {
+                    State::Fixed(Edge::Cross) => {
                         match side_map.hint()[p] {
                             Some(1) => {
                                 side_map.set_same(p, u);
@@ -207,7 +225,7 @@ fn fill_by_relation(side_map: &mut SideMap) {
                             _ => {}
                         }
                     }
-                    Relation::Different => {
+                    State::Fixed(Edge::Line) => {
                         match side_map.hint()[p] {
                             Some(1) => {
                                 side_map.set_same(p, l);
@@ -223,32 +241,32 @@ fn fill_by_relation(side_map: &mut SideMap) {
                             _ => {}
                         }
                     }
-                    Relation::Unknown => {}
-                    Relation::Conflict => panic!()
+                    State::Unknown => {}
+                    State::Conflict => panic!()
                 }
 
-                match side_map.get_relation(u, ur) {
-                    Relation::Same => {
-                        if side_map.hint()[p] == Some(3) && 
+                match side_map.get_edge(u, ur) {
+                    State::Fixed(Edge::Cross) => {
+                        if side_map.hint()[p] == Some(3) &&
                             side_map.hint()[r] == Some(1) {
                             side_map.set_different(p, u);
                             side_map.set_same(r, r + rot * RIGHT);
                             side_map.set_same(r, r + rot * DOWN);
                         }
                     }
-                    Relation::Different => {
+                    State::Fixed(Edge::Line) => {
                         if side_map.hint()[p] == Some(3) {
                             side_map.set_different(p, d);
                             side_map.set_different(p, l);
                             side_map.set_same(ur, r);
                         }
                     }
-                    Relation::Unknown => {}
-                    Relation::Conflict => panic!()
+                    State::Unknown => {}
+                    State::Conflict => panic!()
                 }
 
-                match side_map.get_relation(u, ul) {
-                    Relation::Same => {
+                match side_map.get_edge(u, ul) {
+                    State::Fixed(Edge::Cross) => {
                         if side_map.hint()[p] == Some(3) &&
                             side_map.hint()[l] == Some(1) {
                             side_map.set_different(p, u);
@@ -256,15 +274,15 @@ fn fill_by_relation(side_map: &mut SideMap) {
                             side_map.set_same(l, l + rot * DOWN);
                         }
                     }
-                    Relation::Different => {
+                    State::Fixed(Edge::Line) => {
                         if side_map.hint()[p] == Some(3) {
                             side_map.set_different(p, d);
                             side_map.set_different(p, r);
                             side_map.set_same(ul, l);
                         }
                     }
-                    Relation::Unknown => {}
-                    Relation::Conflict => panic!()
+                    State::Unknown => {}
+                    State::Conflict => panic!()
                 }
             }
 
@@ -275,8 +293,8 @@ fn fill_by_relation(side_map: &mut SideMap) {
                 let l = p + rot * LEFT;
                 let dr = p + rot * (DOWN + RIGHT);
 
-                match side_map.get_relation(u, d) {
-                    Relation::Same => {
+                match side_map.get_edge(u, d) {
+                    State::Fixed(Edge::Cross) => {
                         match side_map.hint()[p] {
                             Some(1) => {
                                 side_map.set_same(p, u);
@@ -293,7 +311,7 @@ fn fill_by_relation(side_map: &mut SideMap) {
                             _ => {}
                         }
                     }
-                    Relation::Different => {
+                    State::Fixed(Edge::Line) => {
                         match side_map.hint()[p] {
                             Some(1) => {
                                 side_map.set_same(p, l);
@@ -309,8 +327,8 @@ fn fill_by_relation(side_map: &mut SideMap) {
                             _ => {}
                         }
                     }
-                    Relation::Unknown => {}
-                    Relation::Conflict => panic!()
+                    State::Unknown => {}
+                    State::Conflict => panic!()
                 }
 
                 if (side_map.is_different(p, r) || side_map.is_different(p, d)) &&
@@ -325,7 +343,7 @@ fn fill_by_relation(side_map: &mut SideMap) {
 #[derive(Show)]
 struct Area {
     coord: Point,
-    side: Side,
+    side: State<Side>,
     unknown_rel: Vec<Point>,
     sum_of_hint: u32,
     size: usize
@@ -339,14 +357,15 @@ impl UFValue for Area {
             rval.coord
         };
         let side = match (lval.side, rval.side) {
-            (Side::In, Side::In)       => Side::In,
-            (Side::In, Side::Unknown)  => Side::In,
-            (Side::In, _)              => Side::Conflict,
-            (Side::Out, Side::Out)     => Side::Out,
-            (Side::Out, Side::Unknown) => Side::Out,
-            (Side::Out, _)             => Side::Conflict,
-            (Side::Unknown, x)         => x,
-            (Side::Conflict, _)        => Side::Conflict,
+            (State::Conflict, _) | (_, State::Conflict) => State::Conflict,
+            (State::Unknown, x) | (x, State::Unknown) => x,
+            (State::Fixed(l), State::Fixed(r)) => {
+                if l == r {
+                    State::Fixed(l)
+                } else {
+                    State::Conflict
+                }
+            }
         };
         let area = Area {
             coord: coord,
@@ -394,7 +413,7 @@ impl ConnectMap {
             let mut rel = vec![];
             if side_map.contains(p) {
                 for &r in [UP, RIGHT, DOWN, LEFT].iter() {
-                    if side_map.get_relation(p, p + r) == Relation::Unknown {
+                    if side_map.get_edge(p, p + r) == State::Unknown {
                         rel.push(p + r);
                     }
                 }
@@ -402,7 +421,7 @@ impl ConnectMap {
                 for r in (0 .. side_map.row()) {
                     for &c in [0, side_map.column() - 1].iter() {
                         let p2 = Point(r, c);
-                        if side_map.get_relation(p, p2) == Relation::Unknown {
+                        if side_map.get_edge(p, p2) == State::Unknown {
                             rel.push(p2);
                         }
                     }
@@ -410,7 +429,7 @@ impl ConnectMap {
                 for c in (0 .. side_map.column()) {
                     for &r in [0, side_map.row() - 1].iter() {
                         let p2 = Point(r, c);
-                        if side_map.get_relation(p, p2) == Relation::Unknown {
+                        if side_map.get_edge(p, p2) == State::Unknown {
                             rel.push(p2);
                         }
                     }
@@ -433,7 +452,7 @@ impl ConnectMap {
                 let p = Point(r, c);
                 for &r in [UP, RIGHT, DOWN, LEFT].iter() {
                     let p2 = p + r;
-                    if side_map.get_relation(p, p2) == Relation::Same {
+                    if side_map.get_edge(p, p2) == State::Fixed(Edge::Cross) {
                         conn_map.union(p, p2);
                     }
                 }
@@ -477,18 +496,18 @@ impl Geom for ConnectMap {
     fn size(&self) -> Size { self.size }
 }
 
-fn filter_rel(side_map: &mut SideMap, p: Point, rel: Vec<Point>)
-              -> (Vec<Point>, Vec<Point>)
+fn filter_edge(side_map: &mut SideMap, p: Point, rel: Vec<Point>)
+               -> (Vec<Point>, Vec<Point>)
 {
     let mut unknown = vec![];
     let mut same = vec![];
 
     for p2 in rel.into_iter() {
-        match side_map.get_relation(p, p2) {
-            Relation::Same => same.push(p2),
-            Relation::Different => {}
-            Relation::Unknown => unknown.push(p2),
-            Relation::Conflict => panic!()
+        match side_map.get_edge(p, p2) {
+            State::Fixed(Edge::Cross) => same.push(p2),
+            State::Fixed(Edge::Line) => {}
+            State::Unknown => unknown.push(p2),
+            State::Conflict => panic!()
         }
     }
 
@@ -506,7 +525,7 @@ fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: Point) -> b
         mem::replace(&mut a.unknown_rel, vec![])
     }.map_in_place(|p| conn_map.get(p).coord);
 
-    let (same, unknown) = filter_rel(side_map, p, rel);
+    let (same, unknown) = filter_edge(side_map, p, rel);
     {
         let a = conn_map.get_mut(p);
         a.side = side_map.get_side(p);
@@ -520,7 +539,8 @@ fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: Point) -> b
     ret
 }
 
-fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side) -> (Vec<Point>, Vec<Vec<usize>>)
+fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
+                     -> (Vec<Point>, Vec<Vec<usize>>)
 {
     let mut pts = vec![];
     if filter_side != Side::Out {
@@ -531,7 +551,7 @@ fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side) -> (Vec<Point
         for c in (0 .. conn_map.column()) {
             let p = Point(r, c);
             let a = conn_map.get(p);
-            if a.coord == p && a.side != filter_side {
+            if a.coord == p && a.side != State::Fixed(filter_side) {
                 pts.push(p);
             }
         }
@@ -657,7 +677,7 @@ fn splits(graph: &[Vec<usize>], v: usize,
 
     fn dfs(graph: &[Vec<usize>], v: usize, visited: &mut [bool],
            conn_map: &mut ConnectMap, pts: &[Point], side: Side) -> bool {
-        let mut contains = conn_map.get(pts[v]).side == side;
+        let mut contains = conn_map.get(pts[v]).side == State::Fixed(side);
         visited[v] = true;
 
         for &u in graph[v].iter() {
@@ -705,7 +725,7 @@ fn fill_by_connection(side_map: &mut SideMap) {
             for &v in arts.iter() {
                 let p = pts[v];
 
-                if conn_map.get(p).side != set_side &&
+                if conn_map.get(p).side != State::Fixed(set_side) &&
                     splits(&graph[], v, &mut conn_map, &pts[], set_side) {
                     side_map.set_side(p, set_side);
                 }
@@ -727,7 +747,7 @@ fn solve_by_logic_once(side_map: &mut SideMap) {
 
 fn solve_by_local_property(side_map: &mut SideMap) {
     fill_by_line_nums(side_map);
-    fill_by_relation(side_map);
+    fill_by_edge(side_map);
 }
 
 fn solve_by_global_property(side_map: &mut SideMap) {
@@ -759,7 +779,7 @@ fn solve_by_logic(side_map: &mut SideMap) {
     println!("{} {} {}", rev, local_cnt, global_cnt);
 }
 
-pub fn solve(board: &Board) -> Board {
+pub fn solve(board: &Board) -> Result<Board, LogicError> {
     let mut side_map = SideMap::from_board(board);
 
     solve_by_logic_once(&mut side_map);

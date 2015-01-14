@@ -1,5 +1,6 @@
 use union_find::UnionFind;
-use board::{self, Hint, Edge, Board};
+use solver::{State, LogicError};
+use board::{Board, Hint, Edge, Side};
 use geom::{Geom, Point, Size, Matrix, LEFT, UP};
 
 const OUTSIDE_CELL_ID: CellId = CellId(0);
@@ -10,16 +11,6 @@ struct CellId(usize);
 impl CellId {
     fn key0(self) -> usize { self.0 * 2 }
     fn key1(self) -> usize { self.0 * 2 + 1 }
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Show)]
-pub enum Relation {
-    Same, Different, Unknown, Conflict
-}
-
-#[derive(Copy, Clone, Eq, PartialEq, Show)]
-pub enum Side {
-    In, Out, Unknown, Conflict
 }
 
 #[derive(Clone)]
@@ -77,88 +68,48 @@ impl SideMap {
             for c in (0 .. board.column()) {
                 let p = Point(r, c);
                 if let Some(side) = board.side()[p] {
-                    match side {
-                        board::Side::In => map.set_inside(p),
-                        board::Side::Out => map.set_outside(p)
-                    };
+                    map.set_side(p, side);
                 }
                 if let Some(edge) = board.edge_h()[p] {
-                    match edge {
-                        Edge::Cross => map.set_same(p, p + UP),
-                        Edge::Line => map.set_different(p, p + UP)
-                    };
+                    map.set_edge(p, p + UP, edge);
                 }
                 if let Some(edge) = board.edge_v()[p] {
-                    match edge {
-                        Edge::Cross => map.set_same(p, p + LEFT),
-                        Edge::Line => map.set_different(p, p + LEFT)
-                    };
+                    map.set_edge(p, p + LEFT, edge);
                 }
             }
             let p = Point(r, board.column());
             if let Some(edge) = board.edge_v()[p] {
-                match edge {
-                    Edge::Cross => map.set_same(p, p + LEFT),
-                    Edge::Line => map.set_different(p, p + LEFT)
-                };
+                map.set_edge(p, p + LEFT, edge);
             }
         }
         for c in (0 .. board.column()) {
             let p = Point(board.row(), c);
             if let Some(edge) = board.edge_h()[p] {
-                match edge {
-                    Edge::Cross => map.set_same(p, p + UP),
-                    Edge::Line => map.set_different(p, p + UP)
-                };
+                map.set_edge(p, p + UP, edge);
             }
         }
         map
     }
 
-    pub fn to_board(&mut self) -> Board {
+    pub fn to_board(&mut self) -> Result<Board, LogicError> {
         let mut board = Board::new(self.size());
         for r in (0 .. self.row()) {
             for c in (0 .. self.column()) {
                 let p = Point(r, c);
 
                 board[p] = self.hint[p];
-                board.side_mut()[p] = match self.get_side(p) {
-                    Side::In => Some(board::Side::In),
-                    Side::Out => Some(board::Side::Out),
-                    Side::Unknown => None,
-                    Side::Conflict => panic!()
-                };
-                board.edge_h_mut()[p] = match self.get_relation(p, p + UP) {
-                    Relation::Same => Some(Edge::Cross),
-                    Relation::Different => Some(Edge::Line),
-                    Relation::Unknown => None,
-                    Relation::Conflict => panic!()
-                };
-                board.edge_v_mut()[p] = match self.get_relation(p, p + LEFT) {
-                    Relation::Same => Some(Edge::Cross),
-                    Relation::Different => Some(Edge::Line),
-                    Relation::Unknown => None,
-                    Relation::Conflict => panic!()
-                };
+                board.side_mut()[p] = try!(self.get_side(p).into_option());
+                board.edge_h_mut()[p] = try!(self.get_edge(p, p + UP).into_option());
+                board.edge_v_mut()[p] = try!(self.get_edge(p, p + LEFT).into_option());
             }
             let p = Point(r, board.column());
-            board.edge_v_mut()[p] = match self.get_relation(p, p + LEFT) {
-                Relation::Same => Some(Edge::Cross),
-                Relation::Different => Some(Edge::Line),
-                Relation::Unknown => None,
-                Relation::Conflict => panic!()
-            };
+            board.edge_v_mut()[p] = try!(self.get_edge(p, p + LEFT).into_option());
         }
         for c in (0 .. board.column()) {
             let p = Point(board.row(), c);
-            board.edge_h_mut()[p] = match self.get_relation(p, p + UP) {
-                Relation::Same => Some(Edge::Cross),
-                Relation::Different => Some(Edge::Line),
-                Relation::Unknown => None,
-                Relation::Conflict => panic!()
-            };
+            board.edge_h_mut()[p] = try!(self.get_edge(p, p + UP).into_option());
         }
-        board
+        Ok(board)
     }
 
     fn is_outside(&mut self, p: Point) -> bool {
@@ -180,20 +131,20 @@ impl SideMap {
         self.inner.is_different(i, j)
     }
 
-    pub fn get_side(&mut self, p: Point) -> Side {
+    pub fn get_side(&mut self, p: Point) -> State<Side> {
         match (self.is_inside(p), self.is_outside(p)) {
-            (false, false) => Side::Unknown,
-            (true,  false) => Side::In,
-            (false, true)  => Side::Out,
-            (true,  true)  => Side::Conflict
+            (false, false) => State::Unknown,
+            (true,  false) => State::Fixed(Side::In),
+            (false, true)  => State::Fixed(Side::Out),
+            (true,  true)  => State::Conflict
         }
     }
-    pub fn get_relation(&mut self, p0: Point, p1: Point) -> Relation {
+    pub fn get_edge(&mut self, p0: Point, p1: Point) -> State<Edge> {
         match (self.is_same(p0, p1), self.is_different(p0, p1)) {
-            (false, false) => Relation::Unknown,
-            (true,  false) => Relation::Same,
-            (false, true)  => Relation::Different,
-            (true,  true)  => Relation::Conflict
+            (false, false) => State::Unknown,
+            (true,  false) => State::Fixed(Edge::Cross),
+            (false, true)  => State::Fixed(Edge::Line),
+            (true,  true)  => State::Conflict
         }
     }
 
@@ -207,10 +158,8 @@ impl SideMap {
     }
     pub fn set_side(&mut self, p: Point, ty: Side) -> bool {
         match ty {
-            Side::In       => self.set_inside(p),
-            Side::Out      => self.set_outside(p),
-            Side::Unknown  => panic!(),
-            Side::Conflict => panic!()
+            Side::In  => self.set_inside(p),
+            Side::Out => self.set_outside(p),
         }
     }
 
@@ -224,12 +173,10 @@ impl SideMap {
         let j = self.cell_id(p1);
         self.inner.set_different(i, j)
     }
-    pub fn set_relation(&mut self, p0: Point, p1: Point, rel: Relation) -> bool {
-        match rel {
-            Relation::Same      => self.set_same(p0, p1),
-            Relation::Different => self.set_different(p0, p1),
-            Relation::Unknown   => panic!(),
-            Relation::Conflict  => panic!()
+    pub fn set_edge(&mut self, p0: Point, p1: Point, edge: Edge) -> bool {
+        match edge {
+            Edge::Cross => self.set_same(p0, p1),
+            Edge::Line  => self.set_different(p0, p1)
         }
     }
 
@@ -252,11 +199,12 @@ impl Geom for SideMap {
 #[cfg(test)]
 mod tests {
     use super::SideMap;
-    use geom::{Size, Point};
+    use geom::{Size, Point, Matrix};
 
     #[test]
     fn set_and_check() {
-        let mut side_map = SideMap::new(Size(10, 10));
+        let hint = Matrix::new_empty(Size(10, 10), None, None);
+        let mut side_map = SideMap::new(hint);
         let p0 = Point(0, 0);
         let p1 = Point(1, 1);
         let p2 = Point(2, 2);
