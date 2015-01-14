@@ -84,12 +84,6 @@ impl SideMap {
         let j = self.cell_id(p1);
         self.inner.is_same(i, j)
     }
-    pub fn is_same_all(&mut self, ps: &[Point]) -> bool {
-        match ps {
-            [] => true,
-            [p0, ps..] => ps.iter().all(|&p| self.is_same(p0, p))
-        }
-    }
     pub fn is_different(&mut self, p0: Point, p1: Point) -> bool {
         let i = self.cell_id(p0);
         let j = self.cell_id(p1);

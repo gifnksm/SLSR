@@ -123,7 +123,6 @@ impl<'a> Printer<'a> {
     }
 
     fn corner(&mut self, p: Point) -> IoResult<()> {
-        let ps = &[p, p + UP, p + LEFT, p + UP + LEFT];
         let is_same_all =
             (self.hint.edge_h()[p] == Some(Edge::Cross)) &&
             (self.hint.edge_h()[p + LEFT] == Some(Edge::Cross)) &&
