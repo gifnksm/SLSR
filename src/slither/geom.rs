@@ -1,4 +1,5 @@
-use std::ops::{Add, Mul};
+use std::iter;
+use std::ops::{Add, Mul, Index, IndexMut};
 
 #[derive(Clone, Copy, Show, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Point(pub i32, pub i32);
@@ -77,6 +78,56 @@ pub trait Geom {
 impl Geom for Size {
     fn size(&self) -> Size { *self }
 }
+
+#[derive(Clone, Show, Eq, PartialEq)]
+pub struct Matrix<T> {
+    size: Size,
+    outside: T,
+    data: Vec<T>
+}
+
+impl<T> Matrix<T> {
+    pub fn new(size: Size, outside: T, data: Vec<T>) -> Matrix<T> {
+        assert_eq!((size.0 * size.1) as usize, data.len());
+        Matrix {
+            size: size, outside: outside, data: data
+        }
+    }
+
+    pub fn new_empty(size: Size, outside: T, init: T) -> Matrix<T>
+        where T: Clone
+    {
+        let data = iter::repeat(init).take((size.0 * size.1) as usize).collect();
+        Matrix::new(size, outside, data)
+    }
+}
+
+impl<T> Geom for Matrix<T> {
+    fn size(&self) -> Size { self.size }
+}
+
+impl<T> Index<Point> for Matrix<T> {
+    type Output = T;
+
+    fn index(&self, p: &Point) -> &T {
+        if self.contains(*p) {
+            &self.data[self.point_to_index(*p)]
+        } else {
+            &self.outside
+        }
+    }
+}
+
+impl<T> IndexMut<Point> for Matrix<T> {
+    type Output = T;
+
+    fn index_mut(&mut self, p: &Point) -> &mut T {
+        assert!(self.contains(*p));
+        let idx = self.point_to_index(*p);
+        &mut self.data[idx]
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
