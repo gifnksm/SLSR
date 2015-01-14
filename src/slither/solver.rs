@@ -1,8 +1,8 @@
 use std::{cmp, mem};
 use std::iter::{self, FromIterator};
 use union_find::{UnionFind, UFValue, Merge};
+use board::Board;
 use geom::{Geom, Point, Size, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
-use hint::Hint;
 use side_map::{SideMap, Relation, Side};
 
 fn fill_by_num_place(side_map: &mut SideMap) {
@@ -759,12 +759,12 @@ fn solve_by_logic(side_map: &mut SideMap) {
     println!("{} {} {}", rev, local_cnt, global_cnt);
 }
 
-pub fn solve(hint: &Hint) -> Hint {
-    let mut side_map = SideMap::from_hint(hint);
+pub fn solve(board: &Board) -> Board {
+    let mut side_map = SideMap::from_board(board);
 
     solve_by_logic_once(&mut side_map);
     solve_by_logic(&mut side_map);
 
-    side_map.to_hint()
+    side_map.to_board()
 }
 

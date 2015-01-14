@@ -1,8 +1,8 @@
 use std::fmt;
 use std::io::IoResult;
 use std::io::stdio::{self, StdWriter};
+use board::{Board, Edge, Side};
 use geom::{Geom, Point, UP, LEFT};
-use hint::{Hint, Edge, Side};
 use term::{self, Terminal, WriterWrapper};
 use term::color::{self, Color};
 
@@ -21,11 +21,11 @@ fn side_to_color(ty: Option<Side>) -> (Color, Color) {
 
 struct Printer<'a> {
     output: Output<StdWriter>,
-    hint: &'a Hint
+    board: &'a Board
 }
 
 impl<'a> Printer<'a> {
-    fn new(hint: &'a Hint) -> Printer<'a> {
+    fn new(board: &'a Board) -> Printer<'a> {
         let output = if stdio::stdout_raw().isatty() {
             match term::stdout() {
                 Some(t) => Output::Pretty(t),
@@ -34,7 +34,7 @@ impl<'a> Printer<'a> {
         } else {
             Output::Raw(stdio::stdout_raw())
         };
-        Printer { output: output, hint: hint }
+        Printer { output: output, board: board }
     }
 
     fn write_pretty(&mut self, ty: Option<Side>, s: &str) -> IoResult<()> {
@@ -78,7 +78,7 @@ impl<'a> Printer<'a> {
     }
 
     fn print(&mut self) -> IoResult<()> {
-        let row = self.hint.row();
+        let row = self.board.row();
         try!(self.label_row());
         for y in (0 .. row) {
             try!(self.edge_row(y));
@@ -91,7 +91,7 @@ impl<'a> Printer<'a> {
 
     fn label_row(&mut self) -> IoResult<()> {
         try!(self.write_plain("  "));
-        for x in 0 .. self.hint.column() {
+        for x in 0 .. self.board.column() {
             try!(self.write_plain_fmt(format_args!(" {:2}", x)));
         }
         try!(self.write_plain("\n"));
@@ -99,7 +99,7 @@ impl<'a> Printer<'a> {
     }
 
     fn edge_row(&mut self, y: i32) -> IoResult<()> {
-        let col = self.hint.column();
+        let col = self.board.column();
         try!(self.write_plain("  "));
         for x in (0 .. col) {
             try!(self.corner(Point(y, x)));
@@ -111,7 +111,7 @@ impl<'a> Printer<'a> {
     }
 
     fn cell_row(&mut self, y: i32) -> IoResult<()> {
-        let col = self.hint.column();
+        let col = self.board.column();
         try!(self.write_plain_fmt(format_args!("{:2}", y)));
         for x in (0 .. col) {
             try!(self.edge_v(Point(y, x)));
@@ -124,13 +124,13 @@ impl<'a> Printer<'a> {
 
     fn corner(&mut self, p: Point) -> IoResult<()> {
         let is_same_all =
-            (self.hint.edge_h()[p] == Some(Edge::Cross)) &&
-            (self.hint.edge_h()[p + LEFT] == Some(Edge::Cross)) &&
-            (self.hint.edge_v()[p] == Some((Edge::Cross))) &&
-            (self.hint.edge_v()[p + UP] == Some((Edge::Cross)));
+            (self.board.edge_h()[p] == Some(Edge::Cross)) &&
+            (self.board.edge_h()[p + LEFT] == Some(Edge::Cross)) &&
+            (self.board.edge_v()[p] == Some((Edge::Cross))) &&
+            (self.board.edge_v()[p + UP] == Some((Edge::Cross)));
 
         let ty = if is_same_all {
-            self.hint.side()[p]
+            self.board.side()[p]
         } else {
             None
         };
@@ -139,8 +139,8 @@ impl<'a> Printer<'a> {
     }
 
     fn edge_h(&mut self, p: Point) -> IoResult<()> {
-        let (s, ty) = match self.hint.edge_h()[p] {
-            Some(Edge::Cross) => (" ", self.hint.side()[p]),
+        let (s, ty) = match self.board.edge_h()[p] {
+            Some(Edge::Cross) => (" ", self.board.side()[p]),
             Some(Edge::Line)  => ("-", None),
             None => ("~", None)
         };
@@ -149,8 +149,8 @@ impl<'a> Printer<'a> {
     }
 
     fn edge_v(&mut self, p: Point) -> IoResult<()> {
-        let (s, ty) = match self.hint.edge_v()[p] {
-            Some(Edge::Cross) => (" ", self.hint.side()[p]),
+        let (s, ty) = match self.board.edge_v()[p] {
+            Some(Edge::Cross) => (" ", self.board.side()[p]),
             Some(Edge::Line)  => ("|", None),
             None => ("?", None)
         };
@@ -159,8 +159,8 @@ impl<'a> Printer<'a> {
     }
 
     fn cell(&mut self, p: Point) -> IoResult<()> {
-        let ty = self.hint.side()[p];
-        match self.hint[p] {
+        let ty = self.board.side()[p];
+        match self.board[p] {
             Some(x) => try!(self.write_pretty_fmt(ty, format_args!("{} ", x))),
             None    => try!(self.write_pretty(ty, "  "))
         }
@@ -168,7 +168,7 @@ impl<'a> Printer<'a> {
     }
 }
 
-pub fn print(hint: &Hint) -> IoResult<()> {
-    Printer::new(hint).print()
+pub fn print(board: &Board) -> IoResult<()> {
+    Printer::new(board).print()
 }
 

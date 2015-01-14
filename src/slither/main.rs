@@ -7,16 +7,16 @@ extern crate "union-find" as union_find;
 extern crate term;
 
 use std::io::stdio;
-use hint::Hint;
+use board::Board;
 
+mod board;
 mod geom;
-mod hint;
 mod pprint;
 mod side_map;
 mod solver;
 
 fn main() {
-    let hint = Hint::from_reader(stdio::stdin()).unwrap();
-    let hint = solver::solve(&hint);
-    let _ = pprint::print(&hint);
+    let board = Board::from_reader(stdio::stdin()).unwrap();
+    let board = solver::solve(&board);
+    let _ = pprint::print(&board);
 }
