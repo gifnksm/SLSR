@@ -490,9 +490,7 @@ fn splits(graph: &[Vec<usize>], v: usize,
     contain_cnt > 1
 }
 
-fn fill_by_connection(side_map: &mut SideMap) {
-    let mut conn_map = ConnectMap::from_side_map(side_map);
-
+fn fill_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap) {
     let mut rev = side_map.revision();
     loop {
         conn_map.sync(side_map);
@@ -504,10 +502,10 @@ fn fill_by_connection(side_map: &mut SideMap) {
                 Side::In
             };
 
-            let (pts, graph) = create_conn_graph(&mut conn_map, filter_side);
+            let (pts, graph) = create_conn_graph(conn_map, filter_side);
             let (arts, visited) = get_articulation(&graph[], 0);
 
-            let disconn = find_disconn_area(&mut conn_map, &pts[], &visited[]);
+            let disconn = find_disconn_area(conn_map, &pts[], &visited[]);
             for &v in disconn.iter() {
                 side_map.set_side(pts[v], filter_side);
             }
@@ -515,7 +513,7 @@ fn fill_by_connection(side_map: &mut SideMap) {
                 let p = pts[v];
 
                 if conn_map.get(p).side() != State::Fixed(set_side) &&
-                    splits(&graph[], v, &mut conn_map, &pts[], set_side) {
+                    splits(&graph[], v, conn_map, &pts[], set_side) {
                     side_map.set_side(p, set_side);
                 }
             }
@@ -539,11 +537,11 @@ fn solve_by_local_property(side_map: &mut SideMap) {
     fill_by_edge(side_map);
 }
 
-fn solve_by_global_property(side_map: &mut SideMap) {
-    fill_by_connection(side_map);
+fn solve_by_global_property(side_map: &mut SideMap, conn_map: &mut ConnectMap) {
+    fill_by_connection(side_map, conn_map);
 }
 
-fn solve_by_logic(side_map: &mut SideMap) {
+fn solve_by_logic(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>) {
     let mut local_cnt = 0;
     let mut global_cnt = 0;
     let mut rev = side_map.revision();
@@ -556,8 +554,11 @@ fn solve_by_logic(side_map: &mut SideMap) {
             continue
         }
 
+        if conn_map.is_none() {
+            *conn_map = Some(ConnectMap::from_side_map(side_map));
+        }
         global_cnt += 1;
-        solve_by_global_property(side_map);
+        solve_by_global_property(side_map, conn_map.as_mut().unwrap());
         if side_map.revision() == rev {
             break;
         }
@@ -570,9 +571,10 @@ fn solve_by_logic(side_map: &mut SideMap) {
 
 pub fn solve(board: &Board) -> Result<Board, LogicError> {
     let mut side_map = SideMap::from_board(board);
+    let mut conn_map = None;
 
     solve_by_logic_once(&mut side_map);
-    solve_by_logic(&mut side_map);
+    solve_by_logic(&mut side_map, &mut conn_map);
 
     side_map.to_board()
 }
