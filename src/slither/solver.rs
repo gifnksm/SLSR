@@ -1,8 +1,7 @@
-use std::{cmp, mem};
-use std::iter::{self, FromIterator};
-use union_find::{UnionFind, UFValue, Merge};
+use std::{cmp, iter};
 use board::{Board, Edge, Side};
-use geom::{Geom, Point, Size, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
+use connect_map::ConnectMap;
+use geom::{Geom, Point, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
 use side_map::SideMap;
 
 #[derive(Show)]
@@ -340,205 +339,6 @@ fn fill_by_edge(side_map: &mut SideMap) {
     }
 }
 
-#[derive(Show)]
-struct Area {
-    coord: Point,
-    side: State<Side>,
-    unknown_rel: Vec<Point>,
-    sum_of_hint: u32,
-    size: usize
-}
-
-impl UFValue for Area {
-    fn merge(lval: Area, rval: Area) -> Merge<Area> {
-        let coord = if lval.coord < rval.coord {
-            lval.coord
-        } else {
-            rval.coord
-        };
-        let side = match (lval.side, rval.side) {
-            (State::Conflict, _) | (_, State::Conflict) => State::Conflict,
-            (State::Unknown, x) | (x, State::Unknown) => x,
-            (State::Fixed(l), State::Fixed(r)) => {
-                if l == r {
-                    State::Fixed(l)
-                } else {
-                    State::Conflict
-                }
-            }
-        };
-        let area = Area {
-            coord: coord,
-            side: side,
-            unknown_rel: lval.unknown_rel + &rval.unknown_rel[],
-            sum_of_hint: lval.sum_of_hint + rval.sum_of_hint,
-            size: lval.size + rval.size
-        };
-        if lval.coord < rval.coord {
-            Merge::Left(area)
-        } else {
-            Merge::Right(area)
-        }
-    }
-}
-
-#[derive(Show)]
-struct ConnectMap {
-    size: Size,
-    uf: UnionFind<Area>
-}
-
-impl ConnectMap {
-    fn new<F>(size: Size, mut f: F) -> ConnectMap
-        where F: FnMut(Point) -> Area
-    {
-        let len = (size.0 * size.1 + 1) as usize;
-        ConnectMap {
-            size: size,
-            uf: FromIterator::from_iter((0 .. len).map(|i| {
-                let p = if i == 0 {
-                    Point(-1, -1)
-                } else {
-                    size.index_to_point(i - 1)
-                };
-                f(p)
-            }))
-        }
-    }
-
-    fn from_side_map(side_map: &mut SideMap) -> ConnectMap {
-        let mut conn_map = ConnectMap::new(side_map.size(), |p| {
-            let sum = side_map.hint()[p].unwrap_or(0);
-
-            let mut rel = vec![];
-            if side_map.contains(p) {
-                for &r in [UP, RIGHT, DOWN, LEFT].iter() {
-                    if side_map.get_edge(p, p + r) == State::Unknown {
-                        rel.push(p + r);
-                    }
-                }
-            } else {
-                for r in (0 .. side_map.row()) {
-                    for &c in [0, side_map.column() - 1].iter() {
-                        let p2 = Point(r, c);
-                        if side_map.get_edge(p, p2) == State::Unknown {
-                            rel.push(p2);
-                        }
-                    }
-                }
-                for c in (0 .. side_map.column()) {
-                    for &r in [0, side_map.row() - 1].iter() {
-                        let p2 = Point(r, c);
-                        if side_map.get_edge(p, p2) == State::Unknown {
-                            rel.push(p2);
-                        }
-                    }
-                }
-            }
-            rel.sort();
-            rel.dedup();
-
-            Area {
-                coord: p,
-                side: side_map.get_side(p),
-                unknown_rel: rel,
-                sum_of_hint: sum as u32,
-                size: 1
-            }
-        });
-
-        for r in (0 .. side_map.row()) {
-            for c in (0 .. side_map.column()) {
-                let p = Point(r, c);
-                for &r in [UP, RIGHT, DOWN, LEFT].iter() {
-                    let p2 = p + r;
-                    if side_map.get_edge(p, p2) == State::Fixed(Edge::Cross) {
-                        conn_map.union(p, p2);
-                    }
-                }
-            }
-        }
-        conn_map
-    }
-
-    fn union(&mut self, p0: Point, p1: Point) -> bool {
-        let i = self.cell_id(p0);
-        let j = self.cell_id(p1);
-        self.uf.union(i, j)
-    }
-
-    fn find(&mut self, p0: Point, p1: Point) -> bool {
-        let i = self.cell_id(p0);
-        let j = self.cell_id(p1);
-        self.uf.find(i, j)
-    }
-
-    fn get(&mut self, p: Point) -> &Area {
-        let i = self.cell_id(p);
-        self.uf.get(i)
-    }
-
-    fn get_mut(&mut self, p: Point) -> &mut Area {
-        let i = self.cell_id(p);
-        self.uf.get_mut(i)
-    }
-
-    fn cell_id(&self, p: Point) -> usize {
-        if self.contains(p) {
-            self.point_to_index(p) + 1
-        } else {
-            0
-        }
-    }
-}
-
-impl Geom for ConnectMap {
-    fn size(&self) -> Size { self.size }
-}
-
-fn filter_edge(side_map: &mut SideMap, p: Point, rel: Vec<Point>)
-               -> (Vec<Point>, Vec<Point>)
-{
-    let mut unknown = vec![];
-    let mut same = vec![];
-
-    for p2 in rel.into_iter() {
-        match side_map.get_edge(p, p2) {
-            State::Fixed(Edge::Cross) => same.push(p2),
-            State::Fixed(Edge::Line) => {}
-            State::Unknown => unknown.push(p2),
-            State::Conflict => panic!()
-        }
-    }
-
-    unknown.sort();
-    unknown.dedup();
-    same.sort();
-    same.dedup();
-    (same, unknown)
-}
-
-fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: Point) -> bool {
-    let rel = {
-        let a = conn_map.get_mut(p);
-        if a.coord != p { return false }
-        mem::replace(&mut a.unknown_rel, vec![])
-    }.map_in_place(|p| conn_map.get(p).coord);
-
-    let (same, unknown) = filter_edge(side_map, p, rel);
-    {
-        let a = conn_map.get_mut(p);
-        a.side = side_map.get_side(p);
-        a.unknown_rel = unknown;
-    }
-
-    let mut ret = false;
-    for &p2 in same.iter() {
-        ret |= conn_map.union(p, p2);
-    }
-    ret
-}
-
 fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
                      -> (Vec<Point>, Vec<Vec<usize>>)
 {
@@ -551,7 +351,7 @@ fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
         for c in (0 .. conn_map.column()) {
             let p = Point(r, c);
             let a = conn_map.get(p);
-            if a.coord == p && a.side != State::Fixed(filter_side) {
+            if a.coord() == p && a.side() != State::Fixed(filter_side) {
                 pts.push(p);
             }
         }
@@ -560,7 +360,7 @@ fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
     let mut graph = vec![];
     for &p in pts.iter() {
         let a = conn_map.get(p);
-        let edges = a.unknown_rel.iter()
+        let edges = a.unknown_edge().iter()
             .filter_map(|&p2| pts.position_elem(&p2))
             .collect::<Vec<_>>();
         graph.push(edges);
@@ -631,7 +431,7 @@ fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool])
 
     let mut sum = 0;
     for &v in disconn.iter() {
-        sum += conn_map.get(pts[v]).sum_of_hint;
+        sum += conn_map.get(pts[v]).sum_of_hint();
     }
     if sum == 0 {
         // Disconnected components does not contain any edges. It is a hole in
@@ -645,7 +445,7 @@ fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool])
     }
     let mut sum = 0;
     for &v in conn.iter() {
-        sum += conn_map.get(pts[v]).sum_of_hint;
+        sum += conn_map.get(pts[v]).sum_of_hint();
     }
     if sum == 0 {
         // Conencted area does not contain any edges. It is a hole in the
@@ -677,7 +477,7 @@ fn splits(graph: &[Vec<usize>], v: usize,
 
     fn dfs(graph: &[Vec<usize>], v: usize, visited: &mut [bool],
            conn_map: &mut ConnectMap, pts: &[Point], side: Side) -> bool {
-        let mut contains = conn_map.get(pts[v]).side == State::Fixed(side);
+        let mut contains = conn_map.get(pts[v]).side() == State::Fixed(side);
         visited[v] = true;
 
         for &u in graph[v].iter() {
@@ -695,18 +495,7 @@ fn fill_by_connection(side_map: &mut SideMap) {
 
     let mut rev = side_map.revision();
     loop {
-        let mut updated = false;
-        for r in (0 .. side_map.row()) {
-            for c in (0 .. side_map.column()) {
-                updated |= update_conn(side_map, &mut conn_map, Point(r, c));
-            }
-        }
-        updated |= update_conn(side_map, &mut conn_map, Point(-1, -1));
-
-        if updated {
-            debug_assert_eq!(rev, side_map.revision());
-            continue
-        }
+        conn_map.sync(side_map);
 
         for &set_side in [Side::In, Side::Out].iter() {
             let filter_side = if set_side == Side::In {
@@ -725,7 +514,7 @@ fn fill_by_connection(side_map: &mut SideMap) {
             for &v in arts.iter() {
                 let p = pts[v];
 
-                if conn_map.get(p).side != State::Fixed(set_side) &&
+                if conn_map.get(p).side() != State::Fixed(set_side) &&
                     splits(&graph[], v, &mut conn_map, &pts[], set_side) {
                     side_map.set_side(p, set_side);
                 }
