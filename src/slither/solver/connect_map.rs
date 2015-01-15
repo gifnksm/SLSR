@@ -3,7 +3,7 @@ use std::mem;
 use union_find::{UnionFind, UFValue, Merge};
 use board::{Edge, Side};
 use geom::{Geom, Point, Size, UP, RIGHT, DOWN, LEFT};
-use solver::State;
+use solver::{LogicError, State, SolverResult};
 use solver::side_map::SideMap;
 
 #[derive(Show)]
@@ -134,16 +134,16 @@ impl ConnectMap {
         conn_map
     }
 
-    pub fn sync(&mut self, side_map: &mut SideMap) {
+    pub fn sync(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
         let rev = side_map.revision();
         loop {
             let mut updated = false;
             for r in (0 .. side_map.row()) {
                 for c in (0 .. side_map.column()) {
-                    updated |= update_conn(side_map, self, Point(r, c));
+                    updated |= try!(update_conn(side_map, self, Point(r, c)));
                 }
             }
-            updated |= update_conn(side_map, self, Point(-1, -1));
+            updated |= try!(update_conn(side_map, self, Point(-1, -1)));
 
             if updated {
                 debug_assert_eq!(rev, side_map.revision());
@@ -151,6 +151,7 @@ impl ConnectMap {
             }
             break
         }
+        Ok(())
     }
 
     pub fn union(&mut self, p0: Point, p1: Point) -> bool {
@@ -189,7 +190,7 @@ impl Geom for ConnectMap {
 }
 
 fn filter_edge(side_map: &mut SideMap, p: Point, edge: Vec<Point>)
-               -> (Vec<Point>, Vec<Point>)
+               -> SolverResult<(Vec<Point>, Vec<Point>)>
 {
     let mut unknown = vec![];
     let mut same = vec![];
@@ -199,7 +200,7 @@ fn filter_edge(side_map: &mut SideMap, p: Point, edge: Vec<Point>)
             State::Fixed(Edge::Cross) => same.push(p2),
             State::Fixed(Edge::Line) => {}
             State::Unknown => unknown.push(p2),
-            State::Conflict => panic!()
+            State::Conflict => return Err(LogicError)
         }
     }
 
@@ -207,17 +208,19 @@ fn filter_edge(side_map: &mut SideMap, p: Point, edge: Vec<Point>)
     unknown.dedup();
     same.sort();
     same.dedup();
-    (same, unknown)
+    Ok((same, unknown))
 }
 
-fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: Point) -> bool {
+fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: Point) 
+               -> SolverResult<bool>
+{
     let edge = {
         let a = conn_map.get_mut(p);
-        if a.coord != p { return false }
+        if a.coord != p { return Ok(false) }
         mem::replace(&mut a.unknown_edge, vec![])
     }.map_in_place(|p| conn_map.get(p).coord);
 
-    let (same, unknown) = filter_edge(side_map, p, edge);
+    let (same, unknown) = try!(filter_edge(side_map, p, edge));
     {
         let a = conn_map.get_mut(p);
         a.side = side_map.get_side(p);
@@ -228,5 +231,5 @@ fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: Point) -> b
     for &p2 in same.iter() {
         ret |= conn_map.union(p, p2);
     }
-    ret
+    Ok(ret)
 }

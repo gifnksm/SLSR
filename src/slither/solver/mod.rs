@@ -10,6 +10,8 @@ mod side_map;
 #[derive(Show)]
 pub struct LogicError;
 
+type SolverResult<T> = Result<T, LogicError>;
+
 #[derive(Copy, Clone, Show, Eq, PartialEq)]
 pub enum State<T> {
     Fixed(T), Unknown, Conflict
@@ -143,7 +145,7 @@ fn fill_by_num_place(side_map: &mut SideMap) {
     }
 }
 
-fn fill_by_line_nums(side_map: &mut SideMap) {
+fn fill_by_line_nums(side_map: &mut SideMap) -> SolverResult<()> {
     for r in (0 .. side_map.row()) {
         for c in (0 .. side_map.column()) {
             let p = Point(r, c);
@@ -159,7 +161,7 @@ fn fill_by_line_nums(side_map: &mut SideMap) {
                     State::Fixed(Edge::Cross) => { sames[num_same] = Some(dir); num_same += 1; }
                     State::Fixed(Edge::Line)  => { diffs[num_diff] = Some(dir); num_diff += 1; }
                     State::Unknown            => { unknowns[num_unknown] = Some(dir); num_unknown += 1; }
-                    State::Conflict => panic!() // FIXME
+                    State::Conflict => return Err(LogicError)
                 }
             }
 
@@ -183,9 +185,10 @@ fn fill_by_line_nums(side_map: &mut SideMap) {
             }
         }
     }
+    Ok(())
 }
 
-fn fill_by_edge(side_map: &mut SideMap) {
+fn fill_by_edge(side_map: &mut SideMap) -> SolverResult<()> {
     for r in (0 .. side_map.row()) {
         for c in (0 .. side_map.column()) {
             let p = Point(r, c);
@@ -244,7 +247,7 @@ fn fill_by_edge(side_map: &mut SideMap) {
                         }
                     }
                     State::Unknown => {}
-                    State::Conflict => panic!()
+                    State::Conflict => return Err(LogicError)
                 }
 
                 match side_map.get_edge(u, ur) {
@@ -264,7 +267,7 @@ fn fill_by_edge(side_map: &mut SideMap) {
                         }
                     }
                     State::Unknown => {}
-                    State::Conflict => panic!()
+                    State::Conflict => return Err(LogicError)
                 }
 
                 match side_map.get_edge(u, ul) {
@@ -284,7 +287,7 @@ fn fill_by_edge(side_map: &mut SideMap) {
                         }
                     }
                     State::Unknown => {}
-                    State::Conflict => panic!()
+                    State::Conflict => return Err(LogicError)
                 }
             }
 
@@ -330,7 +333,7 @@ fn fill_by_edge(side_map: &mut SideMap) {
                         }
                     }
                     State::Unknown => {}
-                    State::Conflict => panic!()
+                    State::Conflict => return Err(LogicError)
                 }
 
                 if (side_map.is_different(p, r) || side_map.is_different(p, d)) &&
@@ -340,6 +343,7 @@ fn fill_by_edge(side_map: &mut SideMap) {
             }
         }
     }
+    Ok(())
 }
 
 fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
@@ -422,14 +426,15 @@ fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
     (arts, visited)
 }
 
-fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool]) -> Vec<usize> {
+fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool])
+                     -> SolverResult<Vec<usize>> {
     let mut disconn = vec![];
     for (u, &vis) in visited.iter().enumerate() {
         if !vis { disconn.push(u); }
     }
     if disconn.is_empty() {
         // All area is connected.
-        return disconn
+        return Ok(disconn)
     }
 
     let mut sum = 0;
@@ -439,7 +444,7 @@ fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool])
     if sum == 0 {
         // Disconnected components does not contain any edges. It is a hole in
         // the filter_side area.
-        return disconn;
+        return Ok(disconn)
     }
 
     let mut conn = vec![];
@@ -453,12 +458,12 @@ fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool])
     if sum == 0 {
         // Conencted area does not contain any edges. It is a hole in the
         // filter_side area.
-        return conn
+        return Ok(conn)
     }
 
     // Graph is splitted into more than two parts, but both parts contain edges.
     // This againsts connectivity rule.
-    panic!()
+    Err(LogicError)
 }
 
 fn splits(graph: &[Vec<usize>], v: usize,
@@ -493,10 +498,12 @@ fn splits(graph: &[Vec<usize>], v: usize,
     contain_cnt > 1
 }
 
-fn fill_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap) {
+fn fill_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap)
+    -> SolverResult<()>
+{
     let mut rev = side_map.revision();
     loop {
-        conn_map.sync(side_map);
+        try!(conn_map.sync(side_map));
 
         for &set_side in [Side::In, Side::Out].iter() {
             let filter_side = if set_side == Side::In {
@@ -508,7 +515,7 @@ fn fill_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap) {
             let (pts, graph) = create_conn_graph(conn_map, filter_side);
             let (arts, visited) = get_articulation(&graph[], 0);
 
-            let disconn = find_disconn_area(conn_map, &pts[], &visited[]);
+            let disconn = try!(find_disconn_area(conn_map, &pts[], &visited[]));
             for &v in disconn.iter() {
                 side_map.set_side(pts[v], filter_side);
             }
@@ -529,29 +536,36 @@ fn fill_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap) {
 
         break
     }
+    Ok(())
 }
 
 fn solve_by_logic_once(side_map: &mut SideMap) {
     fill_by_num_place(side_map);
 }
 
-fn solve_by_local_property(side_map: &mut SideMap) {
-    fill_by_line_nums(side_map);
-    fill_by_edge(side_map);
+fn solve_by_local_property(side_map: &mut SideMap) -> SolverResult<()> {
+    try!(fill_by_line_nums(side_map));
+    try!(fill_by_edge(side_map));
+    Ok(())
 }
 
-fn solve_by_global_property(side_map: &mut SideMap, conn_map: &mut ConnectMap) {
-    fill_by_connection(side_map, conn_map);
+fn solve_by_global_property(side_map: &mut SideMap, conn_map: &mut ConnectMap)
+    -> SolverResult<()>
+{
+    try!(fill_by_connection(side_map, conn_map));
+    Ok(())
 }
 
-fn solve_by_logic(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>) {
+fn solve_by_logic(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>)
+    -> SolverResult<()>
+{
     let mut local_cnt = 0;
     let mut global_cnt = 0;
     let mut rev = side_map.revision();
 
     loop {
         local_cnt += 1;
-        solve_by_local_property(side_map);
+        try!(solve_by_local_property(side_map));
         if side_map.revision() != rev {
             rev = side_map.revision();
             continue
@@ -561,7 +575,7 @@ fn solve_by_logic(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>) {
             *conn_map = Some(ConnectMap::from_side_map(side_map));
         }
         global_cnt += 1;
-        solve_by_global_property(side_map, conn_map.as_mut().unwrap());
+        try!(solve_by_global_property(side_map, conn_map.as_mut().unwrap()));
         if side_map.revision() == rev {
             break;
         }
@@ -570,6 +584,7 @@ fn solve_by_logic(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>) {
     }
 
     println!("{} {} {}", rev, local_cnt, global_cnt);
+    Ok(())
 }
 
 pub fn solve(board: &Board) -> Result<Board, LogicError> {
@@ -577,7 +592,7 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
     let mut conn_map = None;
 
     solve_by_logic_once(&mut side_map);
-    solve_by_logic(&mut side_map, &mut conn_map);
+    try!(solve_by_logic(&mut side_map, &mut conn_map));
 
     side_map.to_board()
 }
