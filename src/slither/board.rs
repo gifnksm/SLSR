@@ -104,50 +104,77 @@ impl FromStr for Board {
     }
 }
 
+struct Cross;
+impl fmt::String for Cross {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "+")
+    }
+}
+
+struct HEdge<'a>(&'a Board, Point);
+impl<'a> fmt::String for HEdge<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let HEdge(board, p) = *self;
+        match board.edge_h[p] {
+            Some(Edge::Cross) => try!(write!(f, "x")),
+            Some(Edge::Line) => try!(write!(f, "-")),
+            None => try!(write!(f, " "))
+        }
+        Ok(())
+    }
+}
+
+struct VEdge<'a>(&'a Board, Point);
+impl<'a> fmt::String for VEdge<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let VEdge(board, p) = *self;
+        match board.edge_v[p] {
+            Some(Edge::Cross) => try!(write!(f, "x")),
+            Some(Edge::Line) => try!(write!(f, "|")),
+            None => try!(write!(f, " "))
+        }
+        Ok(())
+    }
+}
+
+struct EdgeRow<'a>(&'a Board, i32);
+impl<'a> fmt::String for EdgeRow<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let EdgeRow(board, r) = *self;
+        for c in (0 .. board.column()) {
+            let p = Point(r, c);
+            try!(write!(f, "{}", Cross));
+            try!(write!(f, "{}", HEdge(board, p)));
+        }
+        try!(write!(f, "{}", Cross));
+        Ok(())
+    }
+}
+
+struct CellRow<'a>(&'a Board, i32);
+impl<'a> fmt::String for CellRow<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let CellRow(board, r) = *self;
+        for c in (0 .. board.column()) {
+            let p = Point(r, c);
+            try!(write!(f, "{}", VEdge(board, p)));
+            match board.hint[p] {
+                Some(n) => try!(write!(f, "{}", n)),
+                None => try!(write!(f, " "))
+            }
+        }
+        try!(write!(f, "{}", VEdge(board, Point(r, board.column()))));
+        Ok(())
+    }
+}
+
 impl fmt::String for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for r in (0 .. self.row()) {
-            for c in (0 .. self.column()) {
-                let p = Point(r, c);
-                try!(write!(f, "+"));
-                match self.edge_h[p] {
-                    Some(Edge::Cross) => try!(write!(f, "x")),
-                    Some(Edge::Line) => try!(write!(f, "-")),
-                    None => try!(write!(f, " "))
-                }
-            }
-            try!(write!(f, "+"));
-            try!(writeln!(f, ""));
-            for c in (0 .. self.column()) {
-                let p = Point(r, c);
-                match self.edge_v[p] {
-                    Some(Edge::Cross) => try!(write!(f, "x")),
-                    Some(Edge::Line) => try!(write!(f, "|")),
-                    None => try!(write!(f, " "))
-                }
-                match self.hint[p] {
-                    Some(n) => try!(write!(f, "{}", n)),
-                    None => try!(write!(f, " "))
-                }
-            }
-            match self.edge_v[Point(r, self.column())] {
-                Some(Edge::Cross) => try!(write!(f, "x")),
-                Some(Edge::Line) => try!(write!(f, "|")),
-                None => try!(write!(f, " "))
-            }
-            try!(writeln!(f, ""));
+            try!(writeln!(f, "{}", EdgeRow(self, r)));
+            try!(writeln!(f, "{}", CellRow(self, r)));
         }
-        for c in (0 .. self.column()) {
-            let p = Point(self.row(), c);
-            try!(write!(f, "+"));
-            match self.edge_h[p] {
-                Some(Edge::Cross) => try!(write!(f, "x")),
-                Some(Edge::Line) => try!(write!(f, "-")),
-                None => try!(write!(f, " "))
-            }
-        }
-        try!(write!(f, "+"));
-        try!(writeln!(f, ""));
+        try!(writeln!(f, "{}", EdgeRow(self, self.row())));
         Ok(())
     }
 }
