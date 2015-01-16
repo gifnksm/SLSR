@@ -19,5 +19,10 @@ fn main() {
     let input = String::from_utf8(raw_input).unwrap();
     let board = input.parse::<Board>().unwrap();
     let board = solver::solve(&board).unwrap();
-    let _ = pprint::print(&board);
+
+    if stdio::stdout_raw().isatty() {
+        let _ = pprint::print(&board);
+    } else {
+        print!("{}", board.to_string());
+    }
 }
