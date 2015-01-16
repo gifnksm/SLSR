@@ -2,7 +2,7 @@
 name = "SLSR"
 version = "0.0.1"
 dependencies = [
- "term 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "term 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "union-find 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -21,7 +21,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "term"
-version = "0.1.5"
+version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "log 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
