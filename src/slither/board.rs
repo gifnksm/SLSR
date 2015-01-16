@@ -82,6 +82,8 @@ impl FromStr for Board {
             let _ = mat.pop();
         }
 
+        if mat.len() == 0 { return None }
+
         fn parse_pat1(mat: Vec<Vec<char>>) -> Option<Board> {
             let rows = mat.iter()
                 .enumerate()
@@ -343,5 +345,7 @@ ______
         assert_eq!(Some(1), hint[Point(1, 1)]);
         assert_eq!(Some(2), hint[Point(1, 3)]);
         assert_eq!(output, hint.to_string());
+
+        assert_eq!(None, "".parse::<Board>());
     }
 }
