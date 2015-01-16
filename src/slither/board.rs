@@ -1,6 +1,6 @@
-use std::{cmp, iter};
-use std::io::{IoResult, BufferedReader};
+use std::{cmp, fmt, iter};
 use std::ops::{Index, IndexMut};
+use std::str::FromStr;
 
 use geom::{Geom, Point, Size, Matrix};
 
@@ -39,40 +39,6 @@ impl Board {
         Board { size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h }
     }
 
-    pub fn from_reader<R: Reader>(reader: R) -> IoResult<Board> {
-        let mut br = BufferedReader::new(reader);
-
-        let mut column = 0;
-        let mut mat = vec![];
-        for line in br.lines() {
-            let row = try!(line).trim_matches('\n').chars().map(|c| {
-                match c {
-                    '0' => Some(0),
-                    '1' => Some(1),
-                    '2' => Some(2),
-                    '3' => Some(3),
-                    _   => None
-                }
-            }).collect::<Vec<_>>();
-
-            column = cmp::max(column, row.len());
-            mat.push(row);
-        }
-        for row in mat.iter_mut() {
-            let len = row.len();
-            if len < column {
-                row.extend(iter::repeat(None).take(column - len));
-            }
-        }
-        let row = mat.len();
-        let size = Size(row as i32, column as i32);
-
-        let side = iter::repeat(None).take(row * column).collect();
-        let edge_v = iter::repeat(None).take(row * (column + 1)).collect();
-        let edge_h = iter::repeat(None).take((row + 1) * column).collect();
-        Ok(Board::with_data(size, mat.concat(), side, edge_v, edge_h))
-    }
-
     pub fn hint(&self) -> &Matrix<Hint> { &self.hint }
     pub fn side(&self) -> &Matrix<Option<Side>> { &self.side }
     pub fn edge_h(&self) -> &Matrix<Option<Edge>> { &self.edge_h }
@@ -104,6 +70,88 @@ impl IndexMut<Point> for Board {
     }
 }
 
+impl FromStr for Board {
+    fn from_str(s: &str) -> Option<Board> {
+        let mut column = 0;
+        let mut mat = vec![];
+        for line in s.lines() {
+            let row = line.trim_matches('\n').chars().map(|c| {
+                match c {
+                    '0' => Some(0),
+                    '1' => Some(1),
+                    '2' => Some(2),
+                    '3' => Some(3),
+                    _   => None
+                }
+            }).collect::<Vec<_>>();
+
+            column = cmp::max(column, row.len());
+            mat.push(row);
+        }
+        for row in mat.iter_mut() {
+            let len = row.len();
+            if len < column {
+                row.extend(iter::repeat(None).take(column - len));
+            }
+        }
+        let row = mat.len();
+        let size = Size(row as i32, column as i32);
+
+        let side = iter::repeat(None).take(row * column).collect();
+        let edge_v = iter::repeat(None).take(row * (column + 1)).collect();
+        let edge_h = iter::repeat(None).take((row + 1) * column).collect();
+        Some(Board::with_data(size, mat.concat(), side, edge_v, edge_h))
+    }
+}
+
+impl fmt::String for Board {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for r in (0 .. self.row()) {
+            for c in (0 .. self.column()) {
+                let p = Point(r, c);
+                try!(write!(f, "+"));
+                match self.edge_h[p] {
+                    Some(Edge::Cross) => try!(write!(f, "x")),
+                    Some(Edge::Line) => try!(write!(f, "-")),
+                    None => try!(write!(f, " "))
+                }
+            }
+            try!(write!(f, "+"));
+            try!(writeln!(f, ""));
+            for c in (0 .. self.column()) {
+                let p = Point(r, c);
+                match self.edge_v[p] {
+                    Some(Edge::Cross) => try!(write!(f, "x")),
+                    Some(Edge::Line) => try!(write!(f, "|")),
+                    None => try!(write!(f, " "))
+                }
+                match self.hint[p] {
+                    Some(n) => try!(write!(f, "{}", n)),
+                    None => try!(write!(f, " "))
+                }
+            }
+            match self.edge_v[Point(r, self.column())] {
+                Some(Edge::Cross) => try!(write!(f, "x")),
+                Some(Edge::Line) => try!(write!(f, "|")),
+                None => try!(write!(f, " "))
+            }
+            try!(writeln!(f, ""));
+        }
+        for c in (0 .. self.column()) {
+            let p = Point(self.row(), c);
+            try!(write!(f, "+"));
+            match self.edge_h[p] {
+                Some(Edge::Cross) => try!(write!(f, "x")),
+                Some(Edge::Line) => try!(write!(f, "-")),
+                None => try!(write!(f, " "))
+            }
+        }
+        try!(write!(f, "+"));
+        try!(writeln!(f, ""));
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::Board;
@@ -111,11 +159,11 @@ mod tests {
 
     #[test]
     fn from_reader() {
-        let input = "123   
-
-345
+        let input = "123___
+______
+345___
 ";
-        let hint = Board::from_reader(input.as_bytes()).unwrap();
+        let hint = input.parse::<Board>().unwrap();
         assert_eq!(Size(3, 6), hint.size());
         assert_eq!(Some(1), hint[Point(0, 0)]);
         assert_eq!(Some(2), hint[Point(0, 1)]);

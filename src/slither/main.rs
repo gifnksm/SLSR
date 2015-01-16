@@ -15,7 +15,10 @@ mod pprint;
 mod solver;
 
 fn main() {
-    let board = Board::from_reader(stdio::stdin()).unwrap();
+    let raw_input = stdio::stdin().read_to_end().unwrap();
+    let input = String::from_utf8(raw_input).unwrap();
+    let board = input.parse::<Board>().unwrap();
     let board = solver::solve(&board).unwrap();
     let _ = pprint::print(&board);
+    print!("{}", board);
 }
