@@ -20,5 +20,4 @@ fn main() {
     let board = input.parse::<Board>().unwrap();
     let board = solver::solve(&board).unwrap();
     let _ = pprint::print(&board);
-    print!("{}", board);
 }

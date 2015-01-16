@@ -1,4 +1,4 @@
-use std::{cmp, fmt, iter};
+use std::{fmt, iter};
 use std::ops::{Index, IndexMut};
 use std::str::FromStr;
 
@@ -10,7 +10,7 @@ pub enum Side { In, Out }
 #[derive(Copy, Clone, Show, Eq, PartialEq)]
 pub enum Edge { Line, Cross }
 
-#[derive(Clone, Show)]
+#[derive(Clone, Show, Eq, PartialEq)]
 pub struct Board {
     size: Size,
     hint: Matrix<Hint>,
@@ -72,35 +72,145 @@ impl IndexMut<Point> for Board {
 
 impl FromStr for Board {
     fn from_str(s: &str) -> Option<Board> {
-        let mut column = 0;
-        let mut mat = vec![];
-        for line in s.lines() {
-            let row = line.trim_matches('\n').chars().map(|c| {
-                match c {
-                    '0' => Some(0),
-                    '1' => Some(1),
-                    '2' => Some(2),
-                    '3' => Some(3),
-                    _   => None
+        let mut mat = s.lines()
+            .map(|l| l.trim_matches('\n'))
+            .map(|l| l.chars().collect::<Vec<_>>())
+            .skip_while(|l| l.is_empty())
+            .collect::<Vec<_>>();
+
+        while mat.last().map(|l| l.len()) == Some(0) {
+            let _ = mat.pop();
+        }
+
+        fn parse_pat1(mat: Vec<Vec<char>>) -> Option<Board> {
+            let rows = mat.iter()
+                .enumerate()
+                .filter(|&(_, cs)| cs[0] == '+')
+                .map(|(i, _)| i)
+                .collect::<Vec<_>>();
+            let cols = mat[0].iter()
+                .enumerate()
+                .filter(|&(_, &c)| c == '+')
+                .map(|(i, _)| i)
+                .collect::<Vec<_>>();
+
+            if rows.len() <= 1 { return None }
+            if cols.len() <= 1 { return None }
+
+            for &r in rows.iter() {
+                if mat[r].iter().position(|&c| c == '+') != Some(cols[0]) {
+                    return None
                 }
-            }).collect::<Vec<_>>();
-
-            column = cmp::max(column, row.len());
-            mat.push(row);
-        }
-        for row in mat.iter_mut() {
-            let len = row.len();
-            if len < column {
-                row.extend(iter::repeat(None).take(column - len));
+                if mat[r].iter().rposition(|&c| c == '+') != Some(cols[cols.len() - 1]) {
+                    return None
+                }
+                for &c in cols.iter() {
+                    if mat[r].len() <= c {
+                        return None
+                    }
+                    if mat[r][c] != '+' {
+                        return None
+                    }
+                }
             }
-        }
-        let row = mat.len();
-        let size = Size(row as i32, column as i32);
 
-        let side = iter::repeat(None).take(row * column).collect();
-        let edge_v = iter::repeat(None).take(row * (column + 1)).collect();
-        let edge_h = iter::repeat(None).take((row + 1) * column).collect();
-        Some(Board::with_data(size, mat.concat(), side, edge_v, edge_h))
+            let mut edge_v = vec![];
+            for (&rs, &re) in rows.iter().zip(rows[1 ..].iter()) {
+                for &c in cols.iter() {
+                    let s = mat[rs + 1 .. re]
+                        .iter()
+                        .map(|row| row[c])
+                        .collect::<String>();
+                    let edge = if s.len() == 0 {
+                        None
+                    } else if s.chars().all(|c| c == 'x') {
+                        Some(Edge::Cross)
+                    } else if s.chars().all(|c| c == '|') {
+                        Some(Edge::Line)
+                    } else {
+                        None
+                    };
+                    edge_v.push(edge);
+                }
+            }
+
+            let mut edge_h = vec!{};
+            for &r in rows.iter() {
+                for (&cs, &ce) in cols.iter().zip(cols[1 ..].iter()) {
+                    let s = mat[r][cs + 1 .. ce]
+                        .iter()
+                        .cloned()
+                        .collect::<String>();
+                    let edge = if s.len() == 0 {
+                        None
+                    } else if s.chars().all(|c| c == 'x') {
+                        Some(Edge::Cross)
+                    } else if s.chars().all(|c| c == '-') {
+                        Some(Edge::Line)
+                    } else {
+                        None
+                    };
+                    edge_h.push(edge);
+                }
+            }
+
+            let mut hint = vec![];
+            for (&rs, &re) in rows.iter().zip(rows[1 ..].iter()) {
+                for (&cs, &ce) in cols.iter().zip(cols[1 ..].iter()) {
+                    let s = mat[rs + 1 .. re]
+                        .iter()
+                        .flat_map(|row| row[cs + 1 .. ce].iter())
+                        .cloned()
+                        .collect::<String>();
+                    let cell = match s.trim_matches(' ') {
+                        "0" => Some(0),
+                        "1" => Some(1),
+                        "2" => Some(2),
+                        "3" => Some(3),
+                        _ => None
+                    };
+                    hint.push(cell);
+                }
+            }
+
+            let size = Size((rows.len() - 1) as i32, (cols.len() - 1) as i32);
+            let side = iter::repeat(None).take((rows.len() - 1) * (cols.len() - 1)).collect();
+            Some(Board::with_data(size, hint, side, edge_v, edge_h))
+        }
+
+        fn parse_pat2(mat: Vec<Vec<char>>) -> Option<Board> {
+            let row = mat.len();
+            if row == 0 { return None }
+            let col = mat[0].len();
+            if col == 0 { return None }
+            if mat[1 ..].iter().any(|r| r.len() != col) { return None }
+
+            let hint = mat.iter().flat_map(|line| {
+                line.iter().filter_map(|&c| {
+                    match c {
+                        '0' => Some(Some(0)),
+                        '1' => Some(Some(1)),
+                        '2' => Some(Some(2)),
+                        '3' => Some(Some(3)),
+                        '_' => Some(None),
+                        _ => None
+                    }
+                })
+            }).collect::<Vec<_>>();
+            if hint.len() != row * col { return None }
+
+            let size = Size(row as i32, col as i32);
+            let side = iter::repeat(None).take(row * col).collect();
+            let edge_v = iter::repeat(None).take(row * (col + 1)).collect();
+            let edge_h = iter::repeat(None).take((row + 1) * col).collect();
+            Some(Board::with_data(size, hint, side, edge_v, edge_h))
+        }
+
+        if mat[0].iter().any(|&c| c == '+') {
+            parse_pat1(mat)
+        } else {
+            parse_pat2(mat)
+        }
     }
 }
 
@@ -185,10 +295,10 @@ mod tests {
     use geom::{Geom, Size, Point};
 
     #[test]
-    fn from_reader() {
+    fn parse() {
         let input = "123___
 ______
-345___
+3_____
 ";
         let hint = input.parse::<Board>().unwrap();
         assert_eq!(Size(3, 6), hint.size());
@@ -210,5 +320,28 @@ ______
         assert_eq!(None, hint[Point(2, 3)]);
         assert_eq!(None, hint[Point(2, 4)]);
         assert_eq!(None, hint[Point(2, 5)]);
+
+        assert_eq!(Some(&hint), hint.to_string().parse::<Board>().as_ref());
+
+        assert_eq!(None, "1243".parse::<Board>());
+
+        let input = "
++--+ +-+!!+asdf
++  + + +  +
+|  |1|    |
+|  | |  2 |
++  + + +  +
+";
+        let output = "+-+ +-+ +
+         
++ + + + +
+| |1|  2|
++ + + + +
+";
+
+        let hint = input.parse::<Board>().unwrap();
+        assert_eq!(Some(1), hint[Point(1, 1)]);
+        assert_eq!(Some(2), hint[Point(1, 3)]);
+        assert_eq!(output, hint.to_string());
     }
 }
