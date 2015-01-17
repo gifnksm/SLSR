@@ -280,6 +280,12 @@ fn fill_by_edge(side_map: &mut SideMap) -> SolverResult<()> {
                         {
                             side_map.set_different(u, u + rot * UP);
                         }
+                        if side_map.hint()[u] == Some(2) &&
+                            side_map.hint()[p] == Some(3) &&
+                            side_map.is_different(u, r)
+                        {
+                            side_map.set_different(u, u + rot * UP);
+                        }
                     }
                     State::Fixed(Edge::Line) => {
                         if side_map.hint()[p] == Some(3) {
@@ -303,6 +309,12 @@ fn fill_by_edge(side_map: &mut SideMap) -> SolverResult<()> {
                         }
                         if side_map.hint()[u] == Some(2) &&
                             side_map.hint()[r] == Some(3)
+                        {
+                            side_map.set_different(u, u + rot * UP);
+                        }
+                        if side_map.hint()[u] == Some(2) &&
+                            side_map.hint()[p] == Some(3) &&
+                            side_map.is_different(u, l)
                         {
                             side_map.set_different(u, u + rot * UP);
                         }
@@ -479,7 +491,8 @@ fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
 }
 
 fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool])
-                     -> SolverResult<Vec<usize>> {
+                     -> SolverResult<Vec<usize>>
+{
     let mut disconn = vec![];
     for (u, &vis) in visited.iter().enumerate() {
         if !vis { disconn.push(u); }
@@ -514,8 +527,8 @@ fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool])
     }
 
     // Graph is splitted into more than two parts, but both parts contain edges.
-    // This againsts connectivity rule.
-    Err(LogicError)
+    // This may be valid in some situation, so, return empty.
+    Ok(vec![])
 }
 
 fn splits(graph: &[Vec<usize>], v: usize,
@@ -575,7 +588,8 @@ fn fill_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap)
                 let p = pts[v];
 
                 if conn_map.get(p).side() != State::Fixed(set_side) &&
-                    splits(&graph[], v, conn_map, &pts[], set_side) {
+                    splits(&graph[], v, conn_map, &pts[], set_side)
+                {
                     side_map.set_side(p, set_side);
                 }
             }
