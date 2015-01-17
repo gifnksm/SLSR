@@ -173,11 +173,10 @@ fn fill_by_line_nums(side_map: &mut SideMap) -> SolverResult<()> {
             let mut num_unknown = 0;
 
             for &dir in [UP, RIGHT, DOWN, LEFT].iter() {
-                match side_map.get_edge(p, p + dir) {
-                    State::Fixed(Edge::Cross) => { sames[num_same] = Some(dir); num_same += 1; }
-                    State::Fixed(Edge::Line)  => { diffs[num_diff] = Some(dir); num_diff += 1; }
-                    State::Unknown            => { unknowns[num_unknown] = Some(dir); num_unknown += 1; }
-                    State::Conflict => return Err(LogicError)
+                match try!(side_map.get_edge(p, p + dir).into_option()) {
+                    Some(Edge::Cross) => { sames[num_same] = Some(dir); num_same += 1; }
+                    Some(Edge::Line)  => { diffs[num_diff] = Some(dir); num_diff += 1; }
+                    None              => { unknowns[num_unknown] = Some(dir); num_unknown += 1; }
                 }
             }
 
@@ -226,8 +225,8 @@ fn fill_by_edge(side_map: &mut SideMap) -> SolverResult<()> {
                     }
                 }
 
-                match side_map.get_edge(u, r) {
-                    State::Fixed(Edge::Cross) => {
+                match try!(side_map.get_edge(u, r).into_option()) {
+                    Some(Edge::Cross) => {
                         match side_map.hint()[p] {
                             Some(1) => {
                                 side_map.set_same(p, u);
@@ -246,7 +245,7 @@ fn fill_by_edge(side_map: &mut SideMap) -> SolverResult<()> {
                             _ => {}
                         }
                     }
-                    State::Fixed(Edge::Line) => {
+                    Some(Edge::Line) => {
                         match side_map.hint()[p] {
                             Some(1) => {
                                 side_map.set_same(p, l);
@@ -262,12 +261,11 @@ fn fill_by_edge(side_map: &mut SideMap) -> SolverResult<()> {
                             _ => {}
                         }
                     }
-                    State::Unknown => {}
-                    State::Conflict => return Err(LogicError)
+                    None => {}
                 }
 
-                match side_map.get_edge(u, ur) {
-                    State::Fixed(Edge::Cross) => {
+                match try!(side_map.get_edge(u, ur).into_option()) {
+                    Some(Edge::Cross) => {
                         if side_map.hint()[p] == Some(3) &&
                             side_map.hint()[r] == Some(1)
                         {
@@ -287,19 +285,18 @@ fn fill_by_edge(side_map: &mut SideMap) -> SolverResult<()> {
                             side_map.set_different(u, u + rot * UP);
                         }
                     }
-                    State::Fixed(Edge::Line) => {
+                    Some(Edge::Line) => {
                         if side_map.hint()[p] == Some(3) {
                             side_map.set_different(p, d);
                             side_map.set_different(p, l);
                             side_map.set_same(ur, r);
                         }
                     }
-                    State::Unknown => {}
-                    State::Conflict => return Err(LogicError)
+                    None => {}
                 }
 
-                match side_map.get_edge(u, ul) {
-                    State::Fixed(Edge::Cross) => {
+                match try!(side_map.get_edge(u, ul).into_option()) {
+                    Some(Edge::Cross) => {
                         if side_map.hint()[p] == Some(3) &&
                             side_map.hint()[l] == Some(1)
                         {
@@ -319,39 +316,36 @@ fn fill_by_edge(side_map: &mut SideMap) -> SolverResult<()> {
                             side_map.set_different(u, u + rot * UP);
                         }
                     }
-                    State::Fixed(Edge::Line) => {
+                    Some(Edge::Line) => {
                         if side_map.hint()[p] == Some(3) {
                             side_map.set_different(p, d);
                             side_map.set_different(p, r);
                             side_map.set_same(ul, l);
                         }
                     }
-                    State::Unknown => {}
-                    State::Conflict => return Err(LogicError)
+                    None => {}
                 }
 
-                match side_map.get_edge(p, ur) {
-                    State::Fixed(Edge::Cross) => {
+                match try!(side_map.get_edge(p, ur).into_option()) {
+                    Some(Edge::Cross) => {
                         if side_map.hint()[p] == Some(3) {
                             side_map.set_different(p, l);
                             side_map.set_different(p, d);
                         }
                     }
-                    State::Fixed(Edge::Line) => {}
-                    State::Unknown => {}
-                    State::Conflict => return Err(LogicError)
+                    Some(Edge::Line) => {}
+                    None => {}
                 }
 
-                match side_map.get_edge(p, ul) {
-                    State::Fixed(Edge::Cross) => {
+                match try!(side_map.get_edge(p, ul).into_option()) {
+                    Some(Edge::Cross) => {
                         if side_map.hint()[p] == Some(3) {
                             side_map.set_different(p, r);
                             side_map.set_different(p, d);
                         }
                     }
-                    State::Fixed(Edge::Line) => {}
-                    State::Unknown => {}
-                    State::Conflict => return Err(LogicError)
+                    Some(Edge::Line) => {}
+                    None => {}
                 }
             }
 
@@ -362,8 +356,8 @@ fn fill_by_edge(side_map: &mut SideMap) -> SolverResult<()> {
                 let l = p + rot * LEFT;
                 let dr = p + rot * (DOWN + RIGHT);
 
-                match side_map.get_edge(u, d) {
-                    State::Fixed(Edge::Cross) => {
+                match try!(side_map.get_edge(u, d).into_option()) {
+                    Some(Edge::Cross) => {
                         match side_map.hint()[p] {
                             Some(1) => {
                                 side_map.set_same(p, u);
@@ -380,7 +374,7 @@ fn fill_by_edge(side_map: &mut SideMap) -> SolverResult<()> {
                             _ => {}
                         }
                     }
-                    State::Fixed(Edge::Line) => {
+                    Some(Edge::Line) => {
                         match side_map.hint()[p] {
                             Some(1) => {
                                 side_map.set_same(p, l);
@@ -396,8 +390,7 @@ fn fill_by_edge(side_map: &mut SideMap) -> SolverResult<()> {
                             _ => {}
                         }
                     }
-                    State::Unknown => {}
-                    State::Conflict => return Err(LogicError)
+                    None => {}
                 }
 
                 if (side_map.is_different(p, r) || side_map.is_different(p, d)) &&
