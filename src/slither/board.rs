@@ -90,7 +90,7 @@ impl FromStr for Board {
                 .filter(|&(_, cs)| cs[0] == '+')
                 .map(|(i, _)| i)
                 .collect::<Vec<_>>();
-            let cols = mat[0].iter()
+            let cols = mat[rows[0]].iter()
                 .enumerate()
                 .filter(|&(_, &c)| c == '+')
                 .map(|(i, _)| i)
@@ -121,7 +121,7 @@ impl FromStr for Board {
                 for &c in cols.iter() {
                     let s = mat[rs + 1 .. re]
                         .iter()
-                        .map(|row| row[c])
+                        .map(|row| if c < row.len() { row[c] } else { ' ' })
                         .collect::<String>();
                     let edge = if s.len() == 0 {
                         None
@@ -347,5 +347,15 @@ ______
         assert_eq!(output, hint.to_string());
 
         assert_eq!(None, "".parse::<Board>());
+
+        let input = "
++ + + +
+ 1 2 3
++ + + +
+";
+        let hint = input.parse::<Board>().unwrap();
+        assert_eq!(Some(1), hint[Point(0, 0)]);
+        assert_eq!(Some(2), hint[Point(0, 1)]);
+        assert_eq!(Some(3), hint[Point(0, 2)]);
     }
 }
