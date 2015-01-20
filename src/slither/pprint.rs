@@ -123,18 +123,33 @@ impl<'a> Printer<'a> {
     }
 
     fn corner(&mut self, p: Point) -> IoResult<()> {
+        let l = p + LEFT;
+        let u = p + UP;
         let is_same_all =
             (self.board.edge_h()[p] == Some(Edge::Cross)) &&
-            (self.board.edge_h()[p + LEFT] == Some(Edge::Cross)) &&
+            (self.board.edge_h()[l] == Some(Edge::Cross)) &&
             (self.board.edge_v()[p] == Some((Edge::Cross))) &&
-            (self.board.edge_v()[p + UP] == Some((Edge::Cross)));
+            (self.board.edge_v()[u] == Some((Edge::Cross)));
 
         let ty = if is_same_all {
             self.board.side()[p]
         } else {
             None
         };
-        try!(self.write_pretty(ty, "+"));
+        let is_h = self.board.edge_h()[p] == Some(Edge::Line) &&
+            self.board.edge_h()[l] == Some(Edge::Line);
+        let is_v = self.board.edge_v()[p] == Some(Edge::Line) &&
+            self.board.edge_v()[u] == Some(Edge::Line);
+
+        if is_same_all {
+            try!(self.write_pretty(ty, "."));
+        } else if is_h {
+            try!(self.write_pretty(ty, "-"));
+        } else if is_v {
+            try!(self.write_pretty(ty, "|"));
+        } else {
+            try!(self.write_pretty(ty, "+"));
+        }
         Ok(())
     }
 
