@@ -194,7 +194,7 @@ impl FromStr for Board {
                         '1' => Some(Some(1)),
                         '2' => Some(Some(2)),
                         '3' => Some(Some(3)),
-                        '_' => Some(None),
+                        '_' | '-' => Some(None),
                         _ => None
                     }
                 })
