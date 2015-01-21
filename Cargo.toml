@@ -14,3 +14,7 @@ path = "src/slither/main.rs"
 [dependencies]
 term = "*"
 union-find = "*"
+
+[profile.release]
+lto = true
+
