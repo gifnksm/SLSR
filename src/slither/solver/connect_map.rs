@@ -6,7 +6,7 @@ use geom::{Geom, Point, Size, UP, RIGHT, DOWN, LEFT};
 use solver::{LogicError, State, SolverResult};
 use solver::side_map::SideMap;
 
-#[derive(Show)]
+#[derive(Clone, Show)]
 pub struct Area {
     coord: Point,
     side: State<Side>,
@@ -20,6 +20,7 @@ impl Area {
     pub fn side(&self) -> State<Side> { self.side }
     pub fn unknown_edge(&self) -> &[Point] { &self.unknown_edge[] }
     pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
+    pub fn size(&self) -> usize { self.size }
 }
 
 impl UFValue for Area {
@@ -55,7 +56,7 @@ impl UFValue for Area {
     }
 }
 
-#[derive(Show)]
+#[derive(Clone, Show)]
 pub struct ConnectMap {
     size: Size,
     uf: UnionFind<Area>
@@ -174,6 +175,19 @@ impl ConnectMap {
     pub fn get_mut(&mut self, p: Point) -> &mut Area {
         let i = self.cell_id(p);
         self.uf.get_mut(i)
+    }
+
+    pub fn count_area(&mut self) -> usize {
+        let mut cnt = 1; // counts (-1, -1)
+        for r in (0 .. self.row()) {
+            for c in (0 .. self.column()) {
+                let p = Point(r, c);
+                if p == self.get(p).coord() {
+                    cnt += 1;
+                }
+            }
+        }
+        cnt
     }
 
     fn cell_id(&self, p: Point) -> usize {

@@ -13,7 +13,7 @@ impl CellId {
     fn key1(self) -> usize { self.0 * 2 + 1 }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Show)]
 struct SideMapInner {
     uf: UnionFind,
     revision: u32
@@ -47,7 +47,7 @@ impl SideMapInner {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Show)]
 pub struct SideMap {
     hint: Matrix<Hint>,
     inner: SideMapInner
@@ -182,6 +182,9 @@ impl SideMap {
 
     pub fn hint(&self) -> &Matrix<Hint> { &self.hint }
     pub fn revision(&self) -> u32 { self.inner.revision() }
+    pub fn all_filled(&self) -> bool {
+        self.inner.revision() == (self.row() * self.column()) as u32
+    }
 
     fn cell_id(&self, p: Point) -> CellId {
         if self.contains(p) {

@@ -1,4 +1,4 @@
-use std::{cmp, iter};
+use std::{cmp, iter, i32};
 use board::{Board, Edge, Side};
 use geom::{Geom, Point, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
 use solver::connect_map::ConnectMap;
@@ -618,13 +618,14 @@ fn solve_by_global_property(side_map: &mut SideMap, conn_map: &mut ConnectMap)
 fn solve_by_logic(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>)
     -> SolverResult<()>
 {
-    let mut local_cnt = 0;
-    let mut global_cnt = 0;
     let mut rev = side_map.revision();
 
-    loop {
-        local_cnt += 1;
+    while !side_map.all_filled() {
         try!(solve_by_local_property(side_map));
+
+        if side_map.all_filled() {
+            return Ok(())
+        }
         if side_map.revision() != rev {
             rev = side_map.revision();
             continue
@@ -633,7 +634,6 @@ fn solve_by_logic(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>)
         if conn_map.is_none() {
             *conn_map = Some(ConnectMap::from_side_map(side_map));
         }
-        global_cnt += 1;
         try!(solve_by_global_property(side_map, conn_map.as_mut().unwrap()));
         if side_map.revision() == rev {
             break;
@@ -642,17 +642,118 @@ fn solve_by_logic(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>)
         rev = side_map.revision();
     }
 
-    println!("{} {} {}", rev, local_cnt, global_cnt);
     Ok(())
 }
 
+pub fn solve_by_backtracking_one_step(
+    side_map: &mut SideMap, conn_map: &mut ConnectMap) -> SolverResult<bool>
+{
+    let rev = side_map.revision();
+
+    for r in (0 .. conn_map.row()) {
+        for c in (0 .. conn_map.column()) {
+            let p = Point(r, c);
+            {
+                let a = conn_map.get(p);
+                if p != a.coord() { continue }
+                if a.side() != State::Unknown { continue }
+            }
+
+            let mut side_map_0 = side_map.clone();
+            let mut conn_map_0 = Some(conn_map.clone());
+            side_map_0.set_inside(p);
+
+            let mut side_map_1 = side_map.clone();
+            let mut conn_map_1 = Some(conn_map.clone());
+            side_map_1.set_outside(p);
+
+            let in_ok  = solve_by_logic(&mut side_map_0, &mut conn_map_0).is_ok();
+            let out_ok = solve_by_logic(&mut side_map_1, &mut conn_map_1).is_ok();
+
+            match (in_ok, out_ok) {
+                (true, true) => {},
+                (true, false) => {
+                    *side_map = side_map_0;
+                    *conn_map = conn_map_0.unwrap();
+                }
+                (false, true) => {
+                    *side_map = side_map_1;
+                    *conn_map = conn_map_1.unwrap();
+                }
+                (false, false) => {
+                    return Err(LogicError)
+                }
+            }
+        }
+    }
+
+    Ok(side_map.revision() != rev)
+}
+
+
+fn select_largest_area(conn_map: &mut ConnectMap) -> Point {
+    let mut max_size = 0;
+    let mut max_pt = Point(i32::MAX, i32::MAX);
+
+    for r in (0 .. conn_map.row()) {
+        for c in (0 .. conn_map.column()) {
+            let p = Point(r, c);
+            let a = conn_map.get(p);
+            if p != a.coord() { continue }
+            if a.side() != State::Unknown { continue }
+            if a.unknown_edge().len() > max_size {
+                max_pt = p;
+                max_size = a.unknown_edge().len();
+            }
+        }
+    }
+
+    assert!(max_size != 0 && max_pt != Point(i32::MAX, i32::MAX));
+    max_pt
+}
+
 pub fn solve(board: &Board) -> Result<Board, LogicError> {
-    let mut side_map = SideMap::from_board(board);
-    let mut conn_map = None;
+    let mut queue = vec![(SideMap::from_board(board), None)];
 
-    solve_by_logic_once(&mut side_map);
-    try!(solve_by_logic(&mut side_map, &mut conn_map));
+    while let Some((mut side_map, mut conn_map)) = queue.pop() {
+        solve_by_logic_once(&mut side_map);
+        if solve_by_logic(&mut side_map, &mut conn_map).is_err() {
+            continue
+        }
 
-    side_map.to_board()
+        if side_map.all_filled() {
+            if conn_map.is_none() {
+                conn_map = Some(ConnectMap::from_side_map(&mut side_map));
+            }
+            let conn_map = conn_map.as_mut().unwrap();
+            if conn_map.sync(&mut side_map).is_err() { continue }
+            if conn_map.count_area() != 2 {
+                continue
+            }
+            return side_map.to_board()
+        }
+
+        assert!(conn_map.is_some());
+        match solve_by_backtracking_one_step(&mut side_map, conn_map.as_mut().unwrap()) {
+            Ok(true) => {
+                queue.push((side_map, conn_map));
+                continue
+            }
+            Ok(false) => {}
+            Err(_) => continue,
+        }
+
+        let p = select_largest_area(conn_map.as_mut().unwrap());
+        let mut side_map_0 = side_map.clone();
+        let conn_map_0 = conn_map.clone();
+        let mut side_map_1 = side_map;
+        let conn_map_1 = conn_map;
+        side_map_0.set_outside(p);
+        side_map_1.set_inside(p);
+        queue.push((side_map_0, conn_map_0));
+        queue.push((side_map_1, conn_map_1));
+    }
+
+    Err(LogicError)
 }
 
