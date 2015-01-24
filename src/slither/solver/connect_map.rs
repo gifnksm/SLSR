@@ -20,7 +20,6 @@ impl Area {
     pub fn side(&self) -> State<Side> { self.side }
     pub fn unknown_edge(&self) -> &[Point] { &self.unknown_edge[] }
     pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
-    pub fn size(&self) -> usize { self.size }
 }
 
 impl UFValue for Area {
@@ -161,12 +160,6 @@ impl ConnectMap {
         self.uf.union(i, j)
     }
 
-    pub fn find(&mut self, p0: Point, p1: Point) -> bool {
-        let i = self.cell_id(p0);
-        let j = self.cell_id(p1);
-        self.uf.find(i, j)
-    }
-
     pub fn get(&mut self, p: Point) -> &Area {
         let i = self.cell_id(p);
         self.uf.get(i)
@@ -225,7 +218,7 @@ fn filter_edge(side_map: &mut SideMap, p: Point, edge: Vec<Point>)
     Ok((same, unknown))
 }
 
-fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: Point) 
+fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: Point)
                -> SolverResult<bool>
 {
     let edge = {
