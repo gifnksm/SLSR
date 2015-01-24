@@ -1,4 +1,4 @@
-use std::{cmp, iter, i32};
+use std::{cmp, fmt, iter, i32};
 use board::{Board, Edge, Side};
 use geom::{Geom, Point, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
 use solver::connect_map::ConnectMap;
@@ -7,8 +7,14 @@ use solver::side_map::SideMap;
 mod connect_map;
 mod side_map;
 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct LogicError;
+
+impl fmt::Display for LogicError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", *self)
+    }
+}
 
 type SolverResult<T> = Result<T, LogicError>;
 

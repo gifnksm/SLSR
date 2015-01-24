@@ -3,11 +3,11 @@ use std::io::IoResult;
 use std::io::stdio::{self, StdWriter};
 use board::{Board, Edge, Side};
 use geom::{Geom, Point, UP, LEFT};
-use term::{self, Terminal, WriterWrapper};
+use term::{self, Terminal, StdTerminal};
 use term::color::{self, Color};
 
 enum Output<T> {
-    Pretty(Box<Terminal<WriterWrapper> + Send>),
+    Pretty(Box<StdTerminal>),
     Raw(T)
 }
 

@@ -5,12 +5,12 @@ use std::str::FromStr;
 use geom::{Geom, Point, Size, Matrix};
 
 pub type Hint = Option<u8>;
-#[derive(Copy, Clone, Show, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Side { In, Out }
-#[derive(Copy, Clone, Show, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Edge { Line, Cross }
 
-#[derive(Clone, Show, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Board {
     size: Size,
     hint: Matrix<Hint>,
@@ -217,14 +217,14 @@ impl FromStr for Board {
 }
 
 struct Cross;
-impl fmt::String for Cross {
+impl fmt::Display for Cross {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "+")
     }
 }
 
 struct HEdge<'a>(&'a Board, Point);
-impl<'a> fmt::String for HEdge<'a> {
+impl<'a> fmt::Display for HEdge<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let HEdge(board, p) = *self;
         match board.edge_h[p] {
@@ -237,7 +237,7 @@ impl<'a> fmt::String for HEdge<'a> {
 }
 
 struct VEdge<'a>(&'a Board, Point);
-impl<'a> fmt::String for VEdge<'a> {
+impl<'a> fmt::Display for VEdge<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let VEdge(board, p) = *self;
         match board.edge_v[p] {
@@ -250,7 +250,7 @@ impl<'a> fmt::String for VEdge<'a> {
 }
 
 struct EdgeRow<'a>(&'a Board, i32);
-impl<'a> fmt::String for EdgeRow<'a> {
+impl<'a> fmt::Display for EdgeRow<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let EdgeRow(board, r) = *self;
         for c in (0 .. board.column()) {
@@ -264,7 +264,7 @@ impl<'a> fmt::String for EdgeRow<'a> {
 }
 
 struct CellRow<'a>(&'a Board, i32);
-impl<'a> fmt::String for CellRow<'a> {
+impl<'a> fmt::Display for CellRow<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let CellRow(board, r) = *self;
         for c in (0 .. board.column()) {
@@ -280,7 +280,7 @@ impl<'a> fmt::String for CellRow<'a> {
     }
 }
 
-impl fmt::String for Board {
+impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for r in (0 .. self.row()) {
             try!(writeln!(f, "{}", EdgeRow(self, r)));
