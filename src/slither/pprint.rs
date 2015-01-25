@@ -20,12 +20,11 @@ fn side_to_color(ty: Option<Side>) -> (Color, Color) {
 }
 
 struct Printer<'a> {
-    output: Output<StdWriter>,
-    board: &'a Board
+    output: Output<StdWriter>
 }
 
 impl<'a> Printer<'a> {
-    fn new(board: &'a Board) -> Printer<'a> {
+    fn new() -> Printer<'a> {
         let output = if stdio::stdout_raw().isatty() {
             match term::stdout() {
                 Some(t) => Output::Pretty(t),
@@ -34,7 +33,7 @@ impl<'a> Printer<'a> {
         } else {
             Output::Raw(stdio::stdout_raw())
         };
-        Printer { output: output, board: board }
+        Printer { output: output }
     }
 
     fn write_pretty(&mut self, ty: Option<Side>, s: &str) -> IoResult<()> {
@@ -76,114 +75,138 @@ impl<'a> Printer<'a> {
             Output::Raw(ref mut stdout) => stdout.write_fmt(fmt)
         }
     }
+}
 
-    fn print(&mut self) -> IoResult<()> {
-        let row = self.board.row();
-        try!(self.label_row());
+struct Table;
+impl Table {
+    fn pprint(printer: &mut Printer, board: &Board) -> IoResult<()> {
+        let row = board.row();
+        try!(LabelRow::pprint(printer, board));
         for y in (0 .. row) {
-            try!(self.edge_row(y));
-            try!(self.cell_row(y));
+            try!(EdgeRow::pprint(printer, board, y));
+            try!(CellRow::pprint(printer, board, y));
         }
-        try!(self.edge_row(row));
-        try!(self.label_row());
+        try!(EdgeRow::pprint(printer, board, row));
+        try!(LabelRow::pprint(printer, board));
         Ok(())
     }
+}
 
-    fn label_row(&mut self) -> IoResult<()> {
-        try!(self.write_plain("  "));
-        for x in 0 .. self.board.column() {
-            try!(self.write_plain_fmt(format_args!(" {:2}", x)));
+struct LabelRow;
+impl LabelRow {
+    fn pprint(printer: &mut Printer, board: &Board) -> IoResult<()> {
+        try!(printer.write_plain("  "));
+        for x in 0 .. board.column() {
+            try!(printer.write_plain_fmt(format_args!(" {:2}", x)));
         }
-        try!(self.write_plain("\n"));
+        try!(printer.write_plain("\n"));
         Ok(())
-    }
+   }
+}
 
-    fn edge_row(&mut self, y: i32) -> IoResult<()> {
-        let col = self.board.column();
-        try!(self.write_plain("  "));
+struct EdgeRow;
+impl EdgeRow {
+    fn pprint(printer: &mut Printer, board: &Board, y: i32) -> IoResult<()> {
+        let col = board.column();
+        try!(printer.write_plain("  "));
         for x in (0 .. col) {
-            try!(self.corner(Point(y, x)));
-            try!(self.edge_h(Point(y, x)));
+            try!(Corner::pprint(printer, board, Point(y, x)));
+            try!(EdgeH::pprint(printer, board, Point(y, x)));
         }
-        try!(self.corner(Point(y, col)));
-        try!(self.write_plain("\n"));
+        try!(Corner::pprint(printer, board, Point(y, col)));
+        try!(printer.write_plain("\n"));
         Ok(())
     }
+}
 
-    fn cell_row(&mut self, y: i32) -> IoResult<()> {
-        let col = self.board.column();
-        try!(self.write_plain_fmt(format_args!("{:2}", y)));
+struct CellRow;
+impl CellRow {
+    fn pprint(printer: &mut Printer, board: &Board, y: i32) -> IoResult<()> {
+        let col = board.column();
+        try!(printer.write_plain_fmt(format_args!("{:2}", y)));
         for x in (0 .. col) {
-            try!(self.edge_v(Point(y, x)));
-            try!(self.cell(Point(y, x)));
+            try!(EdgeV::pprint(printer, board, Point(y, x)));
+            try!(Cell::pprint(printer, board, Point(y, x)));
         }
-        try!(self.edge_v(Point(y, col)));
-        try!(self.write_plain_fmt(format_args!("{:2}\n", y)));
+        try!(EdgeV::pprint(printer, board, Point(y, col)));
+        try!(printer.write_plain_fmt(format_args!("{:2}\n", y)));
         Ok(())
     }
+}
 
-    fn corner(&mut self, p: Point) -> IoResult<()> {
+struct Corner;
+impl Corner {
+    fn pprint(printer: &mut Printer, board: &Board, p: Point) -> IoResult<()> {
         let l = p + LEFT;
         let u = p + UP;
         let is_same_all =
-            (self.board.edge_h()[p] == Some(Edge::Cross)) &&
-            (self.board.edge_h()[l] == Some(Edge::Cross)) &&
-            (self.board.edge_v()[p] == Some((Edge::Cross))) &&
-            (self.board.edge_v()[u] == Some((Edge::Cross)));
+            (board.edge_h()[p] == Some(Edge::Cross)) &&
+            (board.edge_h()[l] == Some(Edge::Cross)) &&
+            (board.edge_v()[p] == Some((Edge::Cross))) &&
+            (board.edge_v()[u] == Some((Edge::Cross)));
 
         let ty = if is_same_all {
-            self.board.side()[p]
+            board.side()[p]
         } else {
             None
         };
-        let is_h = self.board.edge_h()[p] == Some(Edge::Line) &&
-            self.board.edge_h()[l] == Some(Edge::Line);
-        let is_v = self.board.edge_v()[p] == Some(Edge::Line) &&
-            self.board.edge_v()[u] == Some(Edge::Line);
+        let is_h = board.edge_h()[p] == Some(Edge::Line) &&
+            board.edge_h()[l] == Some(Edge::Line);
+        let is_v = board.edge_v()[p] == Some(Edge::Line) &&
+            board.edge_v()[u] == Some(Edge::Line);
 
         if is_same_all {
-            try!(self.write_pretty(ty, "."));
+            try!(printer.write_pretty(ty, "."));
         } else if is_h {
-            try!(self.write_pretty(ty, "-"));
+            try!(printer.write_pretty(ty, "-"));
         } else if is_v {
-            try!(self.write_pretty(ty, "|"));
+            try!(printer.write_pretty(ty, "|"));
         } else {
-            try!(self.write_pretty(ty, "+"));
+            try!(printer.write_pretty(ty, "+"));
         }
         Ok(())
     }
+}
 
-    fn edge_h(&mut self, p: Point) -> IoResult<()> {
-        let (s, ty) = match self.board.edge_h()[p] {
-            Some(Edge::Cross) => (" ", self.board.side()[p]),
+struct EdgeH;
+impl EdgeH {
+    fn pprint(printer: &mut Printer, board: &Board, p: Point) -> IoResult<()> {
+        let (s, ty) = match board.edge_h()[p] {
+            Some(Edge::Cross) => (" ", board.side()[p]),
             Some(Edge::Line)  => ("-", None),
             None => ("~", None)
         };
-        try!(self.write_pretty_fmt(ty, format_args!("{}{}", s, s)));
+        try!(printer.write_pretty_fmt(ty, format_args!("{}{}", s, s)));
         Ok(())
     }
+}
 
-    fn edge_v(&mut self, p: Point) -> IoResult<()> {
-        let (s, ty) = match self.board.edge_v()[p] {
-            Some(Edge::Cross) => (" ", self.board.side()[p]),
+struct EdgeV;
+impl EdgeV {
+    fn pprint(printer: &mut Printer, board: &Board, p: Point) -> IoResult<()> {
+        let (s, ty) = match board.edge_v()[p] {
+            Some(Edge::Cross) => (" ", board.side()[p]),
             Some(Edge::Line)  => ("|", None),
             None => ("?", None)
         };
-        try!(self.write_pretty(ty, s));
+        try!(printer.write_pretty(ty, s));
         Ok(())
     }
+}
 
-    fn cell(&mut self, p: Point) -> IoResult<()> {
-        let ty = self.board.side()[p];
-        match self.board[p] {
-            Some(x) => try!(self.write_pretty_fmt(ty, format_args!("{} ", x))),
-            None    => try!(self.write_pretty(ty, "  "))
+struct Cell;
+impl Cell {
+    fn pprint(printer: &mut Printer, board: &Board, p: Point) -> IoResult<()> {
+        let ty = board.side()[p];
+        match board[p] {
+            Some(x) => try!(printer.write_pretty_fmt(ty, format_args!("{} ", x))),
+            None    => try!(printer.write_pretty(ty, "  "))
         }
         Ok(())
     }
 }
 
 pub fn print(board: &Board) -> IoResult<()> {
-    Printer::new(board).print()
+    Table::pprint(&mut Printer::new(), board)
 }
 
