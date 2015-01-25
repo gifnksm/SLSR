@@ -12,6 +12,9 @@ name = "slither"
 path = "src/slither/main.rs"
 
 [dependencies]
+docopt = "*"
+docopt_macros = "*"
+rustc-serialize = "*"
 term = "*"
 union-find = "*"
 

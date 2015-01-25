@@ -7,9 +7,9 @@ use geom::{Geom, Point, UP, LEFT};
 use term::{self, Terminal, StdTerminal};
 use term::color::{self, Color};
 
-struct Config {
-    cell_width: usize,
-    cell_height: usize
+pub struct Config {
+    pub cell_width: usize,
+    pub cell_height: usize
 }
 
 enum Output<T> {
@@ -255,7 +255,6 @@ impl Cell {
     }
 }
 
-pub fn print(board: &Board) -> IoResult<()> {
-    let conf = Config { cell_width: 2, cell_height: 1 };
-    Table::pprint(&mut Printer::new(), &conf, board)
+pub fn print(conf: &Config, board: &Board) -> IoResult<()> {
+    Table::pprint(&mut Printer::new(), conf, board)
 }
