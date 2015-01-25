@@ -1,10 +1,16 @@
 use std::fmt;
 use std::io::IoResult;
 use std::io::stdio::{self, StdWriter};
+use std::num::Int;
 use board::{Board, Edge, Side};
 use geom::{Geom, Point, UP, LEFT};
 use term::{self, Terminal, StdTerminal};
 use term::color::{self, Color};
+
+struct Config {
+    cell_width: usize,
+    cell_height: usize
+}
 
 enum Output<T> {
     Pretty(Box<StdTerminal>),
@@ -79,25 +85,31 @@ impl<'a> Printer<'a> {
 
 struct Table;
 impl Table {
-    fn pprint(printer: &mut Printer, board: &Board) -> IoResult<()> {
+    fn pprint(printer: &mut Printer, conf: &Config, board: &Board)
+              -> IoResult<()>
+    {
         let row = board.row();
-        try!(LabelRow::pprint(printer, board));
+        try!(LabelRow::pprint(printer, conf, board));
         for y in (0 .. row) {
-            try!(EdgeRow::pprint(printer, board, y));
-            try!(CellRow::pprint(printer, board, y));
+            try!(EdgeRow::pprint(printer, conf, board, y));
+            try!(CellRow::pprint(printer, conf, board, y));
         }
-        try!(EdgeRow::pprint(printer, board, row));
-        try!(LabelRow::pprint(printer, board));
+        try!(EdgeRow::pprint(printer, conf, board, row));
+        try!(LabelRow::pprint(printer, conf, board));
         Ok(())
     }
 }
 
 struct LabelRow;
 impl LabelRow {
-    fn pprint(printer: &mut Printer, board: &Board) -> IoResult<()> {
-        try!(printer.write_plain("  "));
+    fn pprint(printer: &mut Printer, conf: &Config, board: &Board)
+              -> IoResult<()>
+    {
+        try!(printer.write_plain_fmt(
+            format_args!("{:1$}", "", conf.cell_width)));
         for x in 0 .. board.column() {
-            try!(printer.write_plain_fmt(format_args!(" {:2}", x)));
+            try!(printer.write_plain(" "));
+            try!(Label::pprint(printer, conf, x, true));
         }
         try!(printer.write_plain("\n"));
         Ok(())
@@ -106,12 +118,15 @@ impl LabelRow {
 
 struct EdgeRow;
 impl EdgeRow {
-    fn pprint(printer: &mut Printer, board: &Board, y: i32) -> IoResult<()> {
+    fn pprint(printer: &mut Printer, conf: &Config, board: &Board, y: i32)
+              -> IoResult<()>
+    {
         let col = board.column();
-        try!(printer.write_plain("  "));
+        try!(printer.write_plain_fmt(
+            format_args!("{:1$}", "", conf.cell_width)));
         for x in (0 .. col) {
             try!(Corner::pprint(printer, board, Point(y, x)));
-            try!(EdgeH::pprint(printer, board, Point(y, x)));
+            try!(EdgeH::pprint(printer, conf, board, Point(y, x)));
         }
         try!(Corner::pprint(printer, board, Point(y, col)));
         try!(printer.write_plain("\n"));
@@ -121,15 +136,19 @@ impl EdgeRow {
 
 struct CellRow;
 impl CellRow {
-    fn pprint(printer: &mut Printer, board: &Board, y: i32) -> IoResult<()> {
+    fn pprint(printer: &mut Printer, conf: &Config, board: &Board, y: i32) -> IoResult<()> {
         let col = board.column();
-        try!(printer.write_plain_fmt(format_args!("{:2}", y)));
-        for x in (0 .. col) {
-            try!(EdgeV::pprint(printer, board, Point(y, x)));
-            try!(Cell::pprint(printer, board, Point(y, x)));
+        for i in (0 .. conf.cell_height) {
+            let num_line = (conf.cell_height - 1) / 2 == i;
+            try!(Label::pprint(printer, conf, y, num_line));
+            for x in (0 .. col) {
+                try!(EdgeV::pprint(printer, board, Point(y, x)));
+                try!(Cell::pprint(printer, conf, board, Point(y, x), num_line));
+            }
+            try!(EdgeV::pprint(printer, board, Point(y, col)));
+            try!(Label::pprint(printer, conf, y, num_line));
+            try!(printer.write_plain("\n"));
         }
-        try!(EdgeV::pprint(printer, board, Point(y, col)));
-        try!(printer.write_plain_fmt(format_args!("{:2}\n", y)));
         Ok(())
     }
 }
@@ -170,13 +189,34 @@ impl Corner {
 
 struct EdgeH;
 impl EdgeH {
-    fn pprint(printer: &mut Printer, board: &Board, p: Point) -> IoResult<()> {
-        let (s, ty) = match board.edge_h()[p] {
-            Some(Edge::Cross) => (" ", board.side()[p]),
-            Some(Edge::Line)  => ("-", None),
-            None => ("~", None)
-        };
-        try!(printer.write_pretty_fmt(ty, format_args!("{}{}", s, s)));
+    fn pprint(printer: &mut Printer, config: &Config, board: &Board, p: Point)
+              -> IoResult<()>
+    {
+        for _ in (0 .. config.cell_width) {
+            let (s, ty) = match board.edge_h()[p] {
+                Some(Edge::Cross) => (" ", board.side()[p]),
+                Some(Edge::Line)  => ("-", None),
+                None => ("~", None)
+            };
+            try!(printer.write_pretty(ty, s));
+        }
+        Ok(())
+    }
+}
+
+struct Label;
+impl Label {
+    fn pprint(printer: &mut Printer, conf: &Config, n: i32, num_line: bool)
+              -> IoResult<()>
+    {
+        if num_line {
+            let order = 10.pow(conf.cell_width);
+            try!(printer.write_plain_fmt(
+                format_args!("{:^1$}", n % order, conf.cell_width)));
+        } else {
+            try!(printer.write_plain_fmt(
+                format_args!("{:1$}", "", conf.cell_width)));
+        }
         Ok(())
     }
 }
@@ -196,17 +236,26 @@ impl EdgeV {
 
 struct Cell;
 impl Cell {
-    fn pprint(printer: &mut Printer, board: &Board, p: Point) -> IoResult<()> {
+    fn pprint(printer: &mut Printer, conf: &Config, board: &Board, p: Point,
+              num_line: bool)
+              -> IoResult<()>
+    {
         let ty = board.side()[p];
         match board[p] {
-            Some(x) => try!(printer.write_pretty_fmt(ty, format_args!("{} ", x))),
-            None    => try!(printer.write_pretty(ty, "  "))
-        }
+            Some(x) if num_line => {
+                try!(printer.write_pretty_fmt(
+                    ty, format_args!("{:^1$}", x, conf.cell_width)));
+            },
+            _ => {
+                try!(printer.write_pretty_fmt(
+                    ty, format_args!("{:^1$}", "", conf.cell_width)));
+            }
+        };
         Ok(())
     }
 }
 
 pub fn print(board: &Board) -> IoResult<()> {
-    Table::pprint(&mut Printer::new(), board)
+    let conf = Config { cell_width: 2, cell_height: 1 };
+    Table::pprint(&mut Printer::new(), &conf, board)
 }
-
