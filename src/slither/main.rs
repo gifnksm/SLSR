@@ -11,8 +11,10 @@ extern crate "rustc-serialize" as rustc_serialize;
 extern crate "union-find" as union_find;
 extern crate term;
 
+use std::default::Default;
 use std::io::stdio;
 use board::Board;
+use locale::Category;
 
 mod board;
 mod geom;
@@ -37,7 +39,7 @@ Options:
     flag_width: Option<Width>,
     flag_height: Option<Height>,
     flag_mode: Option<pprint::Mode>,
-    flag_cjk: Option<pprint::Type>
+    flag_cjk: Option<YesNo>
 }
 
 #[derive(Debug)]
@@ -52,6 +54,9 @@ impl rustc_serialize::Decodable for Width {
         }
     }
 }
+impl Default for Width {
+    fn default() -> Width { Width(2) }
+}
 
 #[derive(Debug)]
 struct Height(usize);
@@ -65,6 +70,17 @@ impl rustc_serialize::Decodable for Height {
         }
     }
 }
+impl Default for Height {
+    fn default() -> Height { Height(1) }
+}
+
+#[derive(Copy, Debug, RustcDecodable, Eq, PartialEq)]
+pub enum YesNo {
+    Auto, Yes, No,
+}
+impl Default for YesNo {
+    fn default() -> YesNo { YesNo::Auto }
+}
 
 fn main() {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
@@ -75,11 +91,20 @@ fn main() {
     let board = solver::solve(&board).unwrap();
 
     if stdio::stdout_raw().isatty() {
+        let is_cjk = match args.flag_cjk.unwrap_or_default() {
+            YesNo::Yes => true,
+            YesNo::No => false,
+            YesNo::Auto => {
+                let loc = locale::setlocale(Category::CType, "");
+                loc.starts_with("ja") || loc.starts_with("ko") || loc.starts_with("zh")
+            }
+        };
+
         let conf = pprint::Config {
-            mode: args.flag_mode.unwrap_or(pprint::Mode::Unicode),
-            cjk: args.flag_cjk.unwrap_or(pprint::Type::Auto),
-            cell_width: args.flag_width.unwrap_or(Width(2)).0,
-            cell_height: args.flag_height.unwrap_or(Height(1)).0
+            mode: args.flag_mode.unwrap_or_default(),
+            is_cjk: is_cjk,
+            cell_width: args.flag_width.unwrap_or_default().0,
+            cell_height: args.flag_height.unwrap_or_default().0
         };
         let _ = pprint::print(&conf, &board);
     } else {
