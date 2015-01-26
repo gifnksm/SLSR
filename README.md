@@ -8,6 +8,6 @@ $ cargo run < puzzle/example.txt
 
 ## ToDos
 
-  * Implements backtracking
   * Add more example problems
   * Refactoring
+  * Performance tuning
