@@ -6,6 +6,7 @@
 
 extern crate docopt;
 #[plugin] #[no_link] extern crate docopt_macros;
+extern crate libc;
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate "union-find" as union_find;
 extern crate term;
@@ -15,10 +16,12 @@ use board::Board;
 
 mod board;
 mod geom;
+mod locale;
 mod pprint;
 mod solver;
 
-docopt!{Args derive Debug, "
+docopt! {
+    Args derive Debug, "
 Usage: slither [options]
        slither --help
 
@@ -26,9 +29,15 @@ Options:
   -h, --help       Show this message.
   --width WIDTH    Specify cell width.
   --height HEIGHT  Specify cell height.
+  --mode MODE      Specify pretty print mode.
+                   Valid values: ascii, unicode.
+  --cjk CJK        Specify pretty print char width.
+                   Valid values: auto, yes, no.
 ",
     flag_width: Option<Width>,
-    flag_height: Option<Height>
+    flag_height: Option<Height>,
+    flag_mode: Option<pprint::Mode>,
+    flag_cjk: Option<pprint::Type>
 }
 
 #[derive(Debug)]
@@ -67,6 +76,8 @@ fn main() {
 
     if stdio::stdout_raw().isatty() {
         let conf = pprint::Config {
+            mode: args.flag_mode.unwrap_or(pprint::Mode::Unicode),
+            cjk: args.flag_cjk.unwrap_or(pprint::Type::Auto),
             cell_width: args.flag_width.unwrap_or(Width(2)).0,
             cell_height: args.flag_height.unwrap_or(Height(1)).0
         };
