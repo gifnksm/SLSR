@@ -26,7 +26,7 @@ const THEOREM: &'static [&'staic str] = ["
  3 3  ! |3|3|
 + + + ! + + +
       !   xA
-n+ + + ! + + +
++ + + ! + + +
 ", "
 + + + ! +-+ +
  2    !  2xa
