@@ -656,39 +656,44 @@ pub fn solve_by_backtracking_one_step(
 {
     let rev = side_map.revision();
 
+    let mut pts = vec![];
+
     for r in (0 .. conn_map.row()) {
         for c in (0 .. conn_map.column()) {
             let p = Point(r, c);
-            {
-                let a = conn_map.get(p);
-                if p != a.coord() { continue }
-                if a.side() != State::Unknown { continue }
+            let a = conn_map.get(p);
+            if p != a.coord() { continue }
+            if a.side() != State::Unknown { continue }
+            pts.push((p, a.unknown_edge().len()));
+        }
+    }
+
+    pts.sort_by(|a, b| a.1.cmp(&b.1));
+
+    for &(p, _) in pts.iter() {
+        let mut side_map_0 = side_map.clone();
+        let mut conn_map_0 = Some(conn_map.clone());
+        side_map_0.set_inside(p);
+
+        let mut side_map_1 = side_map.clone();
+        let mut conn_map_1 = Some(conn_map.clone());
+        side_map_1.set_outside(p);
+
+        let in_ok  = solve_by_logic(&mut side_map_0, &mut conn_map_0).is_ok();
+        let out_ok = solve_by_logic(&mut side_map_1, &mut conn_map_1).is_ok();
+
+        match (in_ok, out_ok) {
+            (true, true) => {},
+            (true, false) => {
+                *side_map = side_map_0;
+                *conn_map = conn_map_0.unwrap();
             }
-
-            let mut side_map_0 = side_map.clone();
-            let mut conn_map_0 = Some(conn_map.clone());
-            side_map_0.set_inside(p);
-
-            let mut side_map_1 = side_map.clone();
-            let mut conn_map_1 = Some(conn_map.clone());
-            side_map_1.set_outside(p);
-
-            let in_ok  = solve_by_logic(&mut side_map_0, &mut conn_map_0).is_ok();
-            let out_ok = solve_by_logic(&mut side_map_1, &mut conn_map_1).is_ok();
-
-            match (in_ok, out_ok) {
-                (true, true) => {},
-                (true, false) => {
-                    *side_map = side_map_0;
-                    *conn_map = conn_map_0.unwrap();
-                }
-                (false, true) => {
-                    *side_map = side_map_1;
-                    *conn_map = conn_map_1.unwrap();
-                }
-                (false, false) => {
-                    return Err(LogicError)
-                }
+            (false, true) => {
+                *side_map = side_map_1;
+                *conn_map = conn_map_1.unwrap();
+            }
+            (false, false) => {
+                return Err(LogicError)
             }
         }
     }
