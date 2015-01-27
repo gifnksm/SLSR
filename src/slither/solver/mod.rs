@@ -1,4 +1,4 @@
-use std::{cmp, fmt, iter, i32};
+use std::{cmp, fmt, iter};
 use board::{Board, Edge, Side};
 use geom::{Geom, Point, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
 use solver::connect_map::ConnectMap;
@@ -651,11 +651,7 @@ fn solve_by_logic(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>)
     Ok(())
 }
 
-pub fn solve_by_backtracking_one_step(
-    side_map: &mut SideMap, conn_map: &mut ConnectMap) -> SolverResult<bool>
-{
-    let rev = side_map.revision();
-
+fn get_unknown_points(conn_map: &mut ConnectMap) -> Vec<Point> {
     let mut pts = vec![];
 
     for r in (0 .. conn_map.row()) {
@@ -669,8 +665,16 @@ pub fn solve_by_backtracking_one_step(
     }
 
     pts.sort_by(|a, b| a.1.cmp(&b.1));
+    pts.into_iter().map(|pair| pair.0).collect()
+}
 
-    for &(p, _) in pts.iter() {
+fn solve_by_backtracking_one_step(
+    side_map: &mut SideMap, conn_map: &mut ConnectMap, pts: &[Point])
+    -> SolverResult<bool>
+{
+    let rev = side_map.revision();
+
+    for &p in pts.iter() {
         let mut side_map_0 = side_map.clone();
         let mut conn_map_0 = Some(conn_map.clone());
         side_map_0.set_inside(p);
@@ -701,28 +705,6 @@ pub fn solve_by_backtracking_one_step(
     Ok(side_map.revision() != rev)
 }
 
-
-fn select_largest_area(conn_map: &mut ConnectMap) -> Point {
-    let mut max_size = 0;
-    let mut max_pt = Point(i32::MAX, i32::MAX);
-
-    for r in (0 .. conn_map.row()) {
-        for c in (0 .. conn_map.column()) {
-            let p = Point(r, c);
-            let a = conn_map.get(p);
-            if p != a.coord() { continue }
-            if a.side() != State::Unknown { continue }
-            if a.unknown_edge().len() > max_size {
-                max_pt = p;
-                max_size = a.unknown_edge().len();
-            }
-        }
-    }
-
-    assert!(max_size != 0 && max_pt != Point(i32::MAX, i32::MAX));
-    max_pt
-}
-
 pub fn solve(board: &Board) -> Result<Board, LogicError> {
     let mut queue = vec![(SideMap::from_board(board), None)];
 
@@ -745,7 +727,8 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
         }
 
         assert!(conn_map.is_some());
-        match solve_by_backtracking_one_step(&mut side_map, conn_map.as_mut().unwrap()) {
+        let pts = get_unknown_points(conn_map.as_mut().unwrap());
+        match solve_by_backtracking_one_step(&mut side_map, conn_map.as_mut().unwrap(), &pts[]) {
             Ok(true) => {
                 queue.push((side_map, conn_map));
                 continue
@@ -754,7 +737,7 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
             Err(_) => continue,
         }
 
-        let p = select_largest_area(conn_map.as_mut().unwrap());
+        let p = *pts.last().unwrap();
         let mut side_map_0 = side_map.clone();
         let conn_map_0 = conn_map.clone();
         let mut side_map_1 = side_map;
