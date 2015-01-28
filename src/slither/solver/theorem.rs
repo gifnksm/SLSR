@@ -115,14 +115,54 @@ impl FromStr for Theorem {
                 }
             }
 
+            let mut pairs: Vec<(char, Vec<Point>, Vec<Point>)> = vec![];
+
             for (p, s) in Cells::new(lines, &rows[], &cols[]) {
-                match s.trim_matches(' ') {
-                    "" => {},
-                    "0" => { pat.push(Pattern::Hint(Some(0), p)); }
-                    "1" => { pat.push(Pattern::Hint(Some(1), p)); }
-                    "2" => { pat.push(Pattern::Hint(Some(2), p)); }
-                    "3" => { pat.push(Pattern::Hint(Some(3), p)); }
-                    _ => {}
+                for c in s.trim_matches(' ').chars() {
+                    match c {
+                        '0' => { pat.push(Pattern::Hint(Some(0), p)); }
+                        '1' => { pat.push(Pattern::Hint(Some(1), p)); }
+                        '2' => { pat.push(Pattern::Hint(Some(2), p)); }
+                        '3' => { pat.push(Pattern::Hint(Some(3), p)); }
+                        _ if c.is_alphabetic() => {
+                            let key = c.to_lowercase();
+                            match pairs.iter().position(|&(k, _, _)| k == key) {
+                                Some(idx) => {
+                                    if c.is_lowercase() {
+                                        pairs[idx].1.push(p);
+                                    } else {
+                                        pairs[idx].2.push(p);
+                                    }
+                                }
+                                None => {
+                                    let (lower, upper) = if c.is_lowercase() {
+                                        (vec![p], vec![])
+                                    } else {
+                                        (vec![], vec![])
+                                    };
+                                    pairs.push((key, lower, upper));
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            for &(_, ref ps0, ref ps1) in pairs.iter() {
+                if !ps0.is_empty() && !ps1.is_empty() {
+                    pat.push(Pattern::Edge(Edge::Line, ps0[0], ps1[0]));
+                }
+
+                if ps0.len() > 0 {
+                    for &p in ps0[1 ..].iter() {
+                        pat.push(Pattern::Edge(Edge::Cross, ps0[0], p));
+                    }
+                }
+                if ps1.len() > 0 {
+                    for &p in ps1[1 ..].iter() {
+                        pat.push(Pattern::Edge(Edge::Cross, ps1[0], p));
+                    }
                 }
             }
 
@@ -155,12 +195,63 @@ mod tests {
         check(Size(1, 1),
               vec![Pattern::Hint(Some(0), Point(0, 0))],
               vec![Pattern::Edge(Edge::Cross, Point(0, 0), Point(0, -1)),
-                   Pattern::Edge(Edge::Cross, Point(0, 0), Point(-1, 0)),
                    Pattern::Edge(Edge::Cross, Point(0, 0), Point(0, 1)),
+                   Pattern::Edge(Edge::Cross, Point(0, 0), Point(-1, 0)),
                    Pattern::Edge(Edge::Cross, Point(0, 0), Point(1, 0))],"
 + + ! +x+
  0  ! x0x
 + + ! +x+
+");
+        check(Size(3, 3),
+              vec![Pattern::Hint(Some(0), Point(1, 0)),
+                   Pattern::Hint(Some(3), Point(1, 1))],
+              vec![Pattern::Edge(Edge::Cross, Point(1, 0), Point(1, -1)),
+                   Pattern::Edge(Edge::Cross, Point(1, 0), Point(1, 1)),
+                   Pattern::Edge(Edge::Cross, Point(1, 0), Point(0, 0)),
+                   Pattern::Edge(Edge::Cross, Point(1, 0), Point(2, 0)),
+                   Pattern::Edge(Edge::Cross, Point(0, 1), Point(0, 2)),
+                   Pattern::Edge(Edge::Cross, Point(1, 2), Point(0, 2)),
+                   Pattern::Edge(Edge::Cross, Point(1, 2), Point(2, 2)),
+                   Pattern::Edge(Edge::Cross, Point(2, 1), Point(2, 2)),
+                   Pattern::Edge(Edge::Line, Point(0, 0), Point(0, 1)),
+                   Pattern::Edge(Edge::Line, Point(0, 1), Point(1, 1)),
+                   Pattern::Edge(Edge::Line, Point(1, 1), Point(1, 2)),
+                   Pattern::Edge(Edge::Line, Point(1, 1), Point(2, 1)),
+                   Pattern::Edge(Edge::Line, Point(2, 0), Point(2, 1))], "
++ + + + ! + + + +
+        !   | x
++ + + + ! +x+-+x+
+ 0 3    ! x0x3|
++ + + + ! +x+-+x+
+        !   | x
++ + + + ! + + + +
+");
+        check(Size(2, 2),
+              vec![Pattern::Hint(Some(1), Point(1, 1)),
+                   Pattern::Edge(Edge::Line, Point(1, 0), Point(0, 1))],
+              vec![Pattern::Edge(Edge::Cross, Point(1, 1), Point(1, 2)),
+                   Pattern::Edge(Edge::Cross, Point(1, 1), Point(2, 1))], "
++ + + ! + + +
+   a  !    a
++ + + ! + + +
+ A 1  !  A 1x
++ + + ! + +x+
+");
+        check(Size(3, 3),
+              vec![Pattern::Hint(Some(3), Point(1, 1)),
+                   Pattern::Edge(Edge::Cross, Point(1, 0), Point(0, 1))],
+              vec![Pattern::Edge(Edge::Cross, Point(0, 0), Point(0, 1)),
+                   Pattern::Edge(Edge::Cross, Point(0, 0), Point(1, 0)),
+                   Pattern::Edge(Edge::Line, Point(0, 1), Point(1, 1)),
+                   Pattern::Edge(Edge::Line, Point(1, 0), Point(1, 1)),
+                   Pattern::Edge(Edge::Line, Point(1, 2), Point(2, 1))], "
++ + + + ! + + + +
+   a    !   xa
++ + + + ! +x+-+ +
+ a 3    !  a|3 b
++ + + + ! + + + +
+        !    B
++ + + + ! + + + +
 ");
     }
 }
