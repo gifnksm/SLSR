@@ -6,6 +6,8 @@ use solver::side_map::SideMap;
 
 mod connect_map;
 mod side_map;
+mod theorem;
+mod theorem_define;
 
 #[derive(Debug)]
 pub struct LogicError;

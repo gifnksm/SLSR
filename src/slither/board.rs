@@ -3,11 +3,12 @@ use std::ops::{Index, IndexMut};
 use std::str::FromStr;
 
 use geom::{Geom, Point, Size, Matrix};
+use util;
 
 pub type Hint = Option<u8>;
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Side { In, Out }
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Edge { Line, Cross }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -84,45 +85,18 @@ impl FromStr for Board {
         if mat.len() == 0 { return None }
 
         fn parse_pat1(mat: Vec<Vec<char>>) -> Option<Board> {
-            let rows = mat.iter()
-                .enumerate()
-                .filter(|&(_, cs)| cs[0] == '+')
-                .map(|(i, _)| i)
-                .collect::<Vec<_>>();
-            let cols = mat[rows[0]].iter()
-                .enumerate()
-                .filter(|&(_, &c)| c == '+')
-                .map(|(i, _)| i)
-                .collect::<Vec<_>>();
+            use util::{VEdges, HEdges, Cells};
+
+            let (rows, cols) = match util::find_lattice(&mat[]) {
+                Some(x) => x, None => return None
+            };
 
             if rows.len() <= 1 { return None }
             if cols.len() <= 1 { return None }
 
-            for &r in rows.iter() {
-                if mat[r].iter().position(|&c| c == '+') != Some(cols[0]) {
-                    return None
-                }
-                if mat[r].iter().rposition(|&c| c == '+') != Some(cols[cols.len() - 1]) {
-                    return None
-                }
-                for &c in cols.iter() {
-                    if mat[r].len() <= c {
-                        return None
-                    }
-                    if mat[r][c] != '+' {
-                        return None
-                    }
-                }
-            }
-
-            let mut edge_v = vec![];
-            for (&rs, &re) in rows.iter().zip(rows[1 ..].iter()) {
-                for &c in cols.iter() {
-                    let s = mat[rs + 1 .. re]
-                        .iter()
-                        .map(|row| if c < row.len() { row[c] } else { ' ' })
-                        .collect::<String>();
-                    let edge = if s.len() == 0 {
+            let edge_v = VEdges::new(&mat[], &rows[], &cols[])
+                .map(|(_, s)| {
+                    if s.is_empty() {
                         None
                     } else if s.chars().all(|c| c == 'x') {
                         Some(Edge::Cross)
@@ -130,19 +104,12 @@ impl FromStr for Board {
                         Some(Edge::Line)
                     } else {
                         None
-                    };
-                    edge_v.push(edge);
-                }
-            }
+                    }
+                }).collect();
 
-            let mut edge_h = vec!{};
-            for &r in rows.iter() {
-                for (&cs, &ce) in cols.iter().zip(cols[1 ..].iter()) {
-                    let s = mat[r][cs + 1 .. ce]
-                        .iter()
-                        .cloned()
-                        .collect::<String>();
-                    let edge = if s.len() == 0 {
+            let edge_h = HEdges::new(&mat[], &rows[], &cols[])
+                .map(|(_, s)| {
+                    if s.is_empty() {
                         None
                     } else if s.chars().all(|c| c == 'x') {
                         Some(Edge::Cross)
@@ -150,29 +117,19 @@ impl FromStr for Board {
                         Some(Edge::Line)
                     } else {
                         None
-                    };
-                    edge_h.push(edge);
-                }
-            }
+                    }
+                }).collect();
 
-            let mut hint = vec![];
-            for (&rs, &re) in rows.iter().zip(rows[1 ..].iter()) {
-                for (&cs, &ce) in cols.iter().zip(cols[1 ..].iter()) {
-                    let s = mat[rs + 1 .. re]
-                        .iter()
-                        .flat_map(|row| row[cs + 1 .. ce].iter())
-                        .cloned()
-                        .collect::<String>();
-                    let cell = match s.trim_matches(' ') {
+            let hint = Cells::new(&mat[], &rows[], &cols[])
+                .map(|(_, s)| {
+                    match s.trim_matches(' ') {
                         "0" => Some(0),
                         "1" => Some(1),
                         "2" => Some(2),
                         "3" => Some(3),
                         _ => None
-                    };
-                    hint.push(cell);
-                }
-            }
+                    }
+                }).collect();
 
             let size = Size((rows.len() - 1) as i32, (cols.len() - 1) as i32);
             let side = iter::repeat(None).take((rows.len() - 1) * (cols.len() - 1)).collect();

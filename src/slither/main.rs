@@ -21,6 +21,7 @@ mod geom;
 mod locale;
 mod pprint;
 mod solver;
+mod util;
 
 docopt! {
     Args derive Debug, "

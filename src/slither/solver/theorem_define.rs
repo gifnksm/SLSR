@@ -1,5 +1,5 @@
 // a & a: same side, a & A: Different side
-const THEOREM: &'static [&'staic str] = ["
+pub const THEOREM_DEFINE: &'static [&'static str] = &["
 + + ! +x+
  0  ! x0x
 + + ! +x+
@@ -12,13 +12,13 @@ const THEOREM: &'static [&'staic str] = ["
         !   | x
 + + + + ! + + + +
 ", "
-+ + + ! +x+ + +
- 0    ! x0x
-+ + + ! +x+-+ +
-   3  !   |3 a
-+ + + ! + + + +
-      !    A
-+ + + ! + + + +
++ + + + ! +x+ + +
+ 0      ! x0x
++ + + + ! +x+-+ +
+   3    !   |3 a
++ + + + ! + + + +
+        !    A
++ + + + ! + + + +
 ", "
 + + + ! + + +
       !   xa
@@ -66,7 +66,7 @@ const THEOREM: &'static [&'staic str] = ["
  1  ! x1x
 + + ! +x+
 ", "
-+-+ ! +-+
++ + ! +-+
 x1x ! x1x
 +x+ ! +x+
 ", "
@@ -182,13 +182,13 @@ x2    ! x2|
         !   x
 + + + + ! + + + +
 ", "
-+ + + + ! + + +
-    |   !     |
-+ + + + ! + + +
-   3    !   |3
-+ + + + ! +x+-+
-        !   x
-+ + + + ! + + +
++ + + ! + + +
+    | !     |
++ + + ! + + +
+   3  !   |3
++ + + ! +x+-+
+      !   x
++ + + ! + + +
 ", "
 + +  + + ! + +  + +
       a  !       a
@@ -246,3 +246,19 @@ x2    ! x2|
  A  !  A
 + + ! + +
 "];
+
+#[cfg(test)]
+mod tests {
+    use solver::theorem::Theorem;
+
+    #[test]
+    fn parse() {
+        for s in super::THEOREM_DEFINE.iter() {
+            if !s.parse::<Theorem>().is_some() {
+                println!("{:?}", s.parse::<Theorem>());
+                println!("{}", s);
+            }
+            assert!(s.parse::<Theorem>().is_some());
+        }
+    }
+}
