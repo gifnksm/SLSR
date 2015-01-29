@@ -1,6 +1,8 @@
 use std::str::FromStr;
+use std::num::SignedInt;
 use board::{Edge, Hint};
-use geom::{Point, Size, LEFT, UP};
+use geom::{Point, Rotation, Move, Size,
+           LEFT, UP, UCW90, UCW180, UCW270, H_FLIP, V_FLIP};
 use util;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -18,13 +20,73 @@ impl Pattern {
             x => x
         }
     }
+
+    fn rotate(self, rot: Rotation) -> Pattern {
+        let o = Point(0, 0);
+        match self {
+            Pattern::Hint(h, p) => { Pattern::Hint(h, o + rot * (p - o)) }
+            Pattern::Edge(e, p0, p1) => {
+                Pattern::Edge(e, o + rot * (p0 - o), o + rot * (p1 - o))
+            }
+        }.normalized()
+    }
+
+    fn shift(self, d: Move) -> Pattern {
+        match self {
+            Pattern::Hint(h, p) => { Pattern::Hint(h, p + d) }
+            Pattern::Edge(e, p0, p1) => {
+                Pattern::Edge(e, p0 + d, p1 + d)
+            }
+        }.normalized()
+    }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Theorem {
     size: Size,
     matcher: Vec<Pattern>,
     result: Vec<Pattern>
+}
+
+impl Theorem {
+    fn normalized(mut self) -> Theorem {
+        self.matcher.sort();
+        self.matcher.dedup();
+        self.result.sort();
+        self.result.dedup();
+        self
+    }
+
+    fn rotate(self, rot: Rotation) -> Theorem {
+        let Theorem { size, matcher, result } = self;
+        let size = rot * Move(size.0, size.1);
+
+        let mut d = Move(0, 0);
+        if size.0 < 0 { d = d + Move(- size.0 - 1, 0); }
+        if size.1 < 0 { d = d + Move(0, - size.1 - 1); }
+
+        Theorem {
+            size: Size(size.0.abs(), size.1.abs()),
+            matcher: matcher.map_in_place(|x| x.rotate(rot).shift(d)),
+            result: result.map_in_place(|x| x.rotate(rot).shift(d))
+        }.normalized()
+    }
+
+    pub fn all_rotations(self) -> Vec<Theorem> {
+        let Size(r, c) = self.size;
+        let deg90  = self.clone().rotate(UCW90);
+        let deg180 = self.clone().rotate(UCW180);
+        let deg270 = self.clone().rotate(UCW270);
+        let h_deg0   = self.clone().rotate(H_FLIP);
+        let h_deg90  = h_deg0.clone().rotate(UCW90);
+        let h_deg180 = h_deg0.clone().rotate(UCW180);
+        let h_deg270 = h_deg0.clone().rotate(UCW270);
+        let mut rots = vec![self.clone(), deg90, deg180, deg270,
+                            h_deg0, h_deg90, h_deg180, h_deg270];
+        rots.sort();
+        rots.dedup();
+        rots
+    }
 }
 
 impl FromStr for Theorem {
@@ -138,7 +200,7 @@ impl FromStr for Theorem {
                                     let (lower, upper) = if c.is_lowercase() {
                                         (vec![p], vec![])
                                     } else {
-                                        (vec![], vec![])
+                                        (vec![], vec![p])
                                     };
                                     pairs.push((key, lower, upper));
                                 }
@@ -175,7 +237,7 @@ impl FromStr for Theorem {
 
 #[cfg(test)]
 mod tests {
-    use geom::{Point, Size};
+    use geom::{Point, Size, Move, UCW0, UCW90, UCW180, UCW270, H_FLIP, V_FLIP};
     use board::Edge;
     use super::{Pattern, Theorem};
 
@@ -253,5 +315,92 @@ mod tests {
         !    B
 + + + + ! + + + +
 ");
+    }
+
+    #[test]
+    fn rotate() {
+        let deg0 = "
++ + + ! + + +
+   a  !  bxa
++ + + ! +x+-+
+ a 3  !  a|3
++ + + ! + + +
+      !    B
++ + + ! + + +
+".parse::<Theorem>().unwrap();
+
+        let deg90 = "
++ + + + ! + + + +
+ a 3    !  a|3 B
++ + + + ! +x+-+ +
+   a    !  bxa
++ + + + ! + + + +
+".parse::<Theorem>().unwrap();
+
+        let deg180 = "
++ + + ! + + +
+      !  B
++ + + ! + + +
+ 3 a  !  3|a
++ + + ! +-+x+
+ a    !  axb
++ + + ! + + +
+".parse::<Theorem>().unwrap();
+
+        let deg270 = "
++ + + + ! + + + +
+   a    !    axb
++ + + + ! + +-+x+
+   3 a  !  B 3|a
++ + + + ! + + + +
+".parse::<Theorem>().unwrap();
+
+        let h_flip = "
++ + + ! + + +
+ a    !  axb
++ + + ! +-+x+
+ 3 a  !  3|a
++ + + ! + + +
+      !  B
++ + + ! + + +
+".parse::<Theorem>().unwrap();
+
+        let v_flip = "
++ + + ! + + +
+      !    B
++ + + ! + + +
+ a 3  !  a|3
++ + + ! +x+-+
+   a  !  bxa
++ + + ! + + +
+".parse::<Theorem>().unwrap();
+
+        let Size(r, c) = deg0.size;
+        assert_eq!(deg0.clone(), deg0.clone().rotate(UCW0));
+        assert_eq!(deg90.clone(), deg0.clone().rotate(UCW90));
+        assert_eq!(deg180.clone(), deg0.clone().rotate(UCW180));
+        assert_eq!(deg270.clone(), deg0.clone().rotate(UCW270));
+        assert_eq!(h_flip.clone(), deg0.clone().rotate(H_FLIP));
+        assert_eq!(v_flip.clone(), deg0.clone().rotate(V_FLIP));
+        assert_eq!(v_flip.clone(), h_flip.clone().rotate(UCW180));
+
+        let mut rots = [deg0.clone(), deg90, deg180, deg270,
+                        h_flip.clone(),
+                        h_flip.clone().rotate(UCW90),
+                        h_flip.clone().rotate(UCW180),
+                        h_flip.clone().rotate(UCW270)];
+        rots.sort();
+        assert_eq!(rots, deg0.all_rotations());
+    }
+
+    #[test]
+    fn all_rotations() {
+        let theo = "
++ + ! +x+
+ 0  ! x0x
++ + ! +x+
+".parse::<Theorem>().unwrap();
+        let rots = theo.clone().all_rotations();
+        assert_eq!([theo], rots);
     }
 }

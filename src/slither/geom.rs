@@ -1,9 +1,9 @@
 use std::iter;
-use std::ops::{Add, Mul, Index, IndexMut};
+use std::ops::{Add, Mul, Sub, Neg, Index, IndexMut};
 
 #[derive(Clone, Copy, Show, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Point(pub i32, pub i32);
-#[derive(Clone, Copy, Show, Eq, PartialEq)]
+#[derive(Clone, Copy, Show, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Size(pub i32, pub i32);
 #[derive(Clone, Copy, Show, Eq, PartialEq)]
 pub struct Move(pub i32, pub i32);
@@ -23,6 +23,14 @@ impl Add<Move> for Point {
     }
 }
 
+impl Sub<Point> for Point {
+    type Output = Move;
+
+    fn sub(self, other: Point) -> Move {
+        Move(self.0 - other.0, self.1 - other.1)
+    }
+}
+
 impl Add<Move> for Move {
     type Output = Move;
 
@@ -31,10 +39,36 @@ impl Add<Move> for Move {
     }
 }
 
+impl Sub<Move> for Move {
+    type Output = Move;
+
+    fn sub(self, other: Move) -> Move {
+        Move(self.0 - other.0, self.1 - other.1)
+    }
+}
+
+impl Neg for Move {
+    type Output = Move;
+
+    fn neg(self) -> Move {
+        Move(-self.0, -self.1)
+    }
+}
+
+impl Mul<i32> for Move {
+    type Output = Move;
+
+    fn mul(self, other: i32) -> Move {
+        Move(self.0 * other, self.1 * other)
+    }
+}
+
 pub const UCW0:   Rotation = Rotation( 1,  0,  0,  1);
 pub const UCW90:  Rotation = Rotation( 0, -1,  1,  0);
 pub const UCW180: Rotation = Rotation(-1,  0,  0, -1);
 pub const UCW270: Rotation = Rotation( 0,  1, -1,  0);
+pub const H_FLIP: Rotation = Rotation( 1,  0,  0, -1);
+pub const V_FLIP: Rotation = Rotation(-1,  0,  0,  1);
 
 impl Mul<Rotation> for Rotation {
     type Output = Rotation;
