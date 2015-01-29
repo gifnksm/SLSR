@@ -12,7 +12,7 @@ extern crate "union-find" as union_find;
 extern crate term;
 
 use std::default::Default;
-use std::io::stdio;
+use std::old_io::stdio;
 use board::Board;
 use locale::Category;
 

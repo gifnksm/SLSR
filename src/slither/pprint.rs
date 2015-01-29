@@ -1,7 +1,7 @@
 use std::fmt;
 use std::default::Default;
-use std::io::IoResult;
-use std::io::stdio::{self, StdWriter};
+use std::old_io::IoResult;
+use std::old_io::stdio::{self, StdWriter};
 use std::num::Int;
 use board::{Board, Edge, Side};
 use geom::{Geom, Point, UP, LEFT};
