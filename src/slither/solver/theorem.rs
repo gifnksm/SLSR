@@ -1,18 +1,24 @@
 use std::str::FromStr;
 use std::num::SignedInt;
-use board::{Edge, Hint};
+use board::Edge;
 use geom::{Point, Rotation, Move, Size,
-           LEFT, UP, UCW90, UCW180, UCW270, H_FLIP, V_FLIP};
+           LEFT, UP, UCW90, UCW180, UCW270, H_FLIP};
+use solver::{State, SolverResult, LogicError};
+use solver::side_map::SideMap;
 use util;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-enum Pattern {
-    Hint(Hint, Point),
+pub enum Pattern {
+    Hint(u8, Point),
     Edge(Edge, Point, Point)
 }
 
+enum PatternMatch {
+    Complete, Partial, Conflict
+}
+
 impl Pattern {
-    fn hint(h: Hint, p: Point) -> Pattern {
+    fn hint(h: u8, p: Point) -> Pattern {
         Pattern::Hint(h, p).normalized()
     }
     fn cross(p0: Point, p1: Point) -> Pattern {
@@ -49,6 +55,40 @@ impl Pattern {
             }
         }.normalized()
     }
+
+    pub fn matches(self, side_map: &mut SideMap) -> SolverResult<PatternMatch> {
+        Ok(match self {
+            Pattern::Hint(h, p) => {
+                if side_map.hint()[p] == Some(h) {
+                    PatternMatch::Complete
+                } else {
+                    PatternMatch::Conflict
+                }
+            }
+            Pattern::Edge(e, p0, p1) => {
+                match side_map.get_edge(p0, p1) {
+                    State::Fixed(edg) => {
+                        if e == edg {
+                            PatternMatch::Complete
+                        } else {
+                            PatternMatch::Conflict
+                        }
+                    }
+                    State::Unknown => PatternMatch::Partial,
+                    State::Conflict => return Err(LogicError)
+                }
+            }
+        })
+    }
+
+    pub fn apply(&self, side_map: &mut SideMap) {
+        match self {
+            &Pattern::Hint(..) => panic!(),
+            &Pattern::Edge(e, p0, p1) => {
+                let _ = side_map.set_edge(p0, p1, e);
+            }
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -56,6 +96,12 @@ pub struct Theorem {
     size: Size,
     matcher: Vec<Pattern>,
     result: Vec<Pattern>
+}
+
+pub enum TheoremMatch {
+    Complete(Vec<Pattern>),
+    Partial(Theorem),
+    Conflict
 }
 
 impl Theorem {
@@ -82,8 +128,15 @@ impl Theorem {
         }.normalized()
     }
 
+    pub fn shift(self, d: Move) -> Theorem {
+        Theorem {
+            size: self.size,
+            matcher: self.matcher.map_in_place(|x| x.shift(d)),
+            result: self.result.map_in_place(|x| x.shift(d))
+        }
+    }
+
     pub fn all_rotations(self) -> Vec<Theorem> {
-        let Size(r, c) = self.size;
         let deg90  = self.clone().rotate(UCW90);
         let deg180 = self.clone().rotate(UCW180);
         let deg270 = self.clone().rotate(UCW270);
@@ -99,6 +152,35 @@ impl Theorem {
         rots.dedup();
 
         rots
+    }
+
+    pub fn size(&self) -> Size { self.size }
+    pub fn head(&self) -> Pattern { self.matcher[0] }
+
+    pub fn matches(self, side_map: &mut SideMap) -> SolverResult<TheoremMatch> {
+        let mut new_matcher = vec![];
+        for &pat in self.matcher.iter() {
+            match try!(pat.matches(side_map)) {
+                PatternMatch::Complete => {},
+                PatternMatch::Partial => {
+                    new_matcher.push(pat);
+                }
+                PatternMatch::Conflict => {
+                    return Ok(TheoremMatch::Conflict)
+                }
+            }
+        }
+
+        let m = if new_matcher.is_empty() {
+            TheoremMatch::Complete(self.result)
+        } else {
+            TheoremMatch::Partial(Theorem {
+                size: self.size,
+                matcher: new_matcher,
+                result: self.result
+            })
+        };
+        Ok(m)
     }
 }
 
@@ -195,10 +277,10 @@ impl FromStr for Theorem {
             for (p, s) in Cells::new(lines, &rows[], &cols[]) {
                 for c in s.trim_matches(' ').chars() {
                     match c {
-                        '0' => { pat.push(Pattern::hint(Some(0), p)); }
-                        '1' => { pat.push(Pattern::hint(Some(1), p)); }
-                        '2' => { pat.push(Pattern::hint(Some(2), p)); }
-                        '3' => { pat.push(Pattern::hint(Some(3), p)); }
+                        '0' => { pat.push(Pattern::hint(0, p)); }
+                        '1' => { pat.push(Pattern::hint(1, p)); }
+                        '2' => { pat.push(Pattern::hint(2, p)); }
+                        '3' => { pat.push(Pattern::hint(3, p)); }
                         _ if c.is_alphabetic() => {
                             let key = c.to_lowercase();
                             match pairs.iter().position(|&(k, _, _)| k == key) {
@@ -270,7 +352,7 @@ mod tests {
         }
 
         check(Size(1, 1),
-              vec![Pattern::hint(Some(0), Point(0, 0))],
+              vec![Pattern::hint(0, Point(0, 0))],
               vec![Pattern::cross(Point(0, 0), Point(0, -1)),
                    Pattern::cross(Point(0, 0), Point(0, 1)),
                    Pattern::cross(Point(0, 0), Point(-1, 0)),
@@ -280,8 +362,8 @@ mod tests {
 + + ! +x+
 ");
         check(Size(3, 3),
-              vec![Pattern::hint(Some(0), Point(1, 0)),
-                   Pattern::hint(Some(3), Point(1, 1))],
+              vec![Pattern::hint(0, Point(1, 0)),
+                   Pattern::hint(3, Point(1, 1))],
               vec![Pattern::cross(Point(1, 0), Point(1, -1)),
                    Pattern::cross(Point(1, 0), Point(1, 1)),
                    Pattern::cross(Point(1, 0), Point(0, 0)),
@@ -304,7 +386,7 @@ mod tests {
 + + + + ! + + + +
 ");
         check(Size(2, 2),
-              vec![Pattern::hint(Some(1), Point(1, 1)),
+              vec![Pattern::hint(1, Point(1, 1)),
                    Pattern::line(Point(1, 0), Point(0, 1))],
               vec![Pattern::cross(Point(1, 1), Point(1, 2)),
                    Pattern::cross(Point(1, 1), Point(2, 1))], "
@@ -315,7 +397,7 @@ mod tests {
 + + + ! + +x+
 ");
         check(Size(3, 3),
-              vec![Pattern::hint(Some(3), Point(1, 1)),
+              vec![Pattern::hint(3, Point(1, 1)),
                    Pattern::cross(Point(1, 0), Point(0, 1))],
               vec![Pattern::cross(Point(0, 0), Point(0, 1)),
                    Pattern::cross(Point(0, 0), Point(1, 0)),

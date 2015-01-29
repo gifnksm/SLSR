@@ -1,8 +1,10 @@
-use std::{cmp, fmt, iter};
-use board::{Board, Edge, Side};
-use geom::{Geom, Point, UP, LEFT, RIGHT, DOWN, UCW0, UCW90, UCW180, UCW270};
+use std::{cmp, fmt, iter, mem};
+use board::{Board, Side};
+use geom::{Geom, Point, Move};
 use solver::connect_map::ConnectMap;
 use solver::side_map::SideMap;
+use solver::theorem::{Pattern, TheoremMatch, Theorem};
+use solver::theorem_define::THEOREM_DEFINE;
 
 mod connect_map;
 mod side_map;
@@ -35,131 +37,45 @@ impl<T> State<T> {
     }
 }
 
-fn fill_by_num_place(side_map: &mut SideMap) {
-    // Corner points
-    let corners = [(Point(0, 0), UCW0),
-                   (Point(side_map.row() - 1, 0), UCW90),
-                   (Point(side_map.row() - 1, side_map.column() - 1), UCW180),
-                   (Point(0, side_map.column() - 1), UCW270)];
-    for &(p, rot) in corners.iter() {
-        match side_map.hint()[p] {
-            Some(0) => {}
-            Some(1) => {
-                side_map.set_same(p, p + rot * UP);
-                side_map.set_same(p, p + rot * LEFT);
-            }
-            Some(2) => {
-                side_map.set_different(p + rot * RIGHT, p + rot * (RIGHT + UP));
-                side_map.set_different(p + rot * DOWN,  p + rot * (DOWN + LEFT));
-            }
-            Some(3) => {
-                side_map.set_different(p, p + rot * UP);
-                side_map.set_different(p, p + rot * LEFT);
-            }
-            _ => {}
+fn initialize_theorem(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
+                      -> SolverResult<()>
+{
+    let mut it = THEOREM_DEFINE.iter()
+        .flat_map(|th| {
+            th.parse::<Theorem>().unwrap().all_rotations().into_iter()
+        });
+
+    let mut hint_theorem = [vec![], vec![], vec![], vec![]];
+    let mut nonhint_theorem = vec![];
+
+    for theo in it {
+        match theo.head() {
+            Pattern::Hint(x, _) => hint_theorem[x as usize].push(theo),
+            Pattern::Edge(..) => nonhint_theorem.push(theo)
         }
     }
 
-    // All points
     for r in (0 .. side_map.row()) {
         for c in (0 .. side_map.column()) {
             let p = Point(r, c);
             match side_map.hint()[p] {
-                Some(0) => {
-                    for &rot in [UCW0, UCW90, UCW180, UCW270].iter() {
-                        let r  = p + rot * RIGHT;
-                        let dr = p + rot * (DOWN + RIGHT);
-                        side_map.set_same(p, r);
+                Some(x) => {
+                    for theo in hint_theorem[x as usize].iter() {
+                        let o = match theo.head() {
+                            Pattern::Hint(_, p) => p,
+                            _ => panic!()
+                        };
 
-                        //           -
-                        // 0 3 =>  0x3|
-                        //           -
-                        if side_map.hint()[r] == Some(3) {
-                            side_map.set_different(r, r + rot * UP);
-                            side_map.set_different(r, r + rot * (UP + RIGHT));
-                            side_map.set_different(r, r + rot * RIGHT);
-                            side_map.set_different(r, r + rot * (DOWN + RIGHT));
-                            side_map.set_different(r, r + rot * DOWN);
-                        }
-
-                        // 0      0x
-                        //     => x -
-                        //   3     |3
-                        if side_map.hint()[dr] == Some(3) {
-                            side_map.set_different(dr, dr + rot * UP);
-                            side_map.set_different(dr, dr + rot * LEFT);
-                        }
-                    }
-                }
-                Some(1) => {}
-                Some(2) => {}
-                Some(3) => {
-                    //          x
-                    // 3 3 => |3|3|
-                    //          x
-                    for &rot in [UCW0, UCW90].iter() {
-                        let r = p + rot * RIGHT;
-                        let u = p + rot * UP;
-                        let d = p + rot * DOWN;
-                        let ur = p + rot * (RIGHT + UP);
-                        let dr = p + rot * (RIGHT + DOWN);
-                        if side_map.hint()[r] == Some(3) {
-                            side_map.set_different(p, p + rot * LEFT);
-                            side_map.set_different(p, r);
-                            side_map.set_different(r, r + rot * RIGHT);
-
-                            side_map.set_same(p + rot * UP,   r + rot * UP);
-                            side_map.set_same(p + rot * DOWN, r + rot * DOWN);
-                            side_map.set_different(p + rot * UP, r + rot * DOWN);
-                            if side_map.hint()[u] == Some(2) {
-                                side_map.set_different(u, u + rot * UP);
+                        match try!(theo.clone().shift(p - o).matches(side_map)) {
+                            TheoremMatch::Complete(result) => {
+                                for pat in result.iter() {
+                                    pat.apply(side_map);
+                                }
                             }
-                            if side_map.hint()[d] == Some(2) {
-                                side_map.set_different(d, d + rot * DOWN);
+                            TheoremMatch::Partial(theo) => {
+                                theorem.push(theo)
                             }
-                            if side_map.hint()[ur] == Some(2) {
-                                side_map.set_different(ur, ur + rot * UP);
-                            }
-                            if side_map.hint()[dr] == Some(2) {
-                                side_map.set_different(dr, dr + rot * DOWN);
-                            }
-                        }
-                    }
-
-                    //       -           -
-                    // 3    |3    3     |3
-                    //  3 =>  3|,  2  =>  2
-                    //        -     3       3|
-                    //                      -
-                    for &rot in [UCW0, UCW90].iter() {
-                        let mut dr = p + rot * (DOWN + RIGHT);
-                        let mut cnt = 1;
-                        while side_map.hint()[dr] == Some(2) {
-                            dr = dr + rot * (DOWN + RIGHT);
-                            cnt += 1;
-                        }
-                        if side_map.hint()[dr] == Some(3) {
-                            side_map.set_different(p, p + rot * UP);
-                            side_map.set_different(p, p + rot * (UP + LEFT));
-                            side_map.set_different(p, p + rot * LEFT);
-
-                            side_map.set_different(dr, dr + rot * RIGHT);
-                            side_map.set_different(dr, dr + rot * (RIGHT + DOWN));
-                            side_map.set_different(dr, dr + rot * DOWN);
-
-                            let mut t = p;
-                            for _ in (0 .. cnt) {
-                                side_map.set_different(t + rot * RIGHT,
-                                                    t + rot * DOWN);
-                                t = t + rot * (DOWN + RIGHT);
-                            }
-
-                            if side_map.hint()[p + rot * (RIGHT + RIGHT)] == Some(3) {
-                                side_map.set_same(p + rot * RIGHT, p + rot * (UP + RIGHT));
-                            }
-                            if side_map.hint()[p + rot * (DOWN + DOWN)] == Some(3) {
-                                side_map.set_same(p + rot * DOWN, p + rot * (DOWN + LEFT));
-                            }
+                            TheoremMatch::Conflict => {}
                         }
                     }
                 }
@@ -167,247 +83,56 @@ fn fill_by_num_place(side_map: &mut SideMap) {
             }
         }
     }
-}
 
-fn fill_by_line_nums(side_map: &mut SideMap) -> SolverResult<()> {
-    for r in (0 .. side_map.row()) {
-        for c in (0 .. side_map.column()) {
-            let p = Point(r, c);
-            let mut sames    = [None; 4];
-            let mut diffs    = [None; 4];
-            let mut unknowns = [None; 4];
-            let mut num_same    = 0;
-            let mut num_diff    = 0;
-            let mut num_unknown = 0;
-
-            for &dir in [UP, RIGHT, DOWN, LEFT].iter() {
-                match try!(side_map.get_edge(p, p + dir).into_option()) {
-                    Some(Edge::Cross) => { sames[num_same] = Some(dir); num_same += 1; }
-                    Some(Edge::Line)  => { diffs[num_diff] = Some(dir); num_diff += 1; }
-                    None              => { unknowns[num_unknown] = Some(dir); num_unknown += 1; }
-                }
-            }
-
-            if num_diff == 3 && num_unknown == 1 {
-                side_map.set_same(p, p + unknowns[0].unwrap());
-                continue
-            }
-
-            match side_map.hint()[p] {
-                Some(x) if (num_diff as u8) == x => {
-                    for i in (0 .. num_unknown) {
-                        side_map.set_same(p, p + unknowns[i].unwrap());
+    for theo in nonhint_theorem.into_iter() {
+        let sz = theo.size();
+        for r in (1 - sz.0 .. side_map.row() + sz.0 - 1) {
+            for c in (1 - sz.1 .. side_map.column() + sz.1 - 1) {
+                match try!(theo.clone().shift(Move(r, c)).matches(side_map)) {
+                    TheoremMatch::Complete(result) => {
+                        for pat in result.iter() {
+                            pat.apply(side_map);
+                        }
                     }
-                }
-                Some(x) if (num_same as u8) == 4 - x => {
-                    for i in (0 .. num_unknown) {
-                        side_map.set_different(p, p + unknowns[i].unwrap());
+                    TheoremMatch::Partial(theo) => {
+                        theorem.push(theo)
                     }
+                    TheoremMatch::Conflict => {}
                 }
-                _ => {}
             }
         }
     }
+
     Ok(())
 }
 
-fn fill_by_edge(side_map: &mut SideMap) -> SolverResult<()> {
-    for r in (0 .. side_map.row()) {
-        for c in (0 .. side_map.column()) {
-            let p = Point(r, c);
+fn solve_by_theorem(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
+                   -> SolverResult<()>
+{
+    let mut rev = side_map.revision();
+    loop {
+        let old_theorem = mem::replace(theorem, vec![]);
 
-            for &rot in [UCW0, UCW90, UCW180, UCW270].iter() {
-                let u = p + rot * UP;
-                let d = p + rot * DOWN;
-                let r = p + rot * RIGHT;
-                let l = p + rot * LEFT;
-                let ur = p + rot * (UP + RIGHT);
-                let ul = p + rot * (UP + LEFT);
-
-                if side_map.is_different(p, u) {
-                    if side_map.is_different(p, r) {
-                        side_map.set_different(p, ur);
-                    }
-                    if side_map.is_different(r, ur) {
-                        side_map.set_same(p, r);
+        for theo in old_theorem.into_iter() {
+            match try!(theo.matches(side_map)) {
+                TheoremMatch::Complete(result) => {
+                    for pat in result.iter() {
+                        pat.apply(side_map);
                     }
                 }
-
-                match try!(side_map.get_edge(u, r).into_option()) {
-                    Some(Edge::Cross) => {
-                        match side_map.hint()[p] {
-                            Some(1) => {
-                                side_map.set_same(p, u);
-                                side_map.set_same(p, r);
-                                side_map.set_different(l, d);
-                            }
-                            Some(2) => {
-                                side_map.set_same(l, d);
-                                side_map.set_different(u, l);
-                            }
-                            Some(3) => {
-                                side_map.set_different(p, u);
-                                side_map.set_different(p, r);
-                                side_map.set_different(l, d);
-                            }
-                            _ => {}
-                        }
-                    }
-                    Some(Edge::Line) => {
-                        match side_map.hint()[p] {
-                            Some(1) => {
-                                side_map.set_same(p, l);
-                                side_map.set_same(p, d);
-                            }
-                            Some(2) => {
-                                side_map.set_different(l, d);
-                            }
-                            Some(3) => {
-                                side_map.set_different(p, l);
-                                side_map.set_different(p, d);
-                            }
-                            _ => {}
-                        }
-                    }
-                    None => {}
+                TheoremMatch::Partial(theo) => {
+                    theorem.push(theo)
                 }
-
-                match try!(side_map.get_edge(u, ur).into_option()) {
-                    Some(Edge::Cross) => {
-                        if side_map.hint()[p] == Some(3) &&
-                            side_map.hint()[r] == Some(1)
-                        {
-                            side_map.set_different(p, u);
-                            side_map.set_same(r, r + rot * RIGHT);
-                            side_map.set_same(r, r + rot * DOWN);
-                        }
-                        if side_map.hint()[u] == Some(2) &&
-                            side_map.hint()[l] == Some(3)
-                        {
-                            side_map.set_different(u, u + rot * UP);
-                        }
-                        if side_map.hint()[u] == Some(2) &&
-                            side_map.hint()[p] == Some(3) &&
-                            side_map.is_different(u, r)
-                        {
-                            side_map.set_different(u, u + rot * UP);
-                        }
-                    }
-                    Some(Edge::Line) => {
-                        if side_map.hint()[p] == Some(3) {
-                            side_map.set_different(p, d);
-                            side_map.set_different(p, l);
-                            side_map.set_same(ur, r);
-                        }
-                    }
-                    None => {}
-                }
-
-                match try!(side_map.get_edge(u, ul).into_option()) {
-                    Some(Edge::Cross) => {
-                        if side_map.hint()[p] == Some(3) &&
-                            side_map.hint()[l] == Some(1)
-                        {
-                            side_map.set_different(p, u);
-                            side_map.set_same(l, l + rot * LEFT);
-                            side_map.set_same(l, l + rot * DOWN);
-                        }
-                        if side_map.hint()[u] == Some(2) &&
-                            side_map.hint()[r] == Some(3)
-                        {
-                            side_map.set_different(u, u + rot * UP);
-                        }
-                        if side_map.hint()[u] == Some(2) &&
-                            side_map.hint()[p] == Some(3) &&
-                            side_map.is_different(u, l)
-                        {
-                            side_map.set_different(u, u + rot * UP);
-                        }
-                    }
-                    Some(Edge::Line) => {
-                        if side_map.hint()[p] == Some(3) {
-                            side_map.set_different(p, d);
-                            side_map.set_different(p, r);
-                            side_map.set_same(ul, l);
-                        }
-                    }
-                    None => {}
-                }
-
-                match try!(side_map.get_edge(p, ur).into_option()) {
-                    Some(Edge::Cross) => {
-                        if side_map.hint()[p] == Some(3) {
-                            side_map.set_different(p, l);
-                            side_map.set_different(p, d);
-                        }
-                    }
-                    Some(Edge::Line) => {}
-                    None => {}
-                }
-
-                match try!(side_map.get_edge(p, ul).into_option()) {
-                    Some(Edge::Cross) => {
-                        if side_map.hint()[p] == Some(3) {
-                            side_map.set_different(p, r);
-                            side_map.set_different(p, d);
-                        }
-                    }
-                    Some(Edge::Line) => {}
-                    None => {}
-                }
-            }
-
-            for &rot in [UCW0, UCW90].iter() {
-                let u = p + rot * UP;
-                let d = p + rot * DOWN;
-                let r = p + rot * RIGHT;
-                let l = p + rot * LEFT;
-                let dr = p + rot * (DOWN + RIGHT);
-
-                match try!(side_map.get_edge(u, d).into_option()) {
-                    Some(Edge::Cross) => {
-                        match side_map.hint()[p] {
-                            Some(1) => {
-                                side_map.set_same(p, u);
-                                side_map.set_different(l, r);
-                            }
-                            Some(2) => {
-                                side_map.set_different(u, l);
-                                side_map.set_same(l, r);
-                            }
-                            Some(3) => {
-                                side_map.set_different(p, u);
-                                side_map.set_different(l, r);
-                            }
-                            _ => {}
-                        }
-                    }
-                    Some(Edge::Line) => {
-                        match side_map.hint()[p] {
-                            Some(1) => {
-                                side_map.set_same(p, l);
-                                side_map.set_same(p, r);
-                            }
-                            Some(2) => {
-                                side_map.set_different(l, r);
-                            }
-                            Some(3) => {
-                                side_map.set_different(p, l);
-                                side_map.set_different(p, r);
-                            }
-                            _ => {}
-                        }
-                    }
-                    None => {}
-                }
-
-                if (side_map.is_different(p, r) || side_map.is_different(p, d)) &&
-                    (side_map.is_different(dr, r) || side_map.is_different(dr, d)) {
-                        side_map.set_different(r, d);
-                    }
+                TheoremMatch::Conflict => {}
             }
         }
+
+        if side_map.revision() == rev {
+            break;
+        }
+        rev = side_map.revision()
     }
+
     Ok(())
 }
 
@@ -606,16 +331,6 @@ fn fill_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap)
     Ok(())
 }
 
-fn solve_by_logic_once(side_map: &mut SideMap) {
-    fill_by_num_place(side_map);
-}
-
-fn solve_by_local_property(side_map: &mut SideMap) -> SolverResult<()> {
-    try!(fill_by_line_nums(side_map));
-    try!(fill_by_edge(side_map));
-    Ok(())
-}
-
 fn solve_by_global_property(side_map: &mut SideMap, conn_map: &mut ConnectMap)
     -> SolverResult<()>
 {
@@ -623,13 +338,15 @@ fn solve_by_global_property(side_map: &mut SideMap, conn_map: &mut ConnectMap)
     Ok(())
 }
 
-fn solve_by_logic(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>)
+fn solve_by_logic(
+    side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>,
+    theorem: &mut Vec<Theorem>)
     -> SolverResult<()>
 {
     let mut rev = side_map.revision();
 
     while !side_map.all_filled() {
-        try!(solve_by_local_property(side_map));
+        try!(solve_by_theorem(side_map, theorem));
 
         if side_map.all_filled() {
             return Ok(())
@@ -671,7 +388,8 @@ fn get_unknown_points(conn_map: &mut ConnectMap) -> Vec<Point> {
 }
 
 fn solve_by_backtracking_one_step(
-    side_map: &mut SideMap, conn_map: &mut ConnectMap, pts: &[Point])
+    side_map: &mut SideMap, conn_map: &mut ConnectMap,
+    theorem: &mut Vec<Theorem>, pts: &[Point])
     -> SolverResult<bool>
 {
     let rev = side_map.revision();
@@ -679,24 +397,30 @@ fn solve_by_backtracking_one_step(
     for &p in pts.iter() {
         let mut side_map_0 = side_map.clone();
         let mut conn_map_0 = Some(conn_map.clone());
+        let mut theorem_0 = theorem.clone();
         side_map_0.set_inside(p);
 
         let mut side_map_1 = side_map.clone();
         let mut conn_map_1 = Some(conn_map.clone());
+        let mut theorem_1 = theorem.clone();
         side_map_1.set_outside(p);
 
-        let in_ok  = solve_by_logic(&mut side_map_0, &mut conn_map_0).is_ok();
-        let out_ok = solve_by_logic(&mut side_map_1, &mut conn_map_1).is_ok();
+        let in_ok  = solve_by_logic(
+            &mut side_map_0, &mut conn_map_0, &mut theorem_0).is_ok();
+        let out_ok = solve_by_logic(
+            &mut side_map_1, &mut conn_map_1, &mut theorem_1).is_ok();
 
         match (in_ok, out_ok) {
             (true, true) => {},
             (true, false) => {
                 *side_map = side_map_0;
                 *conn_map = conn_map_0.unwrap();
+                *theorem  = theorem_0;
             }
             (false, true) => {
                 *side_map = side_map_1;
                 *conn_map = conn_map_1.unwrap();
+                *theorem  = theorem_1;
             }
             (false, false) => {
                 return Err(LogicError)
@@ -708,11 +432,14 @@ fn solve_by_backtracking_one_step(
 }
 
 pub fn solve(board: &Board) -> Result<Board, LogicError> {
-    let mut queue = vec![(SideMap::from_board(board), None)];
+    let mut side_map = SideMap::from_board(board);
+    let mut theorem = vec![];
+    try!(initialize_theorem(&mut side_map, &mut theorem));
 
-    while let Some((mut side_map, mut conn_map)) = queue.pop() {
-        solve_by_logic_once(&mut side_map);
-        if solve_by_logic(&mut side_map, &mut conn_map).is_err() {
+    let mut queue = vec![(side_map, None, theorem)];
+
+    while let Some((mut side_map, mut conn_map, mut theorem)) = queue.pop() {
+        if solve_by_logic(&mut side_map, &mut conn_map, &mut theorem).is_err() {
             continue
         }
 
@@ -730,9 +457,11 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
 
         assert!(conn_map.is_some());
         let pts = get_unknown_points(conn_map.as_mut().unwrap());
-        match solve_by_backtracking_one_step(&mut side_map, conn_map.as_mut().unwrap(), &pts[]) {
+        match solve_by_backtracking_one_step(
+            &mut side_map, conn_map.as_mut().unwrap(), &mut theorem, &pts[])
+        {
             Ok(true) => {
-                queue.push((side_map, conn_map));
+                queue.push((side_map, conn_map, theorem));
                 continue
             }
             Ok(false) => {}
@@ -746,8 +475,8 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
         let conn_map_1 = conn_map;
         side_map_0.set_outside(p);
         side_map_1.set_inside(p);
-        queue.push((side_map_0, conn_map_0));
-        queue.push((side_map_1, conn_map_1));
+        queue.push((side_map_0, conn_map_0, theorem.clone()));
+        queue.push((side_map_1, conn_map_1, theorem));
     }
 
     Err(LogicError)

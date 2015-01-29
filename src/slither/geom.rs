@@ -63,11 +63,13 @@ impl Mul<i32> for Move {
     }
 }
 
+#[cfg(test)]
 pub const UCW0:   Rotation = Rotation( 1,  0,  0,  1);
 pub const UCW90:  Rotation = Rotation( 0, -1,  1,  0);
 pub const UCW180: Rotation = Rotation(-1,  0,  0, -1);
 pub const UCW270: Rotation = Rotation( 0,  1, -1,  0);
 pub const H_FLIP: Rotation = Rotation( 1,  0,  0, -1);
+#[cfg(test)]
 pub const V_FLIP: Rotation = Rotation(-1,  0,  0,  1);
 
 impl Mul<Rotation> for Rotation {
