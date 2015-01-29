@@ -157,28 +157,28 @@ impl Theorem {
     pub fn size(&self) -> Size { self.size }
     pub fn head(&self) -> Pattern { self.matcher[0] }
 
-    pub fn matches(self, side_map: &mut SideMap) -> SolverResult<TheoremMatch> {
-        let mut new_matcher = vec![];
-        for &pat in self.matcher.iter() {
-            match try!(pat.matches(side_map)) {
+    pub fn matches(mut self, side_map: &mut SideMap)
+                   -> SolverResult<TheoremMatch>
+    {
+        let mut w = 0;
+        for r in (0 .. self.matcher.len()) {
+            match try!(self.matcher[r].matches(side_map)) {
                 PatternMatch::Complete => {},
                 PatternMatch::Partial => {
-                    new_matcher.push(pat);
+                    self.matcher[w] = self.matcher[r];
+                    w += 1;
                 }
                 PatternMatch::Conflict => {
                     return Ok(TheoremMatch::Conflict)
                 }
             }
         }
+        unsafe { self.matcher.set_len(w); }
 
-        let m = if new_matcher.is_empty() {
+        let m = if self.matcher.is_empty() {
             TheoremMatch::Complete(self.result)
         } else {
-            TheoremMatch::Partial(Theorem {
-                size: self.size,
-                matcher: new_matcher,
-                result: self.result
-            })
+            TheoremMatch::Partial(self)
         };
         Ok(m)
     }
