@@ -59,11 +59,11 @@ impl<'a> Printer<'a> {
                 let (bg, fg) = side_to_color(ty);
                 try!(term.fg(fg));
                 try!(term.bg(bg));
-                try!(term.write(s.as_bytes()));
+                try!(term.write_all(s.as_bytes()));
                 try!(term.reset());
                 Ok(())
             }
-            Output::Raw(ref mut stdout) => stdout.write(s.as_bytes())
+            Output::Raw(ref mut stdout) => stdout.write_all(s.as_bytes())
         }
     }
     fn write_pretty_fmt(&mut self, ty: Option<Side>, fmt: fmt::Arguments) -> IoResult<()> {
@@ -81,8 +81,8 @@ impl<'a> Printer<'a> {
     }
     fn write_plain(&mut self, s: &str) -> IoResult<()> {
         match self.output {
-            Output::Pretty(ref mut term) => term.write(s.as_bytes()),
-            Output::Raw(ref mut stdout) => stdout.write(s.as_bytes())
+            Output::Pretty(ref mut term) => term.write_all(s.as_bytes()),
+            Output::Raw(ref mut stdout) => stdout.write_all(s.as_bytes())
         }
     }
 
