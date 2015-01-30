@@ -289,7 +289,7 @@ fn splits(graph: &[Vec<usize>], v: usize,
     contain_cnt > 1
 }
 
-fn fill_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap)
+fn solve_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap)
     -> SolverResult<()>
 {
     let mut rev = side_map.revision();
@@ -331,13 +331,6 @@ fn fill_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap)
     Ok(())
 }
 
-fn solve_by_global_property(side_map: &mut SideMap, conn_map: &mut ConnectMap)
-    -> SolverResult<()>
-{
-    try!(fill_by_connection(side_map, conn_map));
-    Ok(())
-}
-
 fn solve_by_logic(
     side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>,
     theorem: &mut Vec<Theorem>)
@@ -359,7 +352,7 @@ fn solve_by_logic(
         if conn_map.is_none() {
             *conn_map = Some(ConnectMap::from_side_map(side_map));
         }
-        try!(solve_by_global_property(side_map, conn_map.as_mut().unwrap()));
+        try!(solve_by_connection(side_map, conn_map.as_mut().unwrap()));
         if side_map.revision() == rev {
             break;
         }
@@ -388,47 +381,58 @@ fn get_unknown_points(conn_map: &mut ConnectMap) -> Vec<Point> {
 }
 
 fn solve_by_backtracking_one_step(
-    side_map: &mut SideMap, conn_map: &mut ConnectMap,
+    side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>,
     theorem: &mut Vec<Theorem>, pts: &[Point])
     -> SolverResult<bool>
 {
     let rev = side_map.revision();
 
     for &p in pts.iter() {
-        let mut side_map_0 = side_map.clone();
-        let mut conn_map_0 = Some(conn_map.clone());
-        let mut theorem_0 = theorem.clone();
-        side_map_0.set_inside(p);
+        match side_map.get_side(p) {
+            State::Fixed(_) => continue,
+            State::Unknown => {}
+            State::Conflict => { return Err(LogicError) }
+        }
 
-        let mut side_map_1 = side_map.clone();
-        let mut conn_map_1 = Some(conn_map.clone());
-        let mut theorem_1 = theorem.clone();
-        side_map_1.set_outside(p);
+        let mut sm0 = side_map.clone();
+        let mut cm0 = conn_map.clone();
+        let mut th0 = theorem.clone();
+        sm0.set_inside(p);
 
-        let in_ok  = solve_by_logic(
-            &mut side_map_0, &mut conn_map_0, &mut theorem_0).is_ok();
-        let out_ok = solve_by_logic(
-            &mut side_map_1, &mut conn_map_1, &mut theorem_1).is_ok();
+        if solve_by_logic(&mut sm0, &mut cm0, &mut th0).is_err() {
+            side_map.set_outside(p);
+            try!(solve_by_logic(side_map, conn_map, theorem));
+            continue
+        }
 
-        match (in_ok, out_ok) {
-            (true, true) => {},
-            (true, false) => {
-                *side_map = side_map_0;
-                *conn_map = conn_map_0.unwrap();
-                *theorem  = theorem_0;
-            }
-            (false, true) => {
-                *side_map = side_map_1;
-                *conn_map = conn_map_1.unwrap();
-                *theorem  = theorem_1;
-            }
-            (false, false) => {
-                return Err(LogicError)
-            }
+        let mut sm1 = side_map.clone();
+        let mut cm1 = conn_map.clone();
+        let mut th1 = theorem.clone();
+        sm1.set_outside(p);
+
+        if solve_by_logic(&mut sm1, &mut cm1, &mut th1).is_err() {
+            *side_map = sm0;
+            *conn_map = cm0;
+            *theorem  = th0;
         }
     }
 
     Ok(side_map.revision() != rev)
+}
+
+fn check_answer(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>)
+                -> SolverResult<()>
+{
+    if conn_map.is_none() {
+        *conn_map = Some(ConnectMap::from_side_map(side_map));
+    }
+    let conn_map = conn_map.as_mut().unwrap();
+    try!(conn_map.sync(side_map));
+    if conn_map.count_area() != 2 {
+        return Err(LogicError)
+    }
+
+    Ok(())
 }
 
 pub fn solve(board: &Board) -> Result<Board, LogicError> {
@@ -438,34 +442,36 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
 
     let mut queue = vec![(side_map, None, theorem)];
 
-    while let Some((mut side_map, mut conn_map, mut theorem)) = queue.pop() {
+    'failure: while let Some((mut side_map, mut conn_map, mut theorem)) = queue.pop() {
         if solve_by_logic(&mut side_map, &mut conn_map, &mut theorem).is_err() {
             continue
         }
 
         if side_map.all_filled() {
-            if conn_map.is_none() {
-                conn_map = Some(ConnectMap::from_side_map(&mut side_map));
-            }
-            let conn_map = conn_map.as_mut().unwrap();
-            if conn_map.sync(&mut side_map).is_err() { continue }
-            if conn_map.count_area() != 2 {
+            if check_answer(&mut side_map, &mut conn_map).is_err() {
                 continue
             }
             return side_map.to_board()
         }
 
         assert!(conn_map.is_some());
-        let pts = get_unknown_points(conn_map.as_mut().unwrap());
-        match solve_by_backtracking_one_step(
-            &mut side_map, conn_map.as_mut().unwrap(), &mut theorem, &pts[])
-        {
-            Ok(true) => {
-                queue.push((side_map, conn_map, theorem));
-                continue
+        let mut pts = get_unknown_points(conn_map.as_mut().unwrap());
+        loop {
+            match solve_by_backtracking_one_step(
+                &mut side_map, &mut conn_map, &mut theorem, &pts[])
+            {
+                Ok(true) => {
+                    if side_map.all_filled() {
+                        if check_answer(&mut side_map, &mut conn_map).is_err() {
+                            continue
+                        }
+                        return side_map.to_board()
+                    }
+                    pts = get_unknown_points(conn_map.as_mut().unwrap());
+                }
+                Ok(false) => break,
+                Err(_) => continue 'failure,
             }
-            Ok(false) => {}
-            Err(_) => continue,
         }
 
         let p = *pts.last().unwrap();
