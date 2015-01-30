@@ -154,11 +154,12 @@ fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
         }
     }
 
+    pts.sort();
+
     let mut graph = vec![];
     for &p in pts.iter() {
-        let a = conn_map.get(p);
-        let edges = a.unknown_edge().iter()
-            .filter_map(|&p2| pts.position_elem(&p2))
+        let edges = conn_map.get(p).unknown_edge().iter()
+            .filter_map(|&p2| pts.binary_search(&p2).ok())
             .collect::<Vec<_>>();
         graph.push(edges);
     }
