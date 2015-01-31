@@ -56,7 +56,7 @@ impl Pattern {
         }.normalized()
     }
 
-    pub fn matches(self, side_map: &mut SideMap) -> SolverResult<PatternMatch> {
+    fn matches(self, side_map: &mut SideMap) -> SolverResult<PatternMatch> {
         Ok(match self {
             Pattern::Hint(h, p) => {
                 if side_map.hint()[p] == Some(h) {

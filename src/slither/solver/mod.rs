@@ -111,9 +111,9 @@ fn solve_by_theorem(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
 {
     let mut rev = side_map.revision();
     loop {
-        let old_theorem = mem::replace(theorem, vec![]);
+        let new_theorem = Vec::with_capacity(theorem.len());
 
-        for theo in old_theorem.into_iter() {
+        for theo in mem::replace(theorem, new_theorem).into_iter() {
             match try!(theo.matches(side_map)) {
                 TheoremMatch::Complete(result) => {
                     for pat in result.iter() {
@@ -156,13 +156,11 @@ fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
 
     pts.sort();
 
-    let mut graph = vec![];
-    for &p in pts.iter() {
-        let edges = conn_map.get(p).unknown_edge().iter()
+    let graph = pts.iter().map(|&p| {
+        conn_map.get(p).unknown_edge().iter()
             .filter_map(|&p2| pts.binary_search(&p2).ok())
-            .collect::<Vec<_>>();
-        graph.push(edges);
-    }
+            .collect::<Vec<_>>()
+    }).collect();
 
     (pts, graph)
 }
