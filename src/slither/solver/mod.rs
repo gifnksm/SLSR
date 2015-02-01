@@ -22,7 +22,7 @@ impl fmt::Display for LogicError {
 
 type SolverResult<T> = Result<T, LogicError>;
 
-#[derive(Copy, Clone, Show, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum State<T> {
     Fixed(T), Unknown, Conflict
 }

@@ -1,13 +1,13 @@
 use std::iter;
 use std::ops::{Add, Mul, Sub, Neg, Index, IndexMut};
 
-#[derive(Clone, Copy, Show, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Point(pub i32, pub i32);
-#[derive(Clone, Copy, Show, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Size(pub i32, pub i32);
-#[derive(Clone, Copy, Show, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Move(pub i32, pub i32);
-#[derive(Clone, Copy, Show, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Rotation(i32, i32, i32, i32);
 
 pub const UP:    Move = Move(-1, 0);
@@ -115,7 +115,7 @@ impl Geom for Size {
     fn size(&self) -> Size { *self }
 }
 
-#[derive(Clone, Show, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Matrix<T> {
     size: Size,
     outside: T,

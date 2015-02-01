@@ -1,8 +1,7 @@
-#![feature(plugin)]
+#![feature(core, collections, hash, io, libc, std_misc, plugin, unicode)]
 #![warn(bad_style,
         unused, unused_extern_crates, unused_import_braces,
         unused_qualifications, unused_results, unused_typecasts)]
-#![allow(unstable)]
 
 extern crate docopt;
 #[plugin] #[no_link] extern crate docopt_macros;

@@ -6,7 +6,7 @@ use geom::{Geom, Point, Size, UP, RIGHT, DOWN, LEFT};
 use solver::{LogicError, State, SolverResult};
 use solver::side_map::SideMap;
 
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 pub struct Area {
     coord: Point,
     side: State<Side>,
@@ -55,7 +55,7 @@ impl UFValue for Area {
     }
 }
 
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 pub struct ConnectMap {
     size: Size,
     uf: UnionFind<Area>

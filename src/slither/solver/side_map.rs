@@ -5,7 +5,7 @@ use geom::{Geom, Point, Size, Matrix, LEFT, UP};
 
 const OUTSIDE_CELL_ID: CellId = CellId(0);
 
-#[derive(Copy, Clone, Eq, PartialEq, Show)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 struct CellId(usize);
 
 impl CellId {
@@ -13,7 +13,7 @@ impl CellId {
     fn key1(self) -> usize { self.0 * 2 + 1 }
 }
 
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 struct SideMapInner {
     uf: UnionFind,
     revision: u32
@@ -47,7 +47,7 @@ impl SideMapInner {
     }
 }
 
-#[derive(Clone, Show)]
+#[derive(Clone, Debug)]
 pub struct SideMap {
     hint: Matrix<Hint>,
     inner: SideMapInner
