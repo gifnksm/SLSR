@@ -185,11 +185,13 @@ impl Theorem {
 }
 
 impl FromStr for Theorem {
-    fn from_str(s: &str) -> Option<Theorem> {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Theorem, ()> {
         let mut matcher_lines = vec![];
         let mut result_lines = vec![];
 
-        let mut lines = s.lines()
+        let lines = s.lines()
             .map(|l| l.trim_matches('\n'))
             .filter(|s| !s.is_empty());
 
@@ -198,24 +200,19 @@ impl FromStr for Theorem {
             if let Some(l) = it.next() {
                 matcher_lines.push(l.chars().collect());
             } else {
-                return None
+                return Err(())
             }
 
             if let Some(l) = it.next() {
                 result_lines.push(l.chars().collect());
             } else {
-                return None
+                return Err(())
             }
         }
 
-        let (m_size, m_pat) = match parse_lines(&matcher_lines[]) {
-            Some(x) => x, None => return None
-        };
-        let (r_size, mut r_pat) = match parse_lines(&result_lines[]) {
-            Some(x) => x, None => return None
-        };
-
-        if m_size != r_size { return None }
+        let (m_size, m_pat) = try!(parse_lines(&matcher_lines[]));
+        let (r_size, mut r_pat) = try!(parse_lines(&result_lines[]));
+        if m_size != r_size { return Err(()) }
 
         let mut idx = 0;
         for &p in m_pat.iter() {
@@ -224,21 +221,21 @@ impl FromStr for Theorem {
                     idx += i;
                     let _ = r_pat.remove(idx);
                 }
-                None => { return None }
+                None => { return Err(()) }
             }
         }
 
-        return Some(Theorem { size: m_size, matcher: m_pat, result: r_pat });
+        return Ok(Theorem { size: m_size, matcher: m_pat, result: r_pat });
 
-        fn parse_lines(lines: &[Vec<char>]) -> Option<(Size, Vec<Pattern>)> {
+        fn parse_lines(lines: &[Vec<char>]) -> Result<(Size, Vec<Pattern>), ()> {
             use util::{VEdges, HEdges, Cells};
 
             let (rows, cols) = match util::find_lattice(lines) {
-                Some(x) => x, None => return None
+                Some(x) => x, None => return Err(())
             };
 
-            if rows.len() <= 1 { return None }
-            if cols.len() <= 1 { return None }
+            if rows.len() <= 1 { return Err(()) }
+            if cols.len() <= 1 { return Err(()) }
 
             let size = Size((rows.len() - 1) as i32, (cols.len() - 1) as i32);
 
@@ -325,7 +322,7 @@ impl FromStr for Theorem {
 
             pat.sort();
             pat.dedup();
-            Some((size, pat))
+            Ok((size, pat))
         }
     }
 }
@@ -347,7 +344,7 @@ mod tests {
             matcher.dedup();
             result.sort();
             result.dedup();
-            assert_eq!(Some(Theorem { size: size, matcher: matcher, result: result }),
+            assert_eq!(Ok(Theorem { size: size, matcher: matcher, result: result }),
                        input.parse::<Theorem>())
         }
 

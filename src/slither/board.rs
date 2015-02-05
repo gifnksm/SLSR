@@ -71,7 +71,9 @@ impl IndexMut<Point> for Board {
 }
 
 impl FromStr for Board {
-    fn from_str(s: &str) -> Option<Board> {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Board, ()> {
         let mut mat = s.lines()
             .map(|l| l.trim_matches('\n'))
             .map(|l| l.chars().collect::<Vec<_>>())
@@ -82,17 +84,17 @@ impl FromStr for Board {
             let _ = mat.pop();
         }
 
-        if mat.len() == 0 { return None }
+        if mat.len() == 0 { return Err(()) }
 
-        fn parse_pat1(mat: Vec<Vec<char>>) -> Option<Board> {
+        fn parse_pat1(mat: Vec<Vec<char>>) -> Result<Board, ()> {
             use util::{VEdges, HEdges, Cells};
 
             let (rows, cols) = match util::find_lattice(&mat[]) {
-                Some(x) => x, None => return None
+                Some(x) => x, None => return Err(())
             };
 
-            if rows.len() <= 1 { return None }
-            if cols.len() <= 1 { return None }
+            if rows.len() <= 1 { return Err(()) }
+            if cols.len() <= 1 { return Err(()) }
 
             let edge_v = VEdges::new(&mat[], &rows[], &cols[])
                 .map(|(_, s)| {
@@ -133,15 +135,15 @@ impl FromStr for Board {
 
             let size = Size((rows.len() - 1) as i32, (cols.len() - 1) as i32);
             let side = iter::repeat(None).take((rows.len() - 1) * (cols.len() - 1)).collect();
-            Some(Board::with_data(size, hint, side, edge_v, edge_h))
+            Ok(Board::with_data(size, hint, side, edge_v, edge_h))
         }
 
-        fn parse_pat2(mat: Vec<Vec<char>>) -> Option<Board> {
+        fn parse_pat2(mat: Vec<Vec<char>>) -> Result<Board, ()> {
             let row = mat.len();
-            if row == 0 { return None }
+            if row == 0 { return Err(()) }
             let col = mat[0].len();
-            if col == 0 { return None }
-            if mat[1 ..].iter().any(|r| r.len() != col) { return None }
+            if col == 0 { return Err(()) }
+            if mat[1 ..].iter().any(|r| r.len() != col) { return Err(()) }
 
             let hint = mat.iter().flat_map(|line| {
                 line.iter().filter_map(|&c| {
@@ -155,13 +157,13 @@ impl FromStr for Board {
                     }
                 })
             }).collect::<Vec<_>>();
-            if hint.len() != row * col { return None }
+            if hint.len() != row * col { return Err(()) }
 
             let size = Size(row as i32, col as i32);
             let side = iter::repeat(None).take(row * col).collect();
             let edge_v = iter::repeat(None).take(row * (col + 1)).collect();
             let edge_h = iter::repeat(None).take((row + 1) * col).collect();
-            Some(Board::with_data(size, hint, side, edge_v, edge_h))
+            Ok(Board::with_data(size, hint, side, edge_v, edge_h))
         }
 
         if mat[0].iter().any(|&c| c == '+') {
@@ -279,9 +281,9 @@ ______
         assert_eq!(None, hint[Point(2, 4)]);
         assert_eq!(None, hint[Point(2, 5)]);
 
-        assert_eq!(Some(&hint), hint.to_string().parse::<Board>().as_ref());
+        assert_eq!(Ok(&hint), hint.to_string().parse::<Board>().as_ref());
 
-        assert_eq!(None, "1243".parse::<Board>());
+        assert_eq!(Err(()), "1243".parse::<Board>());
 
         let input = "
 +--+ +-+!!+asdf
@@ -302,7 +304,7 @@ ______
         assert_eq!(Some(2), hint[Point(1, 3)]);
         assert_eq!(output, hint.to_string());
 
-        assert_eq!(None, "".parse::<Board>());
+        assert_eq!(Err(()), "".parse::<Board>());
 
         let input = "
 + + + +

@@ -40,7 +40,7 @@ impl<T> State<T> {
 fn initialize_theorem(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
                       -> SolverResult<()>
 {
-    let mut it = THEOREM_DEFINE.iter()
+    let it = THEOREM_DEFINE.iter()
         .flat_map(|th| {
             th.parse::<Theorem>().unwrap().all_rotations().into_iter()
         });

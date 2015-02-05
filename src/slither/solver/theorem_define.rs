@@ -254,11 +254,11 @@ mod tests {
     #[test]
     fn parse() {
         for s in super::THEOREM_DEFINE.iter() {
-            if !s.parse::<Theorem>().is_some() {
+            if !s.parse::<Theorem>().is_ok() {
                 println!("{:?}", s.parse::<Theorem>());
                 println!("{}", s);
             }
-            assert!(s.parse::<Theorem>().is_some());
+            assert!(s.parse::<Theorem>().is_ok());
         }
     }
 }
