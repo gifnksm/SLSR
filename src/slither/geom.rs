@@ -155,8 +155,6 @@ impl<T> Index<Point> for Matrix<T> {
 }
 
 impl<T> IndexMut<Point> for Matrix<T> {
-    type Output = T;
-
     fn index_mut(&mut self, p: &Point) -> &mut T {
         assert!(self.contains(*p));
         let idx = self.point_to_index(*p);

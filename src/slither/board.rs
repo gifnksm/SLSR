@@ -63,8 +63,6 @@ impl Index<Point> for Board {
 }
 
 impl IndexMut<Point> for Board {
-    type Output = Hint;
-
     fn index_mut(&mut self, p: &Point) -> &mut Hint {
         &mut self.hint[*p]
     }
