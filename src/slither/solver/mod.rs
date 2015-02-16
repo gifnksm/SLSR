@@ -23,12 +23,12 @@ impl fmt::Display for LogicError {
 type SolverResult<T> = Result<T, LogicError>;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum State<T> {
+enum State<T> {
     Fixed(T), Unknown, Conflict
 }
 
 impl<T> State<T> {
-    pub fn into_option(self) -> Result<Option<T>, LogicError> {
+    fn into_option(self) -> Result<Option<T>, LogicError> {
         match self {
             State::Fixed(st) => Ok(Some(st)),
             State::Unknown => Ok(None),
@@ -486,4 +486,3 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
 
     Err(LogicError)
 }
-
