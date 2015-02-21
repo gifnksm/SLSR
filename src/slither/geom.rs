@@ -1,4 +1,3 @@
-use std::iter;
 use std::ops::{Add, Mul, Sub, Neg, Index, IndexMut};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -133,7 +132,7 @@ impl<T> Matrix<T> {
     pub fn new_empty(size: Size, outside: T, init: T) -> Matrix<T>
         where T: Clone
     {
-        let data = iter::repeat(init).take((size.0 * size.1) as usize).collect();
+        let data = vec![init; (size.0 * size.1) as usize];
         Matrix::new(size, outside, data)
     }
 }

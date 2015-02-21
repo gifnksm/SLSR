@@ -1,4 +1,4 @@
-use std::{cmp, fmt, iter, mem};
+use std::{cmp, fmt, mem};
 use board::{Board, Side};
 use geom::{Geom, Point, Move};
 use solver::connect_map::ConnectMap;
@@ -168,9 +168,9 @@ fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
 fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
     if graph.is_empty() { return (vec![], vec![]) }
 
-    let mut visited = iter::repeat(false).take(graph.len()).collect::<Vec<_>>();
-    let mut ord = iter::repeat(0).take(graph.len()).collect::<Vec<_>>();
-    let mut low = iter::repeat(0).take(graph.len()).collect::<Vec<_>>();
+    let mut visited = vec![false; graph.len()];
+    let mut ord = vec![0; graph.len()];
+    let mut low = vec![0; graph.len()];
     let mut arts = vec![];
     let mut ord_cnt = 0;
     dfs(graph, v, &mut visited[..], &mut ord[..], &mut low[..], &mut ord_cnt, &mut arts);
@@ -261,7 +261,7 @@ fn splits(graph: &[Vec<usize>], v: usize,
     if graph.is_empty() { return false }
 
     let mut contain_cnt = 0;
-    let mut visited = iter::repeat(false).take(graph.len()).collect::<Vec<_>>();
+    let mut visited = vec![false; graph.len()];
 
     visited[v] = true;
 

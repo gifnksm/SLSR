@@ -1,4 +1,4 @@
-use std::{fmt, iter};
+use std::fmt;
 use std::ops::{Index, IndexMut};
 use std::str::FromStr;
 
@@ -132,7 +132,7 @@ impl FromStr for Board {
                 }).collect();
 
             let size = Size((rows.len() - 1) as i32, (cols.len() - 1) as i32);
-            let side = iter::repeat(None).take((rows.len() - 1) * (cols.len() - 1)).collect();
+            let side = vec![None; (rows.len() - 1) * (cols.len() - 1)];
             Ok(Board::with_data(size, hint, side, edge_v, edge_h))
         }
 
@@ -158,9 +158,9 @@ impl FromStr for Board {
             if hint.len() != row * col { return Err(()) }
 
             let size = Size(row as i32, col as i32);
-            let side = iter::repeat(None).take(row * col).collect();
-            let edge_v = iter::repeat(None).take(row * (col + 1)).collect();
-            let edge_h = iter::repeat(None).take((row + 1) * col).collect();
+            let side = vec![None; row * col];
+            let edge_v = vec![None; row * (col + 1)];
+            let edge_h = vec![None; (row + 1) * col];
             Ok(Board::with_data(size, hint, side, edge_v, edge_h))
         }
 
