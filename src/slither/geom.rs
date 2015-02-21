@@ -181,8 +181,8 @@ mod tests {
         let mat = [UCW0, UCW90, UCW180, UCW270];
         let vec = [[UP, LEFT, DOWN, RIGHT],
                    [UP + RIGHT, LEFT + UP, DOWN + LEFT, RIGHT + DOWN]];
-        for i in (0 .. mat.len()) {
-            for v in vec.iter() {
+        for i in 0 .. mat.len() {
+            for v in &vec {
                 for j in (0 .. v.len()) {
                     assert_eq!(v[(i + j) % v.len()], mat[i] * v[j]);
                 }

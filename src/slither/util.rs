@@ -13,14 +13,14 @@ pub fn find_lattice(lines: &[Vec<char>]) -> Option<(Vec<usize>, Vec<usize>)> {
         .map(|(i, _)| i)
         .collect::<Vec<_>>();
 
-    for &r in rows.iter() {
+    for &r in &rows {
         if lines[r].iter().position(|&c| c == '+') != Some(cols[0]) {
             return None
         }
         if lines[r].iter().rposition(|&c| c == '+') != Some(cols[cols.len() - 1]) {
             return None
         }
-        for &c in cols.iter() {
+        for &c in &cols {
             if lines[r].len() <= c {
                 return None
             }

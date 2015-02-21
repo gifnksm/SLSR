@@ -215,7 +215,7 @@ impl FromStr for Theorem {
         if m_size != r_size { return Err(()) }
 
         let mut idx = 0;
-        for &p in m_pat.iter() {
+        for &p in &m_pat {
             match r_pat[idx ..].iter().position(|&x| x == p) {
                 Some(i) => {
                     idx += i;
@@ -303,18 +303,18 @@ impl FromStr for Theorem {
                 }
             }
 
-            for &(_, ref ps0, ref ps1) in pairs.iter() {
+            for &(_, ref ps0, ref ps1) in &pairs {
                 if !ps0.is_empty() && !ps1.is_empty() {
                     pat.push(Pattern::line(ps0[0], ps1[0]));
                 }
 
                 if ps0.len() > 0 {
-                    for &p in ps0[1 ..].iter() {
+                    for &p in &ps0[1 ..] {
                         pat.push(Pattern::cross(ps0[0], p));
                     }
                 }
                 if ps1.len() > 0 {
-                    for &p in ps1[1 ..].iter() {
+                    for &p in &ps1[1 ..] {
                         pat.push(Pattern::cross(ps1[0], p));
                     }
                 }

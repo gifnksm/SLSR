@@ -85,22 +85,22 @@ impl ConnectMap {
 
             let mut edge = vec![];
             if side_map.contains(p) {
-                for &r in [UP, RIGHT, DOWN, LEFT].iter() {
+                for &r in &[UP, RIGHT, DOWN, LEFT] {
                     if side_map.get_edge(p, p + r) == State::Unknown {
                         edge.push(p + r);
                     }
                 }
             } else {
-                for r in (0 .. side_map.row()) {
-                    for &c in [0, side_map.column() - 1].iter() {
+                for r in 0 .. side_map.row() {
+                    for &c in &[0, side_map.column() - 1] {
                         let p2 = Point(r, c);
                         if side_map.get_edge(p, p2) == State::Unknown {
                             edge.push(p2);
                         }
                     }
                 }
-                for c in (0 .. side_map.column()) {
-                    for &r in [0, side_map.row() - 1].iter() {
+                for c in 0 .. side_map.column() {
+                    for &r in &[0, side_map.row() - 1] {
                         let p2 = Point(r, c);
                         if side_map.get_edge(p, p2) == State::Unknown {
                             edge.push(p2);
@@ -121,9 +121,9 @@ impl ConnectMap {
         });
 
         for r in (0 .. side_map.row()) {
-            for c in (0 .. side_map.column()) {
+            for c in 0 .. side_map.column() {
                 let p = Point(r, c);
-                for &r in [UP, RIGHT, DOWN, LEFT].iter() {
+                for &r in &[UP, RIGHT, DOWN, LEFT] {
                     let p2 = p + r;
                     if side_map.get_edge(p, p2) == State::Fixed(Edge::Cross) {
                         conn_map.union(p, p2);
@@ -202,7 +202,7 @@ fn filter_edge(side_map: &mut SideMap, p: Point, edge: Vec<Point>)
     let mut unknown = vec![];
     let mut same = vec![];
 
-    for p2 in edge.into_iter() {
+    for p2 in edge {
         match side_map.get_edge(p, p2) {
             State::Fixed(Edge::Cross) => same.push(p2),
             State::Fixed(Edge::Line) => {}
@@ -235,7 +235,7 @@ fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: Point)
     }
 
     let mut ret = false;
-    for &p2 in same.iter() {
+    for &p2 in &same {
         ret |= conn_map.union(p, p2);
     }
     Ok(ret)

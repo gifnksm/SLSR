@@ -60,7 +60,7 @@ fn initialize_theorem(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
             let p = Point(r, c);
             match side_map.hint()[p] {
                 Some(x) => {
-                    for theo in hint_theorem[x as usize].iter() {
+                    for theo in &hint_theorem[x as usize] {
                         let o = match theo.head() {
                             Pattern::Hint(_, p) => p,
                             _ => panic!()
@@ -68,7 +68,7 @@ fn initialize_theorem(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
 
                         match try!(theo.clone().shift(p - o).matches(side_map)) {
                             TheoremMatch::Complete(result) => {
-                                for pat in result.iter() {
+                                for pat in &result {
                                     pat.apply(side_map);
                                 }
                             }
@@ -84,13 +84,13 @@ fn initialize_theorem(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
         }
     }
 
-    for theo in nonhint_theorem.into_iter() {
+    for theo in nonhint_theorem {
         let sz = theo.size();
         for r in (1 - sz.0 .. side_map.row() + sz.0 - 1) {
             for c in (1 - sz.1 .. side_map.column() + sz.1 - 1) {
                 match try!(theo.clone().shift(Move(r, c)).matches(side_map)) {
                     TheoremMatch::Complete(result) => {
-                        for pat in result.iter() {
+                        for pat in &result {
                             pat.apply(side_map);
                         }
                     }
@@ -113,10 +113,10 @@ fn solve_by_theorem(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
     loop {
         let new_theorem = Vec::with_capacity(theorem.len());
 
-        for theo in mem::replace(theorem, new_theorem).into_iter() {
+        for theo in mem::replace(theorem, new_theorem) {
             match try!(theo.matches(side_map)) {
                 TheoremMatch::Complete(result) => {
-                    for pat in result.iter() {
+                    for pat in &result {
                         pat.apply(side_map);
                     }
                 }
@@ -188,7 +188,7 @@ fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
         let mut is_articulation = false;
         let mut num_child = 0;
 
-        for &u in graph[v].iter() {
+        for &u in &graph[v] {
             if u == v { continue }
 
             if !visited[u] {
@@ -228,7 +228,7 @@ fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool])
     }
 
     let mut sum = 0;
-    for &v in disconn.iter() {
+    for &v in &disconn {
         sum += conn_map.get(pts[v]).sum_of_hint();
     }
     if sum == 0 {
@@ -242,7 +242,7 @@ fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool])
         if vis { conn.push(u); }
     }
     let mut sum = 0;
-    for &v in conn.iter() {
+    for &v in &conn {
         sum += conn_map.get(pts[v]).sum_of_hint();
     }
     if sum == 0 {
@@ -265,7 +265,7 @@ fn splits(graph: &[Vec<usize>], v: usize,
 
     visited[v] = true;
 
-    for &u in graph[v].iter() {
+    for &u in &graph[v] {
         if u == v || visited[u] { continue }
 
         if dfs(graph, u, &mut visited[..], conn_map, pts, side) {
@@ -278,7 +278,7 @@ fn splits(graph: &[Vec<usize>], v: usize,
         let mut contains = conn_map.get(pts[v]).side() == State::Fixed(side);
         visited[v] = true;
 
-        for &u in graph[v].iter() {
+        for &u in &graph[v] {
             if u == v || visited[u] { continue }
             contains |= dfs(graph, u, visited, conn_map, pts, side);
         }
@@ -295,7 +295,7 @@ fn solve_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap)
     loop {
         try!(conn_map.sync(side_map));
 
-        for &set_side in [Side::In, Side::Out].iter() {
+        for &set_side in &[Side::In, Side::Out] {
             let filter_side = if set_side == Side::In {
                 Side::Out
             } else {
@@ -306,10 +306,10 @@ fn solve_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap)
             let (arts, visited) = get_articulation(&graph[..], 0);
 
             let disconn = try!(find_disconn_area(conn_map, &pts[..], &visited[..]));
-            for &v in disconn.iter() {
+            for &v in &disconn {
                 side_map.set_side(pts[v], filter_side);
             }
-            for &v in arts.iter() {
+            for &v in &arts {
                 let p = pts[v];
 
                 if conn_map.get(p).side() != State::Fixed(set_side) &&
@@ -386,7 +386,7 @@ fn solve_by_backtracking_one_step(
 {
     let rev = side_map.revision();
 
-    for &p in pts.iter() {
+    for &p in pts {
         match side_map.get_side(p) {
             State::Fixed(_) => continue,
             State::Unknown => {}
