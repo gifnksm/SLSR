@@ -173,7 +173,7 @@ fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
     let mut low = iter::repeat(0).take(graph.len()).collect::<Vec<_>>();
     let mut arts = vec![];
     let mut ord_cnt = 0;
-    dfs(graph, v, &mut visited[], &mut ord[], &mut low[], &mut ord_cnt, &mut arts);
+    dfs(graph, v, &mut visited[..], &mut ord[..], &mut low[..], &mut ord_cnt, &mut arts);
 
     fn dfs(graph: &[Vec<usize>],
            v: usize, visited: &mut [bool], ord: &mut [usize], low: &mut [usize], 
@@ -268,7 +268,7 @@ fn splits(graph: &[Vec<usize>], v: usize,
     for &u in graph[v].iter() {
         if u == v || visited[u] { continue }
 
-        if dfs(graph, u, &mut visited[], conn_map, pts, side) {
+        if dfs(graph, u, &mut visited[..], conn_map, pts, side) {
             contain_cnt += 1;
         }
     }
@@ -303,9 +303,9 @@ fn solve_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap)
             };
 
             let (pts, graph) = create_conn_graph(conn_map, filter_side);
-            let (arts, visited) = get_articulation(&graph[], 0);
+            let (arts, visited) = get_articulation(&graph[..], 0);
 
-            let disconn = try!(find_disconn_area(conn_map, &pts[], &visited[]));
+            let disconn = try!(find_disconn_area(conn_map, &pts[..], &visited[..]));
             for &v in disconn.iter() {
                 side_map.set_side(pts[v], filter_side);
             }
@@ -313,7 +313,7 @@ fn solve_by_connection(side_map: &mut SideMap, conn_map: &mut ConnectMap)
                 let p = pts[v];
 
                 if conn_map.get(p).side() != State::Fixed(set_side) &&
-                    splits(&graph[], v, conn_map, &pts[], set_side)
+                    splits(&graph[..], v, conn_map, &pts[..], set_side)
                 {
                     side_map.set_side(p, set_side);
                 }
@@ -457,7 +457,7 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
         let mut pts = get_unknown_points(conn_map.as_mut().unwrap());
         loop {
             match solve_by_backtracking_one_step(
-                &mut side_map, &mut conn_map, &mut theorem, &pts[])
+                &mut side_map, &mut conn_map, &mut theorem, &pts[..])
             {
                 Ok(true) => {
                     if side_map.all_filled() {

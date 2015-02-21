@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use libc::c_int;
-use std::ffi::{self, CString};
+use std::ffi::{CString, CStr};
 
 const LC_ALL:      c_int = 0;
 const LC_COLLATE:  c_int = 1;
@@ -30,9 +30,9 @@ mod native {
 }
 
 pub fn setlocale(lc: Category, locale: &str) -> String {
-    let locale = CString::from_slice(locale.as_bytes());
+    let locale = CString::new(locale.as_bytes()).unwrap();
     unsafe {
         let ret = native::setlocale(lc as c_int, locale.as_ptr());
-        String::from_utf8_lossy(&ffi::c_str_to_bytes(&ret)[]).to_string()
+        String::from_utf8_lossy(&CStr::from_ptr(ret).to_bytes()[..]).to_string()
     }
 }

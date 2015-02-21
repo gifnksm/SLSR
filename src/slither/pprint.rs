@@ -36,12 +36,12 @@ fn side_to_color(ty: Option<Side>) -> (Color, Color) {
     }
 }
 
-struct Printer<'a> {
+struct Printer {
     output: Output<StdWriter>
 }
 
-impl<'a> Printer<'a> {
-    fn new() -> Printer<'a> {
+impl Printer {
+    fn new() -> Printer {
         let output = if stdio::stdout_raw().isatty() {
             match term::stdout() {
                 Some(t) => Output::Pretty(t),

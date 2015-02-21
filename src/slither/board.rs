@@ -87,14 +87,14 @@ impl FromStr for Board {
         fn parse_pat1(mat: Vec<Vec<char>>) -> Result<Board, ()> {
             use util::{VEdges, HEdges, Cells};
 
-            let (rows, cols) = match util::find_lattice(&mat[]) {
+            let (rows, cols) = match util::find_lattice(&mat[..]) {
                 Some(x) => x, None => return Err(())
             };
 
             if rows.len() <= 1 { return Err(()) }
             if cols.len() <= 1 { return Err(()) }
 
-            let edge_v = VEdges::new(&mat[], &rows[], &cols[])
+            let edge_v = VEdges::new(&mat[..], &rows[..], &cols[..])
                 .map(|(_, s)| {
                     if s.is_empty() {
                         None
@@ -107,7 +107,7 @@ impl FromStr for Board {
                     }
                 }).collect();
 
-            let edge_h = HEdges::new(&mat[], &rows[], &cols[])
+            let edge_h = HEdges::new(&mat[..], &rows[..], &cols[..])
                 .map(|(_, s)| {
                     if s.is_empty() {
                         None
@@ -120,7 +120,7 @@ impl FromStr for Board {
                     }
                 }).collect();
 
-            let hint = Cells::new(&mat[], &rows[], &cols[])
+            let hint = Cells::new(&mat[..], &rows[..], &cols[..])
                 .map(|(_, s)| {
                     match s.trim_matches(' ') {
                         "0" => Some(0),
