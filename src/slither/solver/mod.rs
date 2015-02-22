@@ -37,8 +37,7 @@ impl<T> State<T> {
     }
 }
 
-fn initialize_theorem(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
-                      -> SolverResult<()>
+fn create_theorem_list(side_map: &mut SideMap) -> SolverResult<Vec<Theorem>>
 {
     let it = THEOREM_DEFINE.iter()
         .flat_map(|th| {
@@ -55,8 +54,10 @@ fn initialize_theorem(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
         }
     }
 
-    for r in (0 .. side_map.row()) {
-        for c in (0 .. side_map.column()) {
+    let mut theorem = vec![];
+
+    for r in 0 .. side_map.row() {
+        for c in 0 .. side_map.column() {
             let p = Point(r, c);
             match side_map.hint()[p] {
                 Some(x) => {
@@ -103,7 +104,10 @@ fn initialize_theorem(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
         }
     }
 
-    Ok(())
+    theorem.sort();
+    theorem.dedup();
+
+    Ok(theorem)
 }
 
 fn solve_by_theorem(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
@@ -436,9 +440,7 @@ fn check_answer(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>)
 
 pub fn solve(board: &Board) -> Result<Board, LogicError> {
     let mut side_map = SideMap::from_board(board);
-    let mut theorem = vec![];
-    try!(initialize_theorem(&mut side_map, &mut theorem));
-
+    let theorem = try!(create_theorem_list(&mut side_map));
     let mut queue = vec![(side_map, None, theorem)];
 
     'failure: while let Some((mut side_map, mut conn_map, mut theorem)) = queue.pop() {
