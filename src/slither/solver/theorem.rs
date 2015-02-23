@@ -210,8 +210,8 @@ impl FromStr for Theorem {
             }
         }
 
-        let (m_size, m_pat) = try!(parse_lines(&matcher_lines[..]));
-        let (r_size, mut r_pat) = try!(parse_lines(&result_lines[..]));
+        let (m_size, m_pat) = try!(parse_lines(&matcher_lines));
+        let (r_size, mut r_pat) = try!(parse_lines(&result_lines));
         if m_size != r_size { return Err(()) }
 
         let mut idx = 0;
@@ -241,7 +241,7 @@ impl FromStr for Theorem {
 
             let mut pat = vec![];
 
-            for (p, s) in VEdges::new(lines, &rows[..], &cols[..]) {
+            for (p, s) in VEdges::new(lines, &rows, &cols) {
                 if s.is_empty() {
                     continue
                 }
@@ -255,7 +255,7 @@ impl FromStr for Theorem {
                 }
             }
 
-            for (p, s) in HEdges::new(lines, &rows[..], &cols[..]) {
+            for (p, s) in HEdges::new(lines, &rows, &cols) {
                 if s.is_empty() {
                     continue
                 }
@@ -271,7 +271,7 @@ impl FromStr for Theorem {
 
             let mut pairs: Vec<(char, Vec<Point>, Vec<Point>)> = vec![];
 
-            for (p, s) in Cells::new(lines, &rows[..], &cols[..]) {
+            for (p, s) in Cells::new(lines, &rows, &cols) {
                 for c in s.trim_matches(' ').chars() {
                     match c {
                         '0' => { pat.push(Pattern::hint(0, p)); }

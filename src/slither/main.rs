@@ -49,7 +49,7 @@ impl rustc_serialize::Decodable for Width {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Width, D::Error> {
         let w = try!(d.read_usize());
         if w == 0 {
-            Err(d.error(&format!("Could not decode '{}' as width.", w)[..]))
+            Err(d.error(&format!("Could not decode '{}' as width.", w)))
         } else {
             Ok(Width(w))
         }
@@ -65,7 +65,7 @@ impl rustc_serialize::Decodable for Height {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Height, D::Error> {
         let h = try!(d.read_usize());
         if h == 0 {
-            Err(d.error(&format!("Could not decode '{}' as height.", h)[..]))
+            Err(d.error(&format!("Could not decode '{}' as height.", h)))
         } else {
             Ok(Height(h))
         }

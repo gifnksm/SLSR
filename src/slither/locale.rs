@@ -33,6 +33,6 @@ pub fn setlocale(lc: Category, locale: &str) -> String {
     let locale = CString::new(locale.as_bytes()).unwrap();
     unsafe {
         let ret = native::setlocale(lc as c_int, locale.as_ptr());
-        String::from_utf8_lossy(&CStr::from_ptr(ret).to_bytes()[..]).to_string()
+        String::from_utf8_lossy(&CStr::from_ptr(ret).to_bytes()).to_string()
     }
 }

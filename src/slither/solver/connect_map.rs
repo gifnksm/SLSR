@@ -18,7 +18,7 @@ pub struct Area {
 impl Area {
     pub fn coord(&self) -> Point { self.coord }
     pub fn side(&self) -> State<Side> { self.side }
-    pub fn unknown_edge(&self) -> &[Point] { &self.unknown_edge[..] }
+    pub fn unknown_edge(&self) -> &[Point] { &self.unknown_edge }
     pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
 }
 
@@ -43,7 +43,7 @@ impl UFValue for Area {
         let area = Area {
             coord: coord,
             side: side,
-            unknown_edge: lval.unknown_edge + &rval.unknown_edge[..],
+            unknown_edge: lval.unknown_edge + &rval.unknown_edge,
             sum_of_hint: lval.sum_of_hint + rval.sum_of_hint,
             size: lval.size + rval.size
         };
