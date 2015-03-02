@@ -270,7 +270,7 @@ impl Label {
               -> IoResult<()>
     {
         if num_line {
-            let order = 10.pow(conf.cell_width);
+            let order = 10.pow(conf.cell_width as u32);
             try!(printer.write_plain_fmt(
                 format_args!("{:^1$}", n % order, conf.cell_width)));
         } else {
