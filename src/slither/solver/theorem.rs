@@ -279,7 +279,7 @@ impl FromStr for Theorem {
                         '2' => { pat.push(Pattern::hint(2, p)); }
                         '3' => { pat.push(Pattern::hint(3, p)); }
                         _ if c.is_alphabetic() => {
-                            let key = c.to_lowercase();
+                            let key = c.to_lowercase().next().unwrap();
                             match pairs.iter().position(|&(k, _, _)| k == key) {
                                 Some(idx) => {
                                     if c.is_lowercase() {
