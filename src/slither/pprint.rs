@@ -1,11 +1,12 @@
 use std::fmt;
 use std::default::Default;
-use std::old_io::IoResult;
-use std::old_io::stdio::{self, StdWriter};
+use std::io::{self, Stdout};
+use std::io::prelude::*;
 use std::num::Int;
+use libc;
 use board::{Board, Edge, Side};
 use geom::{Geom, Point, UP, LEFT};
-use term::{self, Terminal, StdTerminal};
+use term::{self, Terminal};
 use term::color::{self, Color};
 
 #[derive(Copy, Debug, RustcDecodable)]
@@ -24,7 +25,7 @@ pub struct Config {
 }
 
 enum Output<T> {
-    Pretty(Box<StdTerminal>),
+    Pretty(Box<Terminal<T> + Send>),
     Raw(T)
 }
 
@@ -36,24 +37,47 @@ fn side_to_color(ty: Option<Side>) -> (Color, Color) {
     }
 }
 
+#[cfg(unix)]
+fn isatty(fd: libc::c_int) -> bool {
+    unsafe { libc::isatty(fd) != 0 }
+}
+#[cfg(windows)]
+fn isatty(fd: libv::c_int) -> bool {
+    extern crate "kernel32-sys" as kernel32;
+    extern crate winapi;
+    unsafe {
+        let handle = kernel32::GetStdHandle(if fd == libc::STDOUT_FILENO {
+            winapi::winbase::STD_OUTPUT_HANDLE
+        } else {
+            winapi::winbase::STD_ERROR_HANDLE
+        });
+        let mut out = 0;
+        kernel32::GetConsoleMode(handle, &mut out) != 0
+    }
+}
+
+pub fn is_pprintable() -> bool {
+    isatty(libc::STDOUT_FILENO)
+}
+
 struct Printer {
-    output: Output<StdWriter>
+    output: Output<Stdout>
 }
 
 impl Printer {
     fn new() -> Printer {
-        let output = if stdio::stdout_raw().isatty() {
+        let output = if is_pprintable() {
             match term::stdout() {
                 Some(t) => Output::Pretty(t),
-                None    => Output::Raw(stdio::stdout_raw())
+                None    => Output::Raw(io::stdout())
             }
         } else {
-            Output::Raw(stdio::stdout_raw())
+            Output::Raw(io::stdout())
         };
         Printer { output: output }
     }
 
-    fn write_pretty(&mut self, ty: Option<Side>, s: &str) -> IoResult<()> {
+    fn write_pretty(&mut self, ty: Option<Side>, s: &str) -> io::Result<()> {
         match self.output {
             Output::Pretty(ref mut term) => {
                 let (bg, fg) = side_to_color(ty);
@@ -66,7 +90,7 @@ impl Printer {
             Output::Raw(ref mut stdout) => stdout.write_all(s.as_bytes())
         }
     }
-    fn write_pretty_fmt(&mut self, ty: Option<Side>, fmt: fmt::Arguments) -> IoResult<()> {
+    fn write_pretty_fmt(&mut self, ty: Option<Side>, fmt: fmt::Arguments) -> io::Result<()> {
         match self.output {
             Output::Pretty(ref mut term) => {
                 let (bg, fg) = side_to_color(ty);
@@ -79,14 +103,14 @@ impl Printer {
             Output::Raw(ref mut stdout) => stdout.write_fmt(fmt)
         }
     }
-    fn write_plain(&mut self, s: &str) -> IoResult<()> {
+    fn write_plain(&mut self, s: &str) -> io::Result<()> {
         match self.output {
             Output::Pretty(ref mut term) => term.write_all(s.as_bytes()),
             Output::Raw(ref mut stdout) => stdout.write_all(s.as_bytes())
         }
     }
 
-    fn write_plain_fmt(&mut self, fmt: fmt::Arguments) -> IoResult<()> {
+    fn write_plain_fmt(&mut self, fmt: fmt::Arguments) -> io::Result<()> {
         match self.output {
             Output::Pretty(ref mut term) => term.write_fmt(fmt),
             Output::Raw(ref mut stdout) => stdout.write_fmt(fmt)
@@ -97,7 +121,7 @@ impl Printer {
 struct Table;
 impl Table {
     fn pprint(printer: &mut Printer, conf: &Config, board: &Board)
-              -> IoResult<()>
+              -> io::Result<()>
     {
         let row = board.row();
         try!(LabelRow::pprint(printer, conf, board));
@@ -114,7 +138,7 @@ impl Table {
 struct LabelRow;
 impl LabelRow {
     fn pprint(printer: &mut Printer, conf: &Config, board: &Board)
-              -> IoResult<()>
+              -> io::Result<()>
     {
         try!(printer.write_plain_fmt(
             format_args!("{:1$}", "", conf.cell_width)));
@@ -131,7 +155,7 @@ impl LabelRow {
 struct EdgeRow;
 impl EdgeRow {
     fn pprint(printer: &mut Printer, conf: &Config, board: &Board, y: i32)
-              -> IoResult<()>
+              -> io::Result<()>
     {
         let col = board.column();
         try!(printer.write_plain_fmt(
@@ -148,7 +172,7 @@ impl EdgeRow {
 
 struct CellRow;
 impl CellRow {
-    fn pprint(printer: &mut Printer, conf: &Config, board: &Board, y: i32) -> IoResult<()> {
+    fn pprint(printer: &mut Printer, conf: &Config, board: &Board, y: i32) -> io::Result<()> {
         let col = board.column();
         for i in (0 .. conf.cell_height) {
             let num_line = (conf.cell_height - 1) / 2 == i;
@@ -168,7 +192,7 @@ impl CellRow {
 struct Corner;
 impl Corner {
     fn pprint(printer: &mut Printer, conf: &Config, board: &Board, p: Point)
-              -> IoResult<()>
+              -> io::Result<()>
     {
         let l = p + LEFT;
         let u = p + UP;
@@ -235,7 +259,7 @@ impl Corner {
 struct EdgeH;
 impl EdgeH {
     fn pprint(printer: &mut Printer, conf: &Config, board: &Board, p: Point)
-              -> IoResult<()>
+              -> io::Result<()>
     {
         match conf.mode {
             Mode::Ascii => {
@@ -267,7 +291,7 @@ impl EdgeH {
 struct Label;
 impl Label {
     fn pprint(printer: &mut Printer, conf: &Config, n: i32, num_line: bool)
-              -> IoResult<()>
+              -> io::Result<()>
     {
         if num_line {
             let order = 10.pow(conf.cell_width as u32);
@@ -284,7 +308,7 @@ impl Label {
 struct EdgeV;
 impl EdgeV {
     fn pprint(printer: &mut Printer, conf: &Config, board: &Board, p: Point)
-              -> IoResult<()>
+              -> io::Result<()>
     {
         match conf.mode {
             Mode::Ascii => {
@@ -315,7 +339,7 @@ struct Cell;
 impl Cell {
     fn pprint(printer: &mut Printer, conf: &Config, board: &Board, p: Point,
               num_line: bool)
-              -> IoResult<()>
+              -> io::Result<()>
     {
         let ty = board.side()[p];
         match board[p] {
@@ -332,6 +356,6 @@ impl Cell {
     }
 }
 
-pub fn print(conf: &Config, board: &Board) -> IoResult<()> {
+pub fn print(conf: &Config, board: &Board) -> io::Result<()> {
     Table::pprint(&mut Printer::new(), conf, board)
 }

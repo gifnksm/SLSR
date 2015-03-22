@@ -1,4 +1,8 @@
-#![feature(core, collections, old_io, libc, plugin, unicode)]
+#![feature(core)]
+#![feature(collections)]
+#![feature(libc)]
+#![feature(plugin)]
+#![feature(unicode)]
 #![warn(bad_style,
         unused, unused_extern_crates, unused_import_braces,
         unused_qualifications, unused_results, unused_typecasts)]
@@ -12,7 +16,8 @@ extern crate "union-find" as union_find;
 extern crate term;
 
 use std::default::Default;
-use std::old_io::stdio;
+use std::io;
+use std::io::prelude::*;
 use board::Board;
 use locale::Category;
 
@@ -86,12 +91,12 @@ impl Default for YesNo {
 fn main() {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
 
-    let raw_input = stdio::stdin().read_to_end().unwrap();
-    let input = String::from_utf8(raw_input).unwrap();
+    let mut input = String::new();
+    let _ = io::stdin().read_to_string(&mut input).unwrap();
     let board = input.parse::<Board>().unwrap();
     let board = solver::solve(&board).unwrap();
 
-    if stdio::stdout_raw().isatty() {
+    if pprint::is_pprintable() {
         let is_cjk = match args.flag_cjk.unwrap_or_default() {
             YesNo::Yes => true,
             YesNo::No => false,
