@@ -11,8 +11,8 @@
 
 extern crate docopt;
 extern crate libc;
-extern crate "rustc-serialize" as rustc_serialize;
-extern crate "union-find" as union_find;
+extern crate rustc_serialize;
+extern crate union_find;
 extern crate term;
 
 use std::default::Default;

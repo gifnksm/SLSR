@@ -57,14 +57,14 @@ impl Geom for Board {
 impl Index<Point> for Board {
     type Output = Hint;
 
-    fn index(&self, p: &Point) -> &Hint {
-        &self.hint[*p]
+    fn index(&self, p: Point) -> &Hint {
+        &self.hint[p]
     }
 }
 
 impl IndexMut<Point> for Board {
-    fn index_mut(&mut self, p: &Point) -> &mut Hint {
-        &mut self.hint[*p]
+    fn index_mut(&mut self, p: Point) -> &mut Hint {
+        &mut self.hint[p]
     }
 }
 
