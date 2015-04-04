@@ -1,4 +1,3 @@
-#![feature(core)]
 #![feature(collections)]
 #![feature(libc)]
 #![feature(plugin)]
@@ -80,7 +79,7 @@ impl Default for Height {
     fn default() -> Height { Height(1) }
 }
 
-#[derive(Copy, Debug, RustcDecodable, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, RustcDecodable, Eq, PartialEq)]
 pub enum YesNo {
     Auto, Yes, No,
 }

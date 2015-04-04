@@ -2,14 +2,13 @@ use std::fmt;
 use std::default::Default;
 use std::io::{self, Stdout};
 use std::io::prelude::*;
-use std::num::Int;
 use libc;
 use board::{Board, Edge, Side};
 use geom::{Geom, Point, UP, LEFT};
 use term::{self, Terminal};
 use term::color::{self, Color};
 
-#[derive(Copy, Debug, RustcDecodable)]
+#[derive(Copy, Clone, Debug, RustcDecodable)]
 pub enum Mode {
     Ascii, Unicode
 }
@@ -294,7 +293,7 @@ impl Label {
               -> io::Result<()>
     {
         if num_line {
-            let order = 10.pow(conf.cell_width as u32);
+            let order = 10i32.pow(conf.cell_width as u32);
             try!(printer.write_plain_fmt(
                 format_args!("{:^1$}", n % order, conf.cell_width)));
         } else {

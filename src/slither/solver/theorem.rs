@@ -1,5 +1,4 @@
 use std::str::FromStr;
-use std::num::SignedInt;
 use board::Edge;
 use geom::{Point, Rotation, Move, Size,
            LEFT, UP, UCW90, UCW180, UCW270, H_FLIP};
@@ -478,13 +477,13 @@ mod tests {
         assert_eq!(v_flip.clone(), deg0.clone().rotate(V_FLIP));
         assert_eq!(v_flip.clone(), h_flip.clone().rotate(UCW180));
 
-        let mut rots = [deg0.clone(), deg90, deg180, deg270,
-                        h_flip.clone(),
-                        h_flip.clone().rotate(UCW90),
-                        h_flip.clone().rotate(UCW180),
-                        h_flip.clone().rotate(UCW270)];
+        let mut rots = &mut [deg0.clone(), deg90, deg180, deg270,
+                             h_flip.clone(),
+                             h_flip.clone().rotate(UCW90),
+                             h_flip.clone().rotate(UCW180),
+                             h_flip.clone().rotate(UCW270)];
         rots.sort();
-        assert_eq!(rots, deg0.all_rotations());
+        assert_eq!(rots, &deg0.all_rotations()[..]);
     }
 
     #[test]
@@ -495,6 +494,6 @@ mod tests {
 + + ! +x+
 ".parse::<Theorem>().unwrap();
         let rots = theo.clone().all_rotations();
-        assert_eq!([theo], rots);
+        assert_eq!(&[theo], &rots[..]);
     }
 }
