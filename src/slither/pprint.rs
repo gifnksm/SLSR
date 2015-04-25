@@ -7,6 +7,7 @@ use board::{Board, Edge, Side};
 use geom::{Geom, Point, UP, LEFT};
 use term::{self, Terminal};
 use term::color::{self, Color};
+use unicode_width::{UnicodeWidthStr, UnicodeWidthChar};
 
 #[derive(Copy, Clone, Debug, RustcDecodable)]
 pub enum Mode {
@@ -139,11 +140,17 @@ impl LabelRow {
     fn pprint(printer: &mut Printer, conf: &Config, board: &Board)
               -> io::Result<()>
     {
+        let width = if conf.is_cjk {
+            "─".width_cjk()
+        } else {
+            UnicodeWidthStr::width("─")
+        };
+
         try!(printer.write_plain_fmt(
             format_args!("{:1$}", "", conf.cell_width)));
         for x in 0 .. board.column() {
             try!(printer.write_plain_fmt(
-                format_args!("{:1$}", "", "─".width(conf.is_cjk))));
+                format_args!("{:1$}", "", width)));
             try!(Label::pprint(printer, conf, x, true));
         }
         try!(printer.write_plain("\n"));
@@ -229,7 +236,11 @@ impl Corner {
                 }
             }
             Mode::Unicode => {
-                let width = '┼'.width(conf.is_cjk).unwrap();
+                let width =  if conf.is_cjk {
+                    '┼'.width_cjk().unwrap()
+                } else {
+                    UnicodeWidthChar::width('┼').unwrap()
+                };
                 if is_same_all {
                     for _ in (0 .. width) {
                         try!(printer.write_pretty(ty, " "));
@@ -277,7 +288,11 @@ impl EdgeH {
                     Some(Edge::Line)  => ("─", None),
                     None => ("~", None)
                 };
-                let w = s.width(conf.is_cjk);
+                let w = if conf.is_cjk {
+                    s.width_cjk()
+                } else {
+                    UnicodeWidthStr::width(s)
+                };
                 for _ in (0 .. (conf.cell_width + w - 1) / w) {
                     try!(printer.write_pretty(ty, s));
                 }
@@ -319,13 +334,22 @@ impl EdgeV {
                 try!(printer.write_pretty(ty, s));
             }
             Mode::Unicode => {
-                let width = "│".width(conf.is_cjk);
+                let width = if conf.is_cjk {
+                    "│".width_cjk()
+                } else {
+                    UnicodeWidthStr::width("│")
+                };
                 let (s, ty) = match board.edge_v()[p] {
                     Some(Edge::Cross) => (" ", board.side()[p]),
                     Some(Edge::Line)  => ("│", None),
                     None => ("/", None)
                 };
-                for _ in (0 .. width / s.width(conf.is_cjk)) {
+                let w = if conf.is_cjk {
+                    s.width_cjk()
+                } else {
+                    UnicodeWidthStr::width(s)
+                };
+                for _ in (0 .. width / w) {
                     try!(printer.write_pretty(ty, s));
                 }
             }

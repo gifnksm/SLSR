@@ -17,6 +17,7 @@ docopt_macros = "*"
 rustc-serialize = "*"
 term = "*"
 union-find = "*"
+unicode-width = "*"
 
 [profile.release]
 lto = true

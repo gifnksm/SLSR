@@ -1,7 +1,6 @@
 #![feature(collections)]
 #![feature(libc)]
 #![feature(plugin)]
-#![feature(unicode)]
 #![warn(bad_style,
         unused, unused_extern_crates, unused_import_braces,
         unused_qualifications, unused_results)]
@@ -12,6 +11,7 @@ extern crate docopt;
 extern crate libc;
 extern crate rustc_serialize;
 extern crate union_find;
+extern crate unicode_width;
 extern crate term;
 
 use std::default::Default;
