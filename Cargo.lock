@@ -2,9 +2,9 @@
 name = "SLSR"
 version = "0.0.1"
 dependencies = [
- "docopt 0.6.62 (registry+https://github.com/rust-lang/crates.io-index)",
- "docopt_macros 0.6.62 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-serialize 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docopt 0.6.64 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docopt_macros 0.6.64 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "term 0.2.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "unicode-width 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "union-find 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -12,19 +12,20 @@ dependencies = [
 
 [[package]]
 name = "docopt"
-version = "0.6.62"
+version = "0.6.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "regex 0.1.30 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-serialize 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.14 (registry+https://github.com/rust-lang/crates.io-index)",
+ "strsim 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "docopt_macros"
-version = "0.6.62"
+version = "0.6.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "docopt 0.6.62 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docopt 0.6.64 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -37,7 +38,7 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.1.6"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -47,7 +48,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "rustc-serialize"
-version = "0.3.13"
+version = "0.3.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "strsim"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -74,6 +80,6 @@ name = "winapi"
 version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "libc 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
