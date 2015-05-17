@@ -40,10 +40,15 @@ impl UFValue for Area {
                 }
             }
         };
+        let unknown_edge = {
+            let mut v = Vec::from(lval.unknown_edge);
+            v.push_all(&rval.unknown_edge);
+            v
+        };
         let area = Area {
             coord: coord,
             side: side,
-            unknown_edge: lval.unknown_edge + &rval.unknown_edge,
+            unknown_edge: unknown_edge,
             sum_of_hint: lval.sum_of_hint + rval.sum_of_hint,
             size: lval.size + rval.size
         };
