@@ -1,6 +1,7 @@
-#![feature(collections)]
 #![feature(libc)]
+#![feature(map_in_place)]
 #![feature(plugin)]
+#![feature(vec_push_all)]
 #![warn(bad_style,
         unused, unused_extern_crates, unused_import_braces,
         unused_qualifications, unused_results)]

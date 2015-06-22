@@ -25,7 +25,7 @@ pub struct Config {
 }
 
 enum Output<T> {
-    Pretty(Box<Terminal<T> + Send>),
+    Pretty(Box<Terminal<Output=T> + Send>),
     Raw(T)
 }
 
