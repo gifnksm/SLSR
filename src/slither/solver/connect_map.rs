@@ -226,11 +226,14 @@ fn filter_edge(side_map: &mut SideMap, p: Point, edge: Vec<Point>)
 fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: Point)
                -> SolverResult<bool>
 {
-    let edge = {
+    let mut edge = {
         let a = conn_map.get_mut(p);
         if a.coord != p { return Ok(false) }
         mem::replace(&mut a.unknown_edge, vec![])
-    }.map_in_place(|p| conn_map.get(p).coord);
+    };
+    for p in edge.iter_mut() {
+        *p = conn_map.get(*p).coord;
+    }
 
     let (same, unknown) = try!(filter_edge(side_map, p, edge));
     {

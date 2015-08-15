@@ -1,5 +1,4 @@
 #![feature(libc)]
-#![feature(map_in_place)]
 #![feature(plugin)]
 #![feature(vec_push_all)]
 #![warn(bad_style,

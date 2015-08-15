@@ -112,27 +112,33 @@ impl Theorem {
         self
     }
 
-    fn rotate(self, rot: Rotation) -> Theorem {
-        let Theorem { size, matcher, result } = self;
-        let size = rot * Move(size.0, size.1);
+    fn rotate(mut self, rot: Rotation) -> Theorem {
+        let size = rot * Move(self.size.0, self.size.1);
 
         let mut d = Move(0, 0);
         if size.0 < 0 { d = d + Move(- size.0 - 1, 0); }
         if size.1 < 0 { d = d + Move(0, - size.1 - 1); }
 
-        Theorem {
-            size: Size(size.0.abs(), size.1.abs()),
-            matcher: matcher.map_in_place(|x| x.rotate(rot).shift(d)),
-            result: result.map_in_place(|x| x.rotate(rot).shift(d))
-        }.normalized()
+        self.size = Size(size.0.abs(), size.1.abs());
+        for x in self.matcher.iter_mut() {
+            *x = x.rotate(rot).shift(d);
+        }
+        for x in self.result.iter_mut() {
+            *x = x.rotate(rot).shift(d)
+        }
+
+        self.normalized()
     }
 
-    pub fn shift(self, d: Move) -> Theorem {
-        Theorem {
-            size: self.size,
-            matcher: self.matcher.map_in_place(|x| x.shift(d)),
-            result: self.result.map_in_place(|x| x.shift(d))
+    pub fn shift(mut self, d: Move) -> Theorem {
+        for x in self.matcher.iter_mut() {
+            *x = x.shift(d);
         }
+        for x in self.result.iter_mut() {
+            *x = x.shift(d);
+        }
+
+        self
     }
 
     pub fn all_rotations(self) -> Vec<Theorem> {
@@ -334,11 +340,11 @@ mod tests {
 
     #[test]
     fn parse() {
-        fn check(size: Size, matcher: Vec<Pattern>, result: Vec<Pattern>,
+        fn check(size: Size, mut matcher: Vec<Pattern>, mut result: Vec<Pattern>,
                  input: &str)
         {
-            let mut matcher = matcher.map_in_place(|p| p.normalized());
-            let mut result = result.map_in_place(|p| p.normalized());
+            for p in matcher.iter_mut() { *p = p.normalized(); }
+            for p in result.iter_mut() { *p = p.normalized(); }
             matcher.sort();
             matcher.dedup();
             result.sort();
