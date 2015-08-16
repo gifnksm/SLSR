@@ -41,6 +41,7 @@ env:
   matrix:
     - PKGDIR=cli
     - PKGDIR=core
+    - PKGDIR=solver
   global:
     - TRAVIS_CARGO_NIGHTLY_FEATURE=""
     - DOC_UPLOAD_VERSION=nightly
