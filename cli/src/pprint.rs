@@ -1,5 +1,4 @@
 use std::fmt;
-use std::default::Default;
 use std::io::{self, Stdout};
 use std::io::prelude::*;
 use libc;
@@ -7,19 +6,8 @@ use slsr_core::board::{Board, Edge, Side};
 use slsr_core::geom::{Geom, Point, UP, LEFT};
 use term::{self, Terminal};
 use term::color::{self, Color};
-use unicode_width::{UnicodeWidthStr, UnicodeWidthChar};
-
-#[derive(Copy, Clone, Debug, RustcDecodable)]
-pub enum Mode {
-    Ascii, Unicode
-}
-impl Default for Mode {
-    fn default() -> Mode { Mode::Unicode }
-}
 
 pub struct Config {
-    pub mode: Mode,
-    pub is_cjk: bool,
     pub cell_width: usize,
     pub cell_height: usize
 }
@@ -140,17 +128,11 @@ impl LabelRow {
     fn pprint(printer: &mut Printer, conf: &Config, board: &Board)
               -> io::Result<()>
     {
-        let width = if conf.is_cjk {
-            "─".width_cjk()
-        } else {
-            UnicodeWidthStr::width("─")
-        };
-
         try!(printer.write_plain_fmt(
             format_args!("{:1$}", "", conf.cell_width)));
         for x in 0 .. board.column() {
             try!(printer.write_plain_fmt(
-                format_args!("{:1$}", "", width)));
+                format_args!("{:1$}", "", 1)));
             try!(Label::pprint(printer, conf, x, true));
         }
         try!(printer.write_plain("\n"));
@@ -197,7 +179,7 @@ impl CellRow {
 
 struct Corner;
 impl Corner {
-    fn pprint(printer: &mut Printer, conf: &Config, board: &Board, p: Point)
+    fn pprint(printer: &mut Printer, _conf: &Config, board: &Board, p: Point)
               -> io::Result<()>
     {
         let l = p + LEFT;
@@ -223,44 +205,14 @@ impl Corner {
         let is_v = ev_p == Some(Edge::Line) &&
             ev_u == Some(Edge::Line);
 
-        match conf.mode {
-            Mode::Ascii => {
-                if is_same_all {
-                    try!(printer.write_pretty(ty, "."));
-                } else if is_h {
-                    try!(printer.write_pretty(ty, "-"));
-                } else if is_v {
-                    try!(printer.write_pretty(ty, "|"));
-                } else {
-                    try!(printer.write_pretty(ty, "+"));
-                }
-            }
-            Mode::Unicode => {
-                let width =  if conf.is_cjk {
-                    '┼'.width_cjk().unwrap()
-                } else {
-                    UnicodeWidthChar::width('┼').unwrap()
-                };
-                if is_same_all {
-                    for _ in (0 .. width) {
-                        try!(printer.write_pretty(ty, " "));
-                    }
-                } else if is_h {
-                    try!(printer.write_pretty(ty, "─"));
-                } else if is_v {
-                    try!(printer.write_pretty(ty, "│"));
-                } else if eh_p == Some(Edge::Line) && ev_p == Some(Edge::Line) {
-                    try!(printer.write_pretty(ty, "┌"));
-                } else if eh_l == Some(Edge::Line) && ev_p == Some(Edge::Line) {
-                    try!(printer.write_pretty(ty, "┐"));
-                } else if eh_l == Some(Edge::Line) && ev_u == Some(Edge::Line) {
-                    try!(printer.write_pretty(ty, "┘"));
-                } else if eh_p == Some(Edge::Line) && ev_u == Some(Edge::Line) {
-                    try!(printer.write_pretty(ty, "└"));
-                } else {
-                    try!(printer.write_pretty(ty, "┼"));
-                }
-            }
+        if is_same_all {
+            try!(printer.write_pretty(ty, "."));
+        } else if is_h {
+            try!(printer.write_pretty(ty, "-"));
+        } else if is_v {
+            try!(printer.write_pretty(ty, "|"));
+        } else {
+            try!(printer.write_pretty(ty, "+"));
         }
         Ok(())
     }
@@ -271,32 +223,13 @@ impl EdgeH {
     fn pprint(printer: &mut Printer, conf: &Config, board: &Board, p: Point)
               -> io::Result<()>
     {
-        match conf.mode {
-            Mode::Ascii => {
-                let (s, ty) = match board.edge_h()[p] {
-                    Some(Edge::Cross) => (" ", board.side()[p]),
-                    Some(Edge::Line)  => ("-", None),
-                    None => ("~", None)
-                };
-                for _ in (0 .. conf.cell_width) {
-                    try!(printer.write_pretty(ty, s));
-                }
-            }
-            Mode::Unicode => {
-                let (s, ty) = match board.edge_h()[p] {
-                    Some(Edge::Cross) => (" ", board.side()[p]),
-                    Some(Edge::Line)  => ("─", None),
-                    None => ("~", None)
-                };
-                let w = if conf.is_cjk {
-                    s.width_cjk()
-                } else {
-                    UnicodeWidthStr::width(s)
-                };
-                for _ in (0 .. (conf.cell_width + w - 1) / w) {
-                    try!(printer.write_pretty(ty, s));
-                }
-            }
+        let (s, ty) = match board.edge_h()[p] {
+            Some(Edge::Cross) => (" ", board.side()[p]),
+            Some(Edge::Line)  => ("-", None),
+            None => ("~", None)
+        };
+        for _ in (0 .. conf.cell_width) {
+            try!(printer.write_pretty(ty, s));
         }
         Ok(())
     }
@@ -321,39 +254,15 @@ impl Label {
 
 struct EdgeV;
 impl EdgeV {
-    fn pprint(printer: &mut Printer, conf: &Config, board: &Board, p: Point)
+    fn pprint(printer: &mut Printer, _conf: &Config, board: &Board, p: Point)
               -> io::Result<()>
     {
-        match conf.mode {
-            Mode::Ascii => {
-                let (s, ty) = match board.edge_v()[p] {
-                    Some(Edge::Cross) => (" ", board.side()[p]),
-                    Some(Edge::Line)  => ("|", None),
-                    None => ("?", None)
-                };
-                try!(printer.write_pretty(ty, s));
-            }
-            Mode::Unicode => {
-                let width = if conf.is_cjk {
-                    "│".width_cjk()
-                } else {
-                    UnicodeWidthStr::width("│")
-                };
-                let (s, ty) = match board.edge_v()[p] {
-                    Some(Edge::Cross) => (" ", board.side()[p]),
-                    Some(Edge::Line)  => ("│", None),
-                    None => ("/", None)
-                };
-                let w = if conf.is_cjk {
-                    s.width_cjk()
-                } else {
-                    UnicodeWidthStr::width(s)
-                };
-                for _ in (0 .. width / w) {
-                    try!(printer.write_pretty(ty, s));
-                }
-            }
-        }
+        let (s, ty) = match board.edge_v()[p] {
+            Some(Edge::Cross) => (" ", board.side()[p]),
+            Some(Edge::Line)  => ("|", None),
+            None => ("?", None)
+        };
+        try!(printer.write_pretty(ty, s));
         Ok(())
     }
 }

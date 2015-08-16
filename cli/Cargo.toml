@@ -13,9 +13,9 @@ name = "slsr-cli"
 [dependencies]
 docopt = "*"
 docopt_macros = "*"
+libc = "*"
 rustc-serialize = "*"
 term = "*"
-unicode-width = "*"
 slsr_core = { path = "../core" }
 slsr_solver = { path = "../solver" }
 
