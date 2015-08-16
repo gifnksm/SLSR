@@ -1,10 +1,30 @@
+//! Slither Link solver logic.
+
+#![warn(bad_style)]
+#![warn(missing_copy_implementations)]
+#![warn(missing_debug_implementations)]
+// #![warn(missing_docs)]
+#![warn(trivial_casts)]
+#![warn(trivial_numeric_casts)]
+#![warn(unused)]
+#![warn(unused_extern_crates)]
+#![warn(unused_import_braces)]
+#![warn(unused_qualifications)]
+#![warn(unused_results)]
+
+#![feature(vec_push_all)]
+
+extern crate union_find;
+extern crate slsr_core;
+
 use std::{cmp, fmt, mem};
 use slsr_core::board::{Board, Side};
 use slsr_core::geom::{Geom, Point, Move};
-use solver::connect_map::ConnectMap;
-use solver::side_map::SideMap;
-use solver::theorem::{Pattern, TheoremMatch, Theorem};
-use solver::theorem_define::THEOREM_DEFINE;
+
+use connect_map::ConnectMap;
+use side_map::SideMap;
+use theorem::{Pattern, TheoremMatch, Theorem};
+use theorem_define::THEOREM_DEFINE;
 
 mod connect_map;
 mod side_map;

@@ -1,6 +1,5 @@
 #![feature(libc)]
 #![feature(plugin)]
-#![feature(vec_push_all)]
 #![warn(bad_style,
         unused, unused_extern_crates, unused_import_braces,
         unused_qualifications, unused_results)]
@@ -10,10 +9,10 @@
 extern crate docopt;
 extern crate libc;
 extern crate rustc_serialize;
-extern crate union_find;
 extern crate unicode_width;
 extern crate term;
 extern crate slsr_core;
+extern crate slsr_solver;
 
 use std::default::Default;
 use std::io;
@@ -23,7 +22,6 @@ use locale::Category;
 
 mod locale;
 mod pprint;
-mod solver;
 
 docopt! {
     Args derive Debug, "
@@ -91,7 +89,7 @@ fn main() {
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input).unwrap();
     let board = input.parse::<Board>().unwrap();
-    let board = solver::solve(&board).unwrap();
+    let board = slsr_solver::solve(&board).unwrap();
 
     if pprint::is_pprintable() {
         let is_cjk = match args.flag_cjk.unwrap_or_default() {

@@ -3,8 +3,9 @@ use std::mem;
 use union_find::{UnionFind, UFValue, Merge};
 use slsr_core::board::{Edge, Side};
 use slsr_core::geom::{Geom, Point, Size, UP, RIGHT, DOWN, LEFT};
-use solver::{LogicError, State, SolverResult};
-use solver::side_map::SideMap;
+
+use super::{LogicError, State, SolverResult};
+use side_map::SideMap;
 
 #[derive(Clone, Debug)]
 pub struct Area {

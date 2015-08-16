@@ -2,9 +2,10 @@ use std::str::FromStr;
 use slsr_core::board::Edge;
 use slsr_core::geom::{Point, Rotation, Move, Size,
                       LEFT, UP, UCW90, UCW180, UCW270, H_FLIP};
-use solver::{State, SolverResult, LogicError};
-use solver::side_map::SideMap;
 use slsr_core::util;
+
+use super::{State, SolverResult, LogicError};
+use side_map::SideMap;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Pattern {
