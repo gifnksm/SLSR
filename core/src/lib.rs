@@ -1,5 +1,7 @@
 //! Data structures and utility functions for Slither Link.
 
+#![feature(associated_consts)]
+
 #![warn(bad_style)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
@@ -14,4 +16,5 @@
 
 pub mod board;
 pub mod geom;
-pub mod util;
+pub mod lattice_parser;
+

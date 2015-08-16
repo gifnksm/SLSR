@@ -1,6 +1,6 @@
 use union_find::UnionFind;
 use slsr_core::board::{Board, Hint, Edge, Side};
-use slsr_core::geom::{Geom, Point, Size, Matrix, LEFT, UP};
+use slsr_core::geom::{Geom, Point, Size, Matrix, Move};
 
 use super::{State, LogicError};
 
@@ -72,21 +72,21 @@ impl SideMap {
                     map.set_side(p, side);
                 }
                 if let Some(edge) = board.edge_h()[p] {
-                    map.set_edge(p, p + UP, edge);
+                    map.set_edge(p, p + Move::UP, edge);
                 }
                 if let Some(edge) = board.edge_v()[p] {
-                    map.set_edge(p, p + LEFT, edge);
+                    map.set_edge(p, p + Move::LEFT, edge);
                 }
             }
             let p = Point(r, board.column());
             if let Some(edge) = board.edge_v()[p] {
-                map.set_edge(p, p + LEFT, edge);
+                map.set_edge(p, p + Move::LEFT, edge);
             }
         }
         for c in (0 .. board.column()) {
             let p = Point(board.row(), c);
             if let Some(edge) = board.edge_h()[p] {
-                map.set_edge(p, p + UP, edge);
+                map.set_edge(p, p + Move::UP, edge);
             }
         }
         map
@@ -100,15 +100,15 @@ impl SideMap {
 
                 board[p] = self.hint[p];
                 board.side_mut()[p] = try!(self.get_side(p).into_option());
-                board.edge_h_mut()[p] = try!(self.get_edge(p, p + UP).into_option());
-                board.edge_v_mut()[p] = try!(self.get_edge(p, p + LEFT).into_option());
+                board.edge_h_mut()[p] = try!(self.get_edge(p, p + Move::UP).into_option());
+                board.edge_v_mut()[p] = try!(self.get_edge(p, p + Move::LEFT).into_option());
             }
             let p = Point(r, board.column());
-            board.edge_v_mut()[p] = try!(self.get_edge(p, p + LEFT).into_option());
+            board.edge_v_mut()[p] = try!(self.get_edge(p, p + Move::LEFT).into_option());
         }
         for c in (0 .. board.column()) {
             let p = Point(board.row(), c);
-            board.edge_h_mut()[p] = try!(self.get_edge(p, p + UP).into_option());
+            board.edge_h_mut()[p] = try!(self.get_edge(p, p + Move::UP).into_option());
         }
         Ok(board)
     }

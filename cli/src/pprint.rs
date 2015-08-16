@@ -3,7 +3,7 @@ use std::io::{self, Stdout};
 use std::io::prelude::*;
 use libc;
 use slsr_core::board::{Board, Edge, Side};
-use slsr_core::geom::{Geom, Point, UP, LEFT};
+use slsr_core::geom::{Geom, Point, Move};
 use term::{self, Terminal};
 use term::color::{self, Color};
 
@@ -182,8 +182,8 @@ impl Corner {
     fn pprint(printer: &mut Printer, _conf: &Config, board: &Board, p: Point)
               -> io::Result<()>
     {
-        let l = p + LEFT;
-        let u = p + UP;
+        let l = p + Move::LEFT;
+        let u = p + Move::UP;
         let eh_p = board.edge_h()[p];
         let eh_l = board.edge_h()[l];
         let ev_p = board.edge_v()[p];

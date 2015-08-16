@@ -2,7 +2,7 @@ use std::iter::FromIterator;
 use std::mem;
 use union_find::{UnionFind, UFValue, Merge};
 use slsr_core::board::{Edge, Side};
-use slsr_core::geom::{Geom, Point, Size, UP, RIGHT, DOWN, LEFT};
+use slsr_core::geom::{Geom, Point, Size, Move};
 
 use super::{LogicError, State, SolverResult};
 use side_map::SideMap;
@@ -91,7 +91,7 @@ impl ConnectMap {
 
             let mut edge = vec![];
             if side_map.contains(p) {
-                for &r in &[UP, RIGHT, DOWN, LEFT] {
+                for &r in &Move::ALL_DIRECTIONS {
                     if side_map.get_edge(p, p + r) == State::Unknown {
                         edge.push(p + r);
                     }
@@ -129,7 +129,7 @@ impl ConnectMap {
         for r in (0 .. side_map.row()) {
             for c in 0 .. side_map.column() {
                 let p = Point(r, c);
-                for &r in &[UP, RIGHT, DOWN, LEFT] {
+                for &r in &Move::ALL_DIRECTIONS {
                     let p2 = p + r;
                     if side_map.get_edge(p, p2) == State::Fixed(Edge::Cross) {
                         conn_map.union(p, p2);

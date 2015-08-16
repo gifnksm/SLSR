@@ -1,8 +1,7 @@
 use std::str::FromStr;
 use slsr_core::board::Edge;
-use slsr_core::geom::{Point, Rotation, Move, Size,
-                      LEFT, UP, UCW90, UCW180, UCW270, H_FLIP};
-use slsr_core::util;
+use slsr_core::geom::{Point, Rotation, Move, Size};
+use slsr_core::lattice_parser::LatticeParser;
 
 use super::{State, SolverResult, LogicError};
 use side_map::SideMap;
@@ -143,13 +142,13 @@ impl Theorem {
     }
 
     pub fn all_rotations(self) -> Vec<Theorem> {
-        let deg90  = self.clone().rotate(UCW90);
-        let deg180 = self.clone().rotate(UCW180);
-        let deg270 = self.clone().rotate(UCW270);
-        let h_deg0   = self.clone().rotate(H_FLIP);
-        let h_deg90  = h_deg0.clone().rotate(UCW90);
-        let h_deg180 = h_deg0.clone().rotate(UCW180);
-        let h_deg270 = h_deg0.clone().rotate(UCW270);
+        let deg90  = self.clone().rotate(Rotation::UCW90);
+        let deg180 = self.clone().rotate(Rotation::UCW180);
+        let deg270 = self.clone().rotate(Rotation::UCW270);
+        let h_deg0   = self.clone().rotate(Rotation::H_FLIP);
+        let h_deg90  = h_deg0.clone().rotate(Rotation::UCW90);
+        let h_deg180 = h_deg0.clone().rotate(Rotation::UCW180);
+        let h_deg270 = h_deg0.clone().rotate(Rotation::UCW270);
         let mut rots = vec![self.clone(), deg90, deg180, deg270,
                             h_deg0, h_deg90, h_deg180, h_deg270];
         rots.sort();
@@ -234,50 +233,51 @@ impl FromStr for Theorem {
         return Ok(Theorem { size: m_size, matcher: m_pat, result: r_pat });
 
         fn parse_lines(lines: &[Vec<char>]) -> Result<(Size, Vec<Pattern>), ()> {
-            use slsr_core::util::{VEdges, HEdges, Cells};
-
-            let (rows, cols) = match util::find_lattice(lines) {
+            let parser = match LatticeParser::new(lines) {
                 Some(x) => x, None => return Err(())
             };
 
-            if rows.len() <= 1 { return Err(()) }
-            if cols.len() <= 1 { return Err(()) }
+            let rows = parser.num_rows();
+            let cols = parser.num_cols();
 
-            let size = Size((rows.len() - 1) as i32, (cols.len() - 1) as i32);
+            if rows <= 1 { return Err(()) }
+            if cols <= 1 { return Err(()) }
+
+            let size = Size((rows - 1) as i32, (cols - 1) as i32);
 
             let mut pat = vec![];
 
-            for (p, s) in VEdges::new(lines, &rows, &cols) {
+            for (p, s) in parser.v_edges() {
                 if s.is_empty() {
                     continue
                 }
                 if s.chars().all(|c| c == 'x') {
-                    pat.push(Pattern::cross(p + LEFT, p));
+                    pat.push(Pattern::cross(p + Move::LEFT, p));
                     continue
                 }
                 if s.chars().all(|c| c == '|') {
-                    pat.push(Pattern::line(p + LEFT, p));
+                    pat.push(Pattern::line(p + Move::LEFT, p));
                     continue
                 }
             }
 
-            for (p, s) in HEdges::new(lines, &rows, &cols) {
+            for (p, s) in parser.h_edges() {
                 if s.is_empty() {
                     continue
                 }
                 if s.chars().all(|c| c == 'x') {
-                    pat.push(Pattern::cross(p + UP, p));
+                    pat.push(Pattern::cross(p + Move::UP, p));
                     continue
                 }
                 if s.chars().all(|c| c == '-') {
-                    pat.push(Pattern::line(p + UP, p));
+                    pat.push(Pattern::line(p + Move::UP, p));
                     continue
                 }
             }
 
             let mut pairs: Vec<(char, Vec<Point>, Vec<Point>)> = vec![];
 
-            for (p, s) in Cells::new(lines, &rows, &cols) {
+            for (p, s) in parser.cells() {
                 for c in s.trim_matches(' ').chars() {
                     match c {
                         '0' => { pat.push(Pattern::hint(0, p)); }
@@ -335,7 +335,7 @@ impl FromStr for Theorem {
 
 #[cfg(test)]
 mod tests {
-    use slsr_core::geom::{Point, Size, UCW0, UCW90, UCW180, UCW270, H_FLIP, V_FLIP};
+    use slsr_core::geom::{Point, Size, Rotation};
     use super::{Pattern, Theorem};
 
     #[test]
@@ -474,19 +474,19 @@ mod tests {
 + + + ! + + +
 ".parse::<Theorem>().unwrap();
 
-        assert_eq!(deg0.clone(), deg0.clone().rotate(UCW0));
-        assert_eq!(deg90.clone(), deg0.clone().rotate(UCW90));
-        assert_eq!(deg180.clone(), deg0.clone().rotate(UCW180));
-        assert_eq!(deg270.clone(), deg0.clone().rotate(UCW270));
-        assert_eq!(h_flip.clone(), deg0.clone().rotate(H_FLIP));
-        assert_eq!(v_flip.clone(), deg0.clone().rotate(V_FLIP));
-        assert_eq!(v_flip.clone(), h_flip.clone().rotate(UCW180));
+        assert_eq!(deg0.clone(), deg0.clone().rotate(Rotation::UCW0));
+        assert_eq!(deg90.clone(), deg0.clone().rotate(Rotation::UCW90));
+        assert_eq!(deg180.clone(), deg0.clone().rotate(Rotation::UCW180));
+        assert_eq!(deg270.clone(), deg0.clone().rotate(Rotation::UCW270));
+        assert_eq!(h_flip.clone(), deg0.clone().rotate(Rotation::H_FLIP));
+        assert_eq!(v_flip.clone(), deg0.clone().rotate(Rotation::V_FLIP));
+        assert_eq!(v_flip.clone(), h_flip.clone().rotate(Rotation::UCW180));
 
         let mut rots = &mut [deg0.clone(), deg90, deg180, deg270,
                              h_flip.clone(),
-                             h_flip.clone().rotate(UCW90),
-                             h_flip.clone().rotate(UCW180),
-                             h_flip.clone().rotate(UCW270)];
+                             h_flip.clone().rotate(Rotation::UCW90),
+                             h_flip.clone().rotate(Rotation::UCW180),
+                             h_flip.clone().rotate(Rotation::UCW270)];
         rots.sort();
         assert_eq!(rots, &deg0.all_rotations()[..]);
     }

@@ -1,35 +1,57 @@
 use std::iter;
 use geom::Point;
 
-pub fn find_lattice(lines: &[Vec<char>]) -> Option<(Vec<usize>, Vec<usize>)> {
-    let rows = lines.iter()
-        .enumerate()
-        .filter(|&(_, cs)| cs.iter().any(|&c| c == '+'))
-        .map(|(i, _)| i)
-        .collect::<Vec<_>>();
-    let cols = lines[rows[0]].iter()
-        .enumerate()
-        .filter(|&(_, &c)| c == '+')
-        .map(|(i, _)| i)
-        .collect::<Vec<_>>();
+#[derive(Clone, Debug)]
+pub struct LatticeParser<'a> {
+    mat: &'a [Vec<char>],
+    rows: Vec<usize>,
+    cols: Vec<usize>
+}
 
-    for &r in &rows {
-        if lines[r].iter().position(|&c| c == '+') != Some(cols[0]) {
-            return None
-        }
-        if lines[r].iter().rposition(|&c| c == '+') != Some(cols[cols.len() - 1]) {
-            return None
-        }
-        for &c in &cols {
-            if lines[r].len() <= c {
+impl<'a> LatticeParser<'a> {
+    pub fn new(lines: &'a[Vec<char>]) -> Option<LatticeParser<'a>> {
+        let rows = lines.iter()
+            .enumerate()
+            .filter(|&(_, cs)| cs.iter().any(|&c| c == '+'))
+            .map(|(i, _)| i)
+            .collect::<Vec<_>>();
+        let cols = lines[rows[0]].iter()
+            .enumerate()
+            .filter(|&(_, &c)| c == '+')
+            .map(|(i, _)| i)
+            .collect::<Vec<_>>();
+
+        for &r in &rows {
+            if lines[r].iter().position(|&c| c == '+') != Some(cols[0]) {
                 return None
             }
-            if lines[r][c] != '+' {
+            if lines[r].iter().rposition(|&c| c == '+') != Some(cols[cols.len() - 1]) {
                 return None
             }
+            for &c in &cols {
+                if lines[r].len() <= c {
+                    return None
+                }
+                if lines[r][c] != '+' {
+                    return None
+                }
+            }
         }
+
+        Some(LatticeParser { mat: lines, rows: rows, cols: cols })
     }
-    Some((rows, cols))
+
+    #[inline]
+    pub fn num_rows(&self) -> usize { self.rows.len() }
+    #[inline]
+    pub fn num_cols(&self) -> usize { self.cols.len() }
+
+    #[inline]
+    pub fn v_edges(&self) -> VEdges { VEdges::new(self) }
+    #[inline]
+    pub fn h_edges(&self) -> HEdges { HEdges::new(self) }
+    #[inline]
+    pub fn cells(&self) -> Cells { Cells::new(self) }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -41,13 +63,12 @@ pub struct VEdges<'a> {
 }
 
 impl<'a> VEdges<'a> {
-    pub fn new(mat: &'a [Vec<char>], rows: &'a [usize], cols: &'a [usize])
-           -> VEdges<'a>
+    fn new(parser: &'a LatticeParser) -> VEdges<'a>
     {
         VEdges {
             row: 0, col: 0,
-            rows: rows, cols: cols,
-            mat: mat
+            rows: &parser.rows, cols: &parser.cols,
+            mat: parser.mat
         }
     }
 }
@@ -86,13 +107,12 @@ pub struct HEdges<'a> {
 }
 
 impl<'a> HEdges<'a> {
-    pub fn new(mat: &'a [Vec<char>], rows: &'a [usize], cols: &'a [usize])
-           -> HEdges<'a>
+    pub fn new(parser: &'a LatticeParser) -> HEdges<'a>
     {
         HEdges {
             row: 0, col: 0,
-            rows: rows, cols: cols,
-            mat: mat
+            rows: &parser.rows, cols: &parser.cols,
+            mat: parser.mat
         }
     }
 }
@@ -131,13 +151,12 @@ pub struct Cells<'a> {
 }
 
 impl<'a> Cells<'a> {
-    pub fn new(mat: &'a [Vec<char>], rows: &'a [usize], cols: &'a [usize])
-           -> Cells<'a>
+    pub fn new(parser: &'a LatticeParser) -> Cells<'a>
     {
         Cells {
             row: 0, col: 0,
-            rows: rows, cols: cols,
-            mat: mat
+            rows: &parser.rows, cols: &parser.cols,
+            mat: parser.mat
         }
     }
 }
