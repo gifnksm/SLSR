@@ -2,7 +2,10 @@
 
 Slither Link Solver written in Rust
 
+## CLI solver
+
 ```
+$ cd cli
 $ cargo run < puzzle/example.txt
 ```
 

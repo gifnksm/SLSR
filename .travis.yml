@@ -14,23 +14,33 @@ rust:
   # - stable
 
 before_script:
-  - |
-      pip install 'travis-cargo<0.2' --user &&
-      export PATH=$HOME/.local/bin:$PATH
+  - pip install 'travis-cargo<0.2' --user
+  - export PATH=$HOME/.local/bin:$PATH
 
 script:
+  - cd "${TRAVIS_BUILD_DIR}/${PKGDIR}"
+  - travis-cargo build -- --release
   - |
-      travis-cargo build -- --release &&
-      travis-cargo run < puzzle/example.txt &&
-      travis-cargo test &&
-      travis-cargo bench &&
-      travis-cargo --only ${DOC_UPLOAD_VERSION} doc
+      if [ "${PKGDIR}" = "cli" ]; then
+        travis-cargo run < ../puzzle/example.txt
+      fi
+  - travis-cargo test
+  - travis-cargo bench
+  - |
+      if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
+        travis-cargo --only ${DOC_UPLOAD_VERSION} doc
+      fi
 
 after_success:
-  - travis-cargo --only ${DOC_UPLOAD_VERSION} doc-upload
+  - if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
+      travis-cargo --only ${DOC_UPLOAD_VERSION} doc-upload
+    fi
   - travis-cargo coveralls --no-sudo
 
 env:
+  matrix:
+    - PKGDIR=cli
   global:
     - TRAVIS_CARGO_NIGHTLY_FEATURE=""
     - DOC_UPLOAD_VERSION=nightly
+    - DOC_UPLOAD_PKG=cli

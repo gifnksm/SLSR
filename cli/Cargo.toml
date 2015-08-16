@@ -8,8 +8,8 @@ repository = "https://github.com/gifnksm/SLSR"
 description = "Slither Link Solver written in Rust."
 
 [[bin]]
-name = "slither"
-path = "src/slither/main.rs"
+name = "slsr-cli"
+path = "src/main.rs"
 
 [dependencies]
 docopt = "*"
