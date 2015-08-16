@@ -32,9 +32,10 @@ script:
       fi
 
 after_success:
-  - if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
-      travis-cargo --only ${DOC_UPLOAD_VERSION} doc-upload
-    fi
+  - |
+      if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
+        travis-cargo --only ${DOC_UPLOAD_VERSION} doc-upload
+      fi
   - travis-cargo coveralls --no-sudo
 
 env:
