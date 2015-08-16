@@ -12,8 +12,6 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 
-#![feature(vec_push_all)]
-
 extern crate union_find;
 extern crate slsr_core;
 
@@ -31,7 +29,7 @@ mod side_map;
 mod theorem;
 mod theorem_define;
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct LogicError;
 
 impl fmt::Display for LogicError {
