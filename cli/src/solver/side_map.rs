@@ -1,7 +1,7 @@
 use union_find::UnionFind;
 use solver::{State, LogicError};
-use board::{Board, Hint, Edge, Side};
-use geom::{Geom, Point, Size, Matrix, LEFT, UP};
+use slsr_core::board::{Board, Hint, Edge, Side};
+use slsr_core::geom::{Geom, Point, Size, Matrix, LEFT, UP};
 
 const OUTSIDE_CELL_ID: CellId = CellId(0);
 

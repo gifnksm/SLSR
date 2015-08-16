@@ -1,6 +1,6 @@
 use std::{cmp, fmt, mem};
-use board::{Board, Side};
-use geom::{Geom, Point, Move};
+use slsr_core::board::{Board, Side};
+use slsr_core::geom::{Geom, Point, Move};
 use solver::connect_map::ConnectMap;
 use solver::side_map::SideMap;
 use solver::theorem::{Pattern, TheoremMatch, Theorem};

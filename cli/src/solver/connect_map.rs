@@ -1,8 +1,8 @@
 use std::iter::FromIterator;
 use std::mem;
 use union_find::{UnionFind, UFValue, Merge};
-use board::{Edge, Side};
-use geom::{Geom, Point, Size, UP, RIGHT, DOWN, LEFT};
+use slsr_core::board::{Edge, Side};
+use slsr_core::geom::{Geom, Point, Size, UP, RIGHT, DOWN, LEFT};
 use solver::{LogicError, State, SolverResult};
 use solver::side_map::SideMap;
 

@@ -13,19 +13,17 @@ extern crate rustc_serialize;
 extern crate union_find;
 extern crate unicode_width;
 extern crate term;
+extern crate slsr_core;
 
 use std::default::Default;
 use std::io;
 use std::io::prelude::*;
-use board::Board;
+use slsr_core::board::Board;
 use locale::Category;
 
-mod board;
-mod geom;
 mod locale;
 mod pprint;
 mod solver;
-mod util;
 
 docopt! {
     Args derive Debug, "

@@ -40,6 +40,7 @@ after_success:
 env:
   matrix:
     - PKGDIR=cli
+    - PKGDIR=core
   global:
     - TRAVIS_CARGO_NIGHTLY_FEATURE=""
     - DOC_UPLOAD_VERSION=nightly

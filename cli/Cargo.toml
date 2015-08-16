@@ -1,5 +1,5 @@
 [package]
-name = "SLSR"
+name = "slsr_cli"
 version = "0.0.1"
 authors = ["gifnksm <makoto.nksm+github@gmail.com>"]
 license="MIT"
@@ -9,7 +9,6 @@ description = "Slither Link Solver written in Rust."
 
 [[bin]]
 name = "slsr-cli"
-path = "src/main.rs"
 
 [dependencies]
 docopt = "*"
@@ -18,6 +17,7 @@ rustc-serialize = "*"
 term = "*"
 union-find = "*"
 unicode-width = "*"
+slsr_core = { path = "../core" }
 
 [profile.release]
 lto = true

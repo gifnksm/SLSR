@@ -1,10 +1,10 @@
 use std::str::FromStr;
-use board::Edge;
-use geom::{Point, Rotation, Move, Size,
-           LEFT, UP, UCW90, UCW180, UCW270, H_FLIP};
+use slsr_core::board::Edge;
+use slsr_core::geom::{Point, Rotation, Move, Size,
+                      LEFT, UP, UCW90, UCW180, UCW270, H_FLIP};
 use solver::{State, SolverResult, LogicError};
 use solver::side_map::SideMap;
-use util;
+use slsr_core::util;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Pattern {
@@ -233,7 +233,7 @@ impl FromStr for Theorem {
         return Ok(Theorem { size: m_size, matcher: m_pat, result: r_pat });
 
         fn parse_lines(lines: &[Vec<char>]) -> Result<(Size, Vec<Pattern>), ()> {
-            use util::{VEdges, HEdges, Cells};
+            use slsr_core::util::{VEdges, HEdges, Cells};
 
             let (rows, cols) = match util::find_lattice(lines) {
                 Some(x) => x, None => return Err(())
