@@ -32,6 +32,7 @@ pub fn find_lattice(lines: &[Vec<char>]) -> Option<(Vec<usize>, Vec<usize>)> {
     Some((rows, cols))
 }
 
+#[derive(Copy, Clone, Debug)]
 pub struct VEdges<'a> {
     row: usize, col: usize,
     rows: &'a [usize],
@@ -76,6 +77,7 @@ impl<'a> Iterator for VEdges<'a> {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 pub struct HEdges<'a> {
     row: usize, col: usize,
     rows: &'a [usize],
@@ -120,6 +122,7 @@ impl<'a> Iterator for HEdges<'a> {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
 pub struct Cells<'a> {
     row: usize, col: usize,
     rows: &'a [usize],
