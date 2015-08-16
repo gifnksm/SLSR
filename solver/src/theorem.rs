@@ -335,8 +335,7 @@ impl FromStr for Theorem {
 
 #[cfg(test)]
 mod tests {
-    use geom::{Point, Size, Move, UCW0, UCW90, UCW180, UCW270, H_FLIP, V_FLIP};
-    use board::Edge;
+    use slsr_core::geom::{Point, Size, UCW0, UCW90, UCW180, UCW270, H_FLIP, V_FLIP};
     use super::{Pattern, Theorem};
 
     #[test]
@@ -475,7 +474,6 @@ mod tests {
 + + + ! + + +
 ".parse::<Theorem>().unwrap();
 
-        let Size(r, c) = deg0.size;
         assert_eq!(deg0.clone(), deg0.clone().rotate(UCW0));
         assert_eq!(deg90.clone(), deg0.clone().rotate(UCW90));
         assert_eq!(deg180.clone(), deg0.clone().rotate(UCW180));

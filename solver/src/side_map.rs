@@ -203,7 +203,7 @@ impl Geom for SideMap {
 #[cfg(test)]
 mod tests {
     use super::SideMap;
-    use geom::{Size, Point, Matrix};
+    use slsr_core::geom::{Size, Point, Matrix};
 
     #[test]
     fn set_and_check() {

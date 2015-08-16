@@ -249,7 +249,7 @@ x2    ! x2|
 
 #[cfg(test)]
 mod tests {
-    use solver::theorem::Theorem;
+    use ::theorem::Theorem;
 
     #[test]
     fn parse() {
