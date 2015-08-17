@@ -5,7 +5,7 @@ dependencies = [
  "docopt 0.6.70 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt_macros 0.6.70 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-serialize 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "slsr_core 0.0.1",
  "slsr_solver 0.0.1",
  "term 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -25,7 +25,7 @@ version = "0.6.70"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "regex 0.1.41 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-serialize 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "strsim 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -76,7 +76,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "rustc-serialize"
-version = "0.3.15"
+version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -88,7 +88,7 @@ name = "slsr_solver"
 version = "0.0.1"
 dependencies = [
  "slsr_core 0.0.1",
- "union-find 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "union-find 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -107,7 +107,7 @@ dependencies = [
 
 [[package]]
 name = "union-find"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
