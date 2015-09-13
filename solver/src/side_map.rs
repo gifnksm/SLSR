@@ -1,4 +1,4 @@
-use union_find::{UnionFind, UnionBySize, QuickFindUf as Uf};
+use union_find::{UnionFind, UnionBySizeRank as Union, QuickFindUf as Uf};
 use slsr_core::board::{Board, Hint, Edge, Side};
 use slsr_core::geom::{Geom, Point, Size, Matrix, Move};
 
@@ -16,7 +16,7 @@ impl CellId {
 
 #[derive(Clone, Debug)]
 struct SideMapInner {
-    uf: Uf<UnionBySize>,
+    uf: Uf<Union>,
     revision: u32
 }
 
@@ -26,13 +26,6 @@ impl SideMapInner {
     }
 
     fn revision(&self) -> u32 { self.revision }
-
-    fn is_same(&mut self, i: CellId, j: CellId) -> bool {
-        self.uf.find(i.key0()) == self.uf.find(j.key0())
-    }
-    fn is_different(&mut self, i: CellId, j: CellId) -> bool {
-        self.uf.find(i.key0()) == self.uf.find(j.key1())
-    }
 
     fn set_same(&mut self, i: CellId, j: CellId) -> bool {
         let c1 = self.uf.union(i.key0(), j.key0());
@@ -113,35 +106,30 @@ impl SideMap {
         Ok(board)
     }
 
-    fn is_outside(&mut self, p: Point) -> bool {
-        let i = self.cell_id(p);
-        self.inner.is_same(i, OUTSIDE_CELL_ID)
-    }
-    fn is_inside(&mut self, p: Point) -> bool {
-        let i = self.cell_id(p);
-        self.inner.is_different(i, OUTSIDE_CELL_ID)
-    }
-    pub fn is_same(&mut self, p0: Point, p1: Point) -> bool {
-        let i = self.cell_id(p0);
-        let j = self.cell_id(p1);
-        self.inner.is_same(i, j)
-    }
-    pub fn is_different(&mut self, p0: Point, p1: Point) -> bool {
-        let i = self.cell_id(p0);
-        let j = self.cell_id(p1);
-        self.inner.is_different(i, j)
-    }
-
     pub fn get_side(&mut self, p: Point) -> State<Side> {
-        match (self.is_inside(p), self.is_outside(p)) {
+        let i = self.cell_id(p);
+        let j = OUTSIDE_CELL_ID;
+
+        let p = self.inner.uf.find(i.key0());
+        let q = self.inner.uf.find(j.key0());
+        let r = self.inner.uf.find(j.key1());
+
+        match (p == q, p == r) {
             (false, false) => State::Unknown,
-            (true,  false) => State::Fixed(Side::In),
-            (false, true)  => State::Fixed(Side::Out),
+            (true,  false) => State::Fixed(Side::Out),
+            (false, true)  => State::Fixed(Side::In),
             (true,  true)  => State::Conflict
         }
     }
     pub fn get_edge(&mut self, p0: Point, p1: Point) -> State<Edge> {
-        match (self.is_same(p0, p1), self.is_different(p0, p1)) {
+        let i = self.cell_id(p0);
+        let j = self.cell_id(p1);
+
+        let p = self.inner.uf.find(i.key0());
+        let q = self.inner.uf.find(j.key0());
+        let r = self.inner.uf.find(j.key1());
+
+        match (p == q, p == r) {
             (false, false) => State::Unknown,
             (true,  false) => State::Fixed(Edge::Cross),
             (false, true)  => State::Fixed(Edge::Line),

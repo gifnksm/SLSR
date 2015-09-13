@@ -1,6 +1,6 @@
 use std::iter::FromIterator;
 use std::mem;
-use union_find::{Union, UnionFind, UnionResult, QuickUnionUf as Uf};
+use union_find::{Union, UnionFind, UnionResult, QuickFindUf as Uf};
 use slsr_core::board::{Edge, Side};
 use slsr_core::geom::{Geom, Point, Size, Move};
 
@@ -53,7 +53,7 @@ impl Union for Area {
             sum_of_hint: lval.sum_of_hint + rval.sum_of_hint,
             size: lval.size + rval.size
         };
-        if lval.coord < rval.coord {
+        if lval.size >= rval.size {
             UnionResult::Left(area)
         } else {
             UnionResult::Right(area)

@@ -167,10 +167,11 @@ impl Theorem {
     {
         let mut w = 0;
         for r in (0 .. self.matcher.len()) {
-            match try!(self.matcher[r].matches(side_map)) {
+            let read = self.matcher[r];
+            match try!(read.matches(side_map)) {
                 PatternMatch::Complete => {},
                 PatternMatch::Partial => {
-                    self.matcher[w] = self.matcher[r];
+                    self.matcher[w] = read;
                     w += 1;
                 }
                 PatternMatch::Conflict => {
