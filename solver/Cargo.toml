@@ -10,3 +10,4 @@ description = "Slither Link Solver written in Rust."
 [dependencies]
 slsr_core = { path = "../core" }
 union-find = "*"
+# union-find = { path = "../../union-find-rs/" }

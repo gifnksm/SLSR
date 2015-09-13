@@ -473,7 +473,7 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
             return side_map.to_board()
         }
 
-        assert!(conn_map.is_some());
+        debug_assert!(conn_map.is_some());
         let mut pts = get_unknown_points(conn_map.as_mut().unwrap());
         loop {
             match solve_by_backtracking_one_step(

@@ -3,7 +3,7 @@ name = "slsr_solver"
 version = "0.0.1"
 dependencies = [
  "slsr_core 0.0.1",
- "union-find 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "union-find 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -12,6 +12,6 @@ version = "0.0.1"
 
 [[package]]
 name = "union-find"
-version = "0.1.5"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
