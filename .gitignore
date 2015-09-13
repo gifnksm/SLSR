@@ -1,4 +1,5 @@
 cli/target
 core/target
+core/Cargo.lock
 solver/target
-
+solver/Cargo.lock
