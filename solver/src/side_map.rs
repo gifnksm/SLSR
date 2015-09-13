@@ -188,34 +188,3 @@ impl Geom for SideMap {
     fn size(&self) -> Size { self.hint.size() }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::SideMap;
-    use slsr_core::geom::{Size, Point, Matrix};
-
-    #[test]
-    fn set_and_check() {
-        let hint = Matrix::new_empty(Size(10, 10), None, None);
-        let mut side_map = SideMap::new(hint);
-        let p0 = Point(0, 0);
-        let p1 = Point(1, 1);
-        let p2 = Point(2, 2);
-
-        side_map.set_outside(p0);
-        side_map.set_same(p0, p1);
-
-        assert!(side_map.is_outside(p0));
-        assert!(side_map.is_outside(p1));
-        assert!(!side_map.is_inside(p0));
-        assert!(!side_map.is_inside(p1));
-        assert!(side_map.is_same(p0, p1));
-        assert!(!side_map.is_different(p0, p1));
-
-        assert!(!side_map.is_same(p1, p2));
-        assert!(!side_map.is_different(p1, p2));
-
-        side_map.set_inside(p2);
-        assert!(!side_map.is_same(p1, p2));
-        assert!(side_map.is_different(p1, p2));
-    }
-}
