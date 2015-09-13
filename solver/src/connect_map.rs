@@ -1,6 +1,6 @@
 use std::iter::FromIterator;
 use std::mem;
-use union_find::{UnionFind, UFValue, Merge};
+use union_find::{Union, UnionFind, UnionResult, QuickUnionUf as Uf};
 use slsr_core::board::{Edge, Side};
 use slsr_core::geom::{Geom, Point, Size, Move};
 
@@ -23,8 +23,8 @@ impl Area {
     pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
 }
 
-impl UFValue for Area {
-    fn merge(lval: Area, rval: Area) -> Merge<Area> {
+impl Union for Area {
+    fn union(lval: Area, rval: Area) -> UnionResult<Area> {
         let coord = if lval.coord < rval.coord {
             lval.coord
         } else {
@@ -54,9 +54,9 @@ impl UFValue for Area {
             size: lval.size + rval.size
         };
         if lval.coord < rval.coord {
-            Merge::Left(area)
+            UnionResult::Left(area)
         } else {
-            Merge::Right(area)
+            UnionResult::Right(area)
         }
     }
 }
@@ -64,7 +64,7 @@ impl UFValue for Area {
 #[derive(Clone, Debug)]
 pub struct ConnectMap {
     size: Size,
-    uf: UnionFind<Area>
+    uf: Uf<Area>
 }
 
 impl ConnectMap {

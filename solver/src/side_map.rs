@@ -1,4 +1,4 @@
-use union_find::UnionFind;
+use union_find::{UnionFind, UnionBySize, QuickFindUf as Uf};
 use slsr_core::board::{Board, Hint, Edge, Side};
 use slsr_core::geom::{Geom, Point, Size, Matrix, Move};
 
@@ -16,7 +16,7 @@ impl CellId {
 
 #[derive(Clone, Debug)]
 struct SideMapInner {
-    uf: UnionFind,
+    uf: Uf<UnionBySize>,
     revision: u32
 }
 
@@ -28,10 +28,10 @@ impl SideMapInner {
     fn revision(&self) -> u32 { self.revision }
 
     fn is_same(&mut self, i: CellId, j: CellId) -> bool {
-        self.uf.find(i.key0(), j.key0())
+        self.uf.find(i.key0()) == self.uf.find(j.key0())
     }
     fn is_different(&mut self, i: CellId, j: CellId) -> bool {
-        self.uf.find(i.key0(), j.key1())
+        self.uf.find(i.key0()) == self.uf.find(j.key1())
     }
 
     fn set_same(&mut self, i: CellId, j: CellId) -> bool {
