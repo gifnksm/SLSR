@@ -4,8 +4,8 @@ use union_find::{Union, UnionFind, UnionResult, QuickFindUf as Uf};
 use slsr_core::board::{Edge, Side};
 use slsr_core::geom::{Geom, Point, Size, Move};
 
-use super::{LogicError, State, SolverResult};
-use side_map::SideMap;
+use ::{LogicError, State, SolverResult};
+use ::model::side_map::SideMap;
 
 #[derive(Clone, Debug)]
 pub struct Area {
@@ -155,6 +155,7 @@ impl ConnectMap {
                 debug_assert_eq!(rev, side_map.revision());
                 continue
             }
+
             break
         }
         Ok(())

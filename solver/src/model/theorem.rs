@@ -3,8 +3,8 @@ use slsr_core::board::Edge;
 use slsr_core::geom::{Point, Rotation, Move, Size};
 use slsr_core::lattice_parser::LatticeParser;
 
-use super::{State, SolverResult, LogicError};
-use side_map::SideMap;
+use ::{State, SolverResult, LogicError};
+use ::model::side_map::SideMap;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Pattern {

@@ -2,7 +2,7 @@ use union_find::{UnionFind, UnionBySizeRank as Union, QuickFindUf as Uf};
 use slsr_core::board::{Board, Hint, Edge, Side};
 use slsr_core::geom::{Geom, Point, Size, Matrix, Move};
 
-use super::{State, LogicError};
+use ::{State, LogicError};
 
 const OUTSIDE_CELL_ID: CellId = CellId(0);
 
