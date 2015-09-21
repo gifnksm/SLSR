@@ -3,7 +3,7 @@ use slsr_core::geom::{Geom, Point, Move};
 
 use ::SolverResult;
 use ::model::side_map::SideMap;
-use ::model::theorem::{Pattern, Theorem, TheoremMatcher, TheoremMatchResult};
+use ::model::theorem::{Match, Pattern, Theorem, TheoremMatcher, TheoremMatchResult};
 
 #[derive(Clone, Debug)]
 pub struct TheoremPool {
@@ -23,7 +23,7 @@ impl TheoremPool {
 
         for theo in it {
             match theo.head() {
-                Pattern::Hint(x, _) => hint_theorem[x as usize].push(theo),
+                Pattern::Hint(h) => hint_theorem[h.hint() as usize].push(theo),
                 _ => nonhint_theorem.push(theo)
             }
         }
@@ -36,10 +36,10 @@ impl TheoremPool {
                 if let Some(x) = side_map.hint()[p] {
                     for theo in &hint_theorem[x as usize] {
                         let o = match theo.head() {
-                            Pattern::Hint(_, o) => o,
+                            Pattern::Hint(hint) => hint.point(),
                             _ => panic!()
                         };
-                        let matcher = theo.clone().shift(p - o).into_matcher();
+                        let matcher = theo.clone().shift(p - o);
                         try!(Self::matches(matcher, side_map, &mut data));
                     }
                 }
@@ -50,7 +50,7 @@ impl TheoremPool {
             let sz = theo.size();
             for r in (1 - sz.0 .. side_map.row() + sz.0 - 1) {
                 for c in (1 - sz.1 .. side_map.column() + sz.1 - 1) {
-                    let matcher = theo.clone().shift(Move(r, c)).into_matcher();
+                    let matcher = theo.clone().shift(Move(r, c));
                     try!(Self::matches(matcher, side_map, &mut data));
                 }
             }
@@ -79,10 +79,12 @@ impl TheoremPool {
         Ok(())
     }
 
-    fn matches(matcher: TheoremMatcher,
-               side_map: &mut SideMap,
-               new_matchers: &mut Vec<TheoremMatcher>
-               ) -> SolverResult<()> {
+    fn matches<M>(matcher: M,
+                  side_map: &mut SideMap,
+                  new_matchers: &mut Vec<TheoremMatcher>
+                  ) -> SolverResult<()>
+        where M: Match
+    {
         match try!(matcher.matches(side_map)) {
             TheoremMatchResult::Complete(result) => {
                 for pat in &result {

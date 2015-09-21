@@ -7,94 +7,148 @@ use ::{State, SolverResult, LogicError};
 use ::model::side_map::SideMap;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub enum Pattern {
-    Hint(u8, Point),
-    Edge(Edge, Point, Point)
+pub struct HintPattern {
+    hint: u8,
+    point: Point
 }
 
-enum PatternMatchResult {
-    Complete, Partial, Conflict
+impl HintPattern {
+    fn new(h: u8, p: Point) -> HintPattern {
+        HintPattern { hint: h, point: p }.normalized()
+    }
+    pub fn hint(&self) -> u8 { self.hint }
+    pub fn point(&self) -> Point { self.point }
+
+    fn normalized(self) -> HintPattern { self }
+    fn rotate(mut self, rot: Rotation) -> HintPattern {
+        let o = Point(0, 0);
+        let p = self.point;
+        self.point = o + rot * (p - o);
+        self.normalized()
+    }
+    fn shift(mut self, d: Move) -> HintPattern {
+        let p = self.point;
+        self.point = p + d;
+        self.normalized()
+    }
+
+    fn matches<T>(self, side_map: &mut SideMap)
+                  -> SolverResult<PatternMatchResult<T>> {
+        if side_map.hint()[self.point] == Some(self.hint) {
+            Ok(PatternMatchResult::Complete)
+        } else {
+            Ok(PatternMatchResult::Conflict)
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct EdgePattern {
+    edge: Edge,
+    points: (Point, Point)
+}
+
+impl EdgePattern {
+    fn cross(p0: Point, p1: Point) -> EdgePattern {
+        EdgePattern { edge: Edge::Cross, points: (p0, p1) }.normalized()
+    }
+    fn line(p0: Point, p1: Point) -> EdgePattern {
+        EdgePattern { edge: Edge::Line, points: (p0, p1) }.normalized()
+    }
+
+    fn normalized(self) -> EdgePattern {
+        let mut points = self.points;
+        if self.points.1 < self.points.0 {
+            points = (self.points.1, self.points.0);
+        }
+        EdgePattern { edge: self.edge, points: points }
+    }
+    fn rotate(mut self, rot: Rotation) -> EdgePattern {
+        let o = Point(0, 0);
+        let ps = self.points;
+        self.points = (o + rot * (ps.0 - o), o + rot * (ps.1 - o));
+        self.normalized()
+    }
+    fn shift(mut self, d: Move) -> EdgePattern {
+        let ps = self.points;
+        self.points = (ps.0 + d, ps.1 + d);
+        self.normalized()
+    }
+
+    fn matches(self, side_map: &mut SideMap)
+               -> SolverResult<PatternMatchResult<EdgePattern>> {
+        let ps = self.points;
+        match side_map.get_edge(ps.0, ps.1) {
+            State::Fixed(edg) => {
+                if self.edge == edg {
+                    Ok(PatternMatchResult::Complete)
+                } else {
+                    Ok(PatternMatchResult::Conflict)
+                }
+            }
+            State::Unknown => Ok(PatternMatchResult::Partial(self)),
+            State::Conflict => Err(LogicError)
+        }
+    }
+
+    pub fn apply(&self, side_map: &mut SideMap) {
+        let ps = self.points;
+        let _ = side_map.set_edge(ps.0, ps.1, self.edge);
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub enum Pattern {
+    Hint(HintPattern),
+    Edge(EdgePattern)
+}
+
+enum PatternMatchResult<T> {
+    Complete, Partial(T), Conflict
 }
 
 impl Pattern {
     fn hint(h: u8, p: Point) -> Pattern {
-        Pattern::Hint(h, p).normalized()
+        Pattern::Hint(HintPattern::new(h, p))
     }
     fn cross(p0: Point, p1: Point) -> Pattern {
-        Pattern::Edge(Edge::Cross, p0, p1).normalized()
+        Pattern::Edge(EdgePattern::cross(p0, p1))
     }
     fn line(p0: Point, p1: Point) -> Pattern {
-        Pattern::Edge(Edge::Line, p0, p1).normalized()
-    }
-
-    fn normalized(self) -> Pattern {
-        match self {
-            Pattern::Edge(edge, p0, p1) if p1 < p0 => {
-                Pattern::Edge(edge, p1, p0)
-            }
-            x => x
-        }
+        Pattern::Edge(EdgePattern::line(p0, p1))
     }
 
     fn rotate(self, rot: Rotation) -> Pattern {
-        let o = Point(0, 0);
         match self {
-            Pattern::Hint(h, p) => { Pattern::Hint(h, o + rot * (p - o)) }
-            Pattern::Edge(e, p0, p1) => {
-                Pattern::Edge(e, o + rot * (p0 - o), o + rot * (p1 - o))
-            }
-        }.normalized()
-    }
-
-    fn shift(self, d: Move) -> Pattern {
-        match self {
-            Pattern::Hint(h, p) => { Pattern::Hint(h, p + d) }
-            Pattern::Edge(e, p0, p1) => {
-                Pattern::Edge(e, p0 + d, p1 + d)
-            }
-        }.normalized()
-    }
-
-    fn matches(self, side_map: &mut SideMap) -> SolverResult<PatternMatchResult> {
-        Ok(match self {
-            Pattern::Hint(h, p) => {
-                if side_map.hint()[p] == Some(h) {
-                    PatternMatchResult::Complete
-                } else {
-                    PatternMatchResult::Conflict
-                }
-            }
-            Pattern::Edge(e, p0, p1) => {
-                match side_map.get_edge(p0, p1) {
-                    State::Fixed(edg) => {
-                        if e == edg {
-                            PatternMatchResult::Complete
-                        } else {
-                            PatternMatchResult::Conflict
-                        }
-                    }
-                    State::Unknown => PatternMatchResult::Partial,
-                    State::Conflict => return Err(LogicError)
-                }
-            }
-        })
-    }
-
-    pub fn apply(&self, side_map: &mut SideMap) {
-        match self {
-            &Pattern::Hint(..) => panic!(),
-            &Pattern::Edge(e, p0, p1) => {
-                let _ = side_map.set_edge(p0, p1, e);
-            }
+            Pattern::Hint(h) => Pattern::Hint(h.rotate(rot)),
+            Pattern::Edge(e) => Pattern::Edge(e.rotate(rot))
         }
     }
+    fn shift(self, d: Move) -> Pattern {
+        match self {
+            Pattern::Hint(h) => Pattern::Hint(h.shift(d)),
+            Pattern::Edge(e) => Pattern::Edge(e.shift(d))
+        }
+    }
+
+    fn matches(self, side_map: &mut SideMap)
+               -> SolverResult<PatternMatchResult<EdgePattern>> {
+        match self {
+            Pattern::Hint(h) => h.matches(side_map),
+            Pattern::Edge(e) => e.matches(side_map)
+        }
+    }
+}
+
+pub trait Match {
+    fn matches(mut self, side_map: &mut SideMap) -> SolverResult<TheoremMatchResult>;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Theorem {
     size: Size,
     matcher: Vec<Pattern>,
-    result: Vec<Pattern>
+    result: Vec<EdgePattern>
 }
 
 impl Theorem {
@@ -154,30 +208,62 @@ impl Theorem {
 
     pub fn size(&self) -> Size { self.size }
     pub fn head(&self) -> Pattern { self.matcher[0] }
+}
 
-    pub fn into_matcher(self) -> TheoremMatcher {
-        TheoremMatcher {
-            matcher: self.matcher,
-            result: self.result
+impl Match for Theorem {
+    fn matches(self, side_map: &mut SideMap) -> SolverResult<TheoremMatchResult> {
+        let cap = self.matcher.len();
+        let mut new_matcher = Vec::with_capacity(cap);
+
+        for matcher in self.matcher {
+            match try!(matcher.matches(side_map)) {
+                PatternMatchResult::Complete => {},
+                PatternMatchResult::Partial(m) => new_matcher.push(m),
+                PatternMatchResult::Conflict => {
+                    return Ok(TheoremMatchResult::Conflict)
+                }
+            }
+        }
+
+        if new_matcher.is_empty() {
+            Ok(TheoremMatchResult::Complete(self.result))
+        } else {
+            Ok(TheoremMatchResult::Partial(TheoremMatcher {
+                matcher: new_matcher,
+                result: self.result
+            }))
         }
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct TheoremMatcher {
-    matcher: Vec<Pattern>,
-    result: Vec<Pattern>
+    matcher: Vec<EdgePattern>,
+    result: Vec<EdgePattern>
 }
 
 #[derive(Clone, Debug)]
 pub enum TheoremMatchResult {
-    Complete(Vec<Pattern>),
+    Complete(Vec<EdgePattern>),
     Partial(TheoremMatcher),
     Conflict
 }
 
 impl TheoremMatcher {
-    pub fn matches(mut self, side_map: &mut SideMap) -> SolverResult<TheoremMatchResult> {
+    pub fn merge(&mut self, other: &TheoremMatcher) -> Result<(), ()> {
+        if self.matcher != other.matcher {
+            return Err(());
+        }
+
+        self.result.extend(other.result.iter().cloned());
+        self.result.sort();
+        self.result.dedup();
+        Ok(())
+    }
+}
+
+impl Match for TheoremMatcher {
+    fn matches(mut self, side_map: &mut SideMap) -> SolverResult<TheoremMatchResult> {
         unsafe {
             // Assume the elements of self.matcher is copyable.
             let len = self.matcher.len();
@@ -188,8 +274,8 @@ impl TheoremMatcher {
 
                 match try!(read.matches(side_map)) {
                     PatternMatchResult::Complete => {},
-                    PatternMatchResult::Partial => {
-                        *p.offset(w as isize) = read;
+                    PatternMatchResult::Partial(e) => {
+                        *p.offset(w as isize) = e;
                         w += 1;
                     }
                     PatternMatchResult::Conflict => {
@@ -206,17 +292,6 @@ impl TheoremMatcher {
             TheoremMatchResult::Partial(self)
         };
         Ok(m)
-    }
-
-    pub fn merge(&mut self, other: &TheoremMatcher) -> Result<(), ()> {
-        if self.matcher != other.matcher {
-            return Err(());
-        }
-
-        self.result.extend(other.result.iter().cloned());
-        self.result.sort();
-        self.result.dedup();
-        Ok(())
     }
 }
 
@@ -246,6 +321,7 @@ impl FromStr for Theorem {
             }
         }
 
+
         let (m_size, m_pat) = try!(parse_lines(&matcher_lines));
         let (r_size, mut r_pat) = try!(parse_lines(&result_lines));
         if m_size != r_size { return Err(()) }
@@ -260,6 +336,11 @@ impl FromStr for Theorem {
                 None => { return Err(()) }
             }
         }
+
+        let r_pat = r_pat.into_iter().map(|pat| match pat {
+            Pattern::Edge(e) => e,
+            _ => panic!()
+        }).collect();
 
         return Ok(Theorem { size: m_size, matcher: m_pat, result: r_pat });
 
@@ -367,15 +448,13 @@ impl FromStr for Theorem {
 #[cfg(test)]
 mod tests {
     use slsr_core::geom::{Point, Size, Rotation};
-    use super::{Pattern, Theorem};
+    use super::{EdgePattern, Pattern, Theorem};
 
     #[test]
     fn parse() {
-        fn check(size: Size, mut matcher: Vec<Pattern>, mut result: Vec<Pattern>,
+        fn check(size: Size, mut matcher: Vec<Pattern>, mut result: Vec<EdgePattern>,
                  input: &str)
         {
-            for p in matcher.iter_mut() { *p = p.normalized(); }
-            for p in result.iter_mut() { *p = p.normalized(); }
             matcher.sort();
             matcher.dedup();
             result.sort();
@@ -386,10 +465,10 @@ mod tests {
 
         check(Size(1, 1),
               vec![Pattern::hint(0, Point(0, 0))],
-              vec![Pattern::cross(Point(0, 0), Point(0, -1)),
-                   Pattern::cross(Point(0, 0), Point(0, 1)),
-                   Pattern::cross(Point(0, 0), Point(-1, 0)),
-                   Pattern::cross(Point(0, 0), Point(1, 0))],"
+              vec![EdgePattern::cross(Point(0, 0), Point(0, -1)),
+                   EdgePattern::cross(Point(0, 0), Point(0, 1)),
+                   EdgePattern::cross(Point(0, 0), Point(-1, 0)),
+                   EdgePattern::cross(Point(0, 0), Point(1, 0))],"
 + + ! +x+
  0  ! x0x
 + + ! +x+
@@ -397,19 +476,19 @@ mod tests {
         check(Size(3, 3),
               vec![Pattern::hint(0, Point(1, 0)),
                    Pattern::hint(3, Point(1, 1))],
-              vec![Pattern::cross(Point(1, 0), Point(1, -1)),
-                   Pattern::cross(Point(1, 0), Point(1, 1)),
-                   Pattern::cross(Point(1, 0), Point(0, 0)),
-                   Pattern::cross(Point(1, 0), Point(2, 0)),
-                   Pattern::cross(Point(0, 1), Point(0, 2)),
-                   Pattern::cross(Point(1, 2), Point(0, 2)),
-                   Pattern::cross(Point(1, 2), Point(2, 2)),
-                   Pattern::cross(Point(2, 1), Point(2, 2)),
-                   Pattern::line(Point(0, 0), Point(0, 1)),
-                   Pattern::line(Point(0, 1), Point(1, 1)),
-                   Pattern::line(Point(1, 1), Point(1, 2)),
-                   Pattern::line(Point(1, 1), Point(2, 1)),
-                   Pattern::line(Point(2, 0), Point(2, 1))], "
+              vec![EdgePattern::cross(Point(1, 0), Point(1, -1)),
+                   EdgePattern::cross(Point(1, 0), Point(1, 1)),
+                   EdgePattern::cross(Point(1, 0), Point(0, 0)),
+                   EdgePattern::cross(Point(1, 0), Point(2, 0)),
+                   EdgePattern::cross(Point(0, 1), Point(0, 2)),
+                   EdgePattern::cross(Point(1, 2), Point(0, 2)),
+                   EdgePattern::cross(Point(1, 2), Point(2, 2)),
+                   EdgePattern::cross(Point(2, 1), Point(2, 2)),
+                   EdgePattern::line(Point(0, 0), Point(0, 1)),
+                   EdgePattern::line(Point(0, 1), Point(1, 1)),
+                   EdgePattern::line(Point(1, 1), Point(1, 2)),
+                   EdgePattern::line(Point(1, 1), Point(2, 1)),
+                   EdgePattern::line(Point(2, 0), Point(2, 1))], "
 + + + + ! + + + +
         !   | x
 + + + + ! +x+-+x+
@@ -421,8 +500,8 @@ mod tests {
         check(Size(2, 2),
               vec![Pattern::hint(1, Point(1, 1)),
                    Pattern::line(Point(1, 0), Point(0, 1))],
-              vec![Pattern::cross(Point(1, 1), Point(1, 2)),
-                   Pattern::cross(Point(1, 1), Point(2, 1))], "
+              vec![EdgePattern::cross(Point(1, 1), Point(1, 2)),
+                   EdgePattern::cross(Point(1, 1), Point(2, 1))], "
 + + + ! + + +
    a  !    a
 + + + ! + + +
@@ -432,11 +511,11 @@ mod tests {
         check(Size(3, 3),
               vec![Pattern::hint(3, Point(1, 1)),
                    Pattern::cross(Point(1, 0), Point(0, 1))],
-              vec![Pattern::cross(Point(0, 0), Point(0, 1)),
-                   Pattern::cross(Point(0, 0), Point(1, 0)),
-                   Pattern::line(Point(0, 1), Point(1, 1)),
-                   Pattern::line(Point(1, 0), Point(1, 1)),
-                   Pattern::line(Point(1, 2), Point(2, 1))], "
+              vec![EdgePattern::cross(Point(0, 0), Point(0, 1)),
+                   EdgePattern::cross(Point(0, 0), Point(1, 0)),
+                   EdgePattern::line(Point(0, 1), Point(1, 1)),
+                   EdgePattern::line(Point(1, 0), Point(1, 1)),
+                   EdgePattern::line(Point(1, 2), Point(2, 1))], "
 + + + + ! + + + +
    a    !   xa
 + + + + ! +x+-+ +
