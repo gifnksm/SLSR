@@ -171,10 +171,13 @@ impl<T> Index<Point> for Matrix<T> {
 
     #[inline]
     fn index(&self, p: Point) -> &T {
-        if self.contains(p) {
-            &self.data[self.point_to_index(p)]
-        } else {
-            &self.outside
+        unsafe {
+            if self.contains(p) {
+                let idx = self.point_to_index(p);
+                self.data.get_unchecked(idx)
+            } else {
+                &self.outside
+            }
         }
     }
 }
@@ -182,9 +185,11 @@ impl<T> Index<Point> for Matrix<T> {
 impl<T> IndexMut<Point> for Matrix<T> {
     #[inline]
     fn index_mut(&mut self, p: Point) -> &mut T {
-        assert!(self.contains(p));
-        let idx = self.point_to_index(p);
-        &mut self.data[idx]
+        unsafe {
+            assert!(self.contains(p));
+            let idx = self.point_to_index(p);
+            self.data.get_unchecked_mut(idx)
+        }
     }
 }
 
