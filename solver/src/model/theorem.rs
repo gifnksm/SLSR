@@ -12,7 +12,7 @@ pub enum Pattern {
     Edge(Edge, Point, Point)
 }
 
-enum PatternMatch {
+enum PatternMatchResult {
     Complete, Partial, Conflict
 }
 
@@ -55,25 +55,25 @@ impl Pattern {
         }.normalized()
     }
 
-    fn matches(self, side_map: &mut SideMap) -> SolverResult<PatternMatch> {
+    fn matches(self, side_map: &mut SideMap) -> SolverResult<PatternMatchResult> {
         Ok(match self {
             Pattern::Hint(h, p) => {
                 if side_map.hint()[p] == Some(h) {
-                    PatternMatch::Complete
+                    PatternMatchResult::Complete
                 } else {
-                    PatternMatch::Conflict
+                    PatternMatchResult::Conflict
                 }
             }
             Pattern::Edge(e, p0, p1) => {
                 match side_map.get_edge(p0, p1) {
                     State::Fixed(edg) => {
                         if e == edg {
-                            PatternMatch::Complete
+                            PatternMatchResult::Complete
                         } else {
-                            PatternMatch::Conflict
+                            PatternMatchResult::Conflict
                         }
                     }
-                    State::Unknown => PatternMatch::Partial,
+                    State::Unknown => PatternMatchResult::Partial,
                     State::Conflict => return Err(LogicError)
                 }
             }
@@ -95,13 +95,6 @@ pub struct Theorem {
     size: Size,
     matcher: Vec<Pattern>,
     result: Vec<Pattern>
-}
-
-#[derive(Clone, Debug)]
-pub enum TheoremMatch {
-    Complete(Vec<Pattern>),
-    Partial(Theorem),
-    Conflict
 }
 
 impl Theorem {
@@ -152,6 +145,7 @@ impl Theorem {
         let h_deg270 = h_deg0.clone().rotate(Rotation::UCW270);
         let mut rots = vec![self.clone(), deg90, deg180, deg270,
                             h_deg0, h_deg90, h_deg180, h_deg270];
+
         rots.sort();
         // FIXME: Should reduce the elements that has different result but size
         //        and matcher are same.
@@ -163,29 +157,52 @@ impl Theorem {
     pub fn size(&self) -> Size { self.size }
     pub fn head(&self) -> Pattern { self.matcher[0] }
 
-    pub fn matches(mut self, side_map: &mut SideMap)
-                   -> SolverResult<TheoremMatch>
+    pub fn into_matcher(self) -> TheoremMatcher {
+        TheoremMatcher {
+            matcher: self.matcher,
+            result: self.result
+        }
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct TheoremMatcher {
+    matcher: Vec<Pattern>,
+    result: Vec<Pattern>
+}
+
+#[derive(Clone, Debug)]
+pub enum TheoremMatchResult {
+    Complete(Vec<Pattern>),
+    Partial(TheoremMatcher),
+    Conflict
+}
+
+impl TheoremMatcher {
+    pub fn matches(mut self, side_map: &mut SideMap) -> SolverResult<TheoremMatchResult>
     {
-        let mut w = 0;
-        for r in (0 .. self.matcher.len()) {
-            let read = self.matcher[r];
-            match try!(read.matches(side_map)) {
-                PatternMatch::Complete => {},
-                PatternMatch::Partial => {
-                    self.matcher[w] = read;
-                    w += 1;
-                }
-                PatternMatch::Conflict => {
-                    return Ok(TheoremMatch::Conflict)
+        unsafe {
+            let mut w = 0;
+            for r in 0..self.matcher.len() {
+                let read = self.matcher[r];
+                match try!(read.matches(side_map)) {
+                    PatternMatchResult::Complete => {},
+                    PatternMatchResult::Partial => {
+                        self.matcher[w] = read;
+                        w += 1;
+                    }
+                    PatternMatchResult::Conflict => {
+                        return Ok(TheoremMatchResult::Conflict)
+                    }
                 }
             }
+            self.matcher.set_len(w);
         }
-        unsafe { self.matcher.set_len(w); }
 
         let m = if self.matcher.is_empty() {
-            TheoremMatch::Complete(self.result)
+            TheoremMatchResult::Complete(self.result)
         } else {
-            TheoremMatch::Partial(self)
+            TheoremMatchResult::Partial(self)
         };
         Ok(m)
     }

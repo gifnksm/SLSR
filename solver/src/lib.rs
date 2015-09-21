@@ -21,7 +21,8 @@ use slsr_core::geom::{Geom, Point};
 
 use model::connect_map::ConnectMap;
 use model::side_map::SideMap;
-use model::theorem::Theorem;
+use step::apply_theorem::TheoremPool;
+use theorem_define::THEOREM_DEFINE;
 
 mod model {
     pub mod connect_map;
@@ -62,13 +63,13 @@ impl<T> State<T> {
 
 fn solve_by_logic(
     side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>,
-    theorem: &mut Vec<Theorem>)
+    theorem_pool: &mut TheoremPool)
     -> SolverResult<()>
 {
     let mut rev = side_map.revision();
 
     while !side_map.all_filled() {
-        try!(step::apply_theorem::run(side_map, theorem));
+        try!(theorem_pool.apply_all(side_map));
 
         if side_map.all_filled() {
             return Ok(())
@@ -111,7 +112,7 @@ fn get_unknown_points(conn_map: &mut ConnectMap) -> Vec<Point> {
 
 fn solve_by_backtracking_one_step(
     side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>,
-    theorem: &mut Vec<Theorem>, pts: &[Point])
+    theorem_pool: &mut TheoremPool, pts: &[Point])
     -> SolverResult<bool>
 {
     let rev = side_map.revision();
@@ -125,24 +126,24 @@ fn solve_by_backtracking_one_step(
 
         let mut sm0 = side_map.clone();
         let mut cm0 = conn_map.clone();
-        let mut th0 = theorem.clone();
+        let mut th0 = theorem_pool.clone();
         sm0.set_inside(p);
 
         if solve_by_logic(&mut sm0, &mut cm0, &mut th0).is_err() {
             side_map.set_outside(p);
-            try!(solve_by_logic(side_map, conn_map, theorem));
+            try!(solve_by_logic(side_map, conn_map, theorem_pool));
             continue
         }
 
         let mut sm1 = side_map.clone();
         let mut cm1 = conn_map.clone();
-        let mut th1 = theorem.clone();
+        let mut th1 = theorem_pool.clone();
         sm1.set_outside(p);
 
         if solve_by_logic(&mut sm1, &mut cm1, &mut th1).is_err() {
             *side_map = sm0;
             *conn_map = cm0;
-            *theorem  = th0;
+            *theorem_pool  = th0;
         }
     }
 
@@ -166,11 +167,13 @@ fn check_answer(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>)
 
 pub fn solve(board: &Board) -> Result<Board, LogicError> {
     let mut side_map = SideMap::from_board(board);
-    let theorem = try!(step::apply_theorem::create_theorem_list(&mut side_map));
-    let mut queue = vec![(side_map, None, theorem)];
+    let it = THEOREM_DEFINE.iter().map(|theo| theo.parse().unwrap());
+    let theorem_pool = try!(TheoremPool::new(it, &mut side_map));
 
-    'failure: while let Some((mut side_map, mut conn_map, mut theorem)) = queue.pop() {
-        if solve_by_logic(&mut side_map, &mut conn_map, &mut theorem).is_err() {
+    let mut queue = vec![(side_map, None, theorem_pool)];
+
+    'failure: while let Some((mut side_map, mut conn_map, mut theorem_pool)) = queue.pop() {
+        if solve_by_logic(&mut side_map, &mut conn_map, &mut theorem_pool).is_err() {
             continue
         }
 
@@ -185,7 +188,7 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
         let mut pts = get_unknown_points(conn_map.as_mut().unwrap());
         loop {
             match solve_by_backtracking_one_step(
-                &mut side_map, &mut conn_map, &mut theorem, &pts)
+                &mut side_map, &mut conn_map, &mut theorem_pool, &pts)
             {
                 Ok(true) => {
                     if side_map.all_filled() {
@@ -208,8 +211,8 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
         let conn_map_1 = conn_map;
         side_map_0.set_outside(p);
         side_map_1.set_inside(p);
-        queue.push((side_map_0, conn_map_0, theorem.clone()));
-        queue.push((side_map_1, conn_map_1, theorem));
+        queue.push((side_map_0, conn_map_0, theorem_pool.clone()));
+        queue.push((side_map_1, conn_map_1, theorem_pool));
     }
 
     Err(LogicError)

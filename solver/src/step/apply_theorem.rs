@@ -3,108 +3,111 @@ use slsr_core::geom::{Geom, Point, Move};
 
 use ::SolverResult;
 use ::model::side_map::SideMap;
-use ::model::theorem::{Pattern, TheoremMatch, Theorem};
-use ::theorem_define::THEOREM_DEFINE;
+use ::model::theorem::{Pattern, Theorem, TheoremMatcher, TheoremMatchResult};
 
-pub fn create_theorem_list(side_map: &mut SideMap) -> SolverResult<Vec<Theorem>>
-{
-    let it = THEOREM_DEFINE.iter()
-        .flat_map(|th| {
-            th.parse::<Theorem>().unwrap().all_rotations().into_iter()
-        });
+#[derive(Clone, Debug)]
+pub struct TheoremPool {
+    data: Vec<TheoremMatcher>
+}
 
-    let mut hint_theorem = [vec![], vec![], vec![], vec![]];
-    let mut nonhint_theorem = vec![];
+impl TheoremPool {
+    pub fn new<'a, T>(theo_defs: T, side_map: &mut SideMap) -> SolverResult<TheoremPool>
+        where T: IntoIterator<Item=Theorem>
+    {
+        let it = theo_defs
+            .into_iter()
+            .flat_map(|theo| theo.all_rotations());
 
-    for theo in it {
-        match theo.head() {
-            Pattern::Hint(x, _) => hint_theorem[x as usize].push(theo),
-            Pattern::Edge(..) => nonhint_theorem.push(theo)
+        let mut hint_theorem = [vec![], vec![], vec![], vec![]];
+        let mut nonhint_theorem = vec![];
+
+        for theo in it {
+            match theo.head() {
+                Pattern::Hint(x, _) => hint_theorem[x as usize].push(theo),
+                _ => nonhint_theorem.push(theo)
+            }
         }
-    }
 
-    let mut theorem = vec![];
+        let mut data = vec![];
 
-    for r in 0 .. side_map.row() {
-        for c in 0 .. side_map.column() {
-            let p = Point(r, c);
-            match side_map.hint()[p] {
-                Some(x) => {
+        for r in 0..side_map.row() {
+            for c in 0..side_map.column() {
+                let p = Point(r, c);
+                if let Some(x) = side_map.hint()[p] {
                     for theo in &hint_theorem[x as usize] {
                         let o = match theo.head() {
                             Pattern::Hint(_, p) => p,
                             _ => panic!()
                         };
 
-                        match try!(theo.clone().shift(p - o).matches(side_map)) {
-                            TheoremMatch::Complete(result) => {
+                        match try!(theo.clone().shift(p - o).into_matcher().matches(side_map)) {
+                            TheoremMatchResult::Complete(result) => {
                                 for pat in &result {
                                     pat.apply(side_map);
                                 }
                             }
-                            TheoremMatch::Partial(theo) => {
-                                theorem.push(theo)
+                            TheoremMatchResult::Partial(theo) => {
+                                data.push(theo);
                             }
-                            TheoremMatch::Conflict => {}
+                            TheoremMatchResult::Conflict => {}
                         }
                     }
                 }
-                _ => {}
             }
         }
+
+        for theo in nonhint_theorem {
+            let sz = theo.size();
+            for r in (1 - sz.0 .. side_map.row() + sz.0 - 1) {
+                for c in (1 - sz.1 .. side_map.column() + sz.1 - 1) {
+                    let mv = Move(r, c);
+                    match try!(theo.clone().shift(mv).into_matcher().matches(side_map)) {
+                        TheoremMatchResult::Complete(result) => {
+                            for pat in &result {
+                                pat.apply(side_map);
+                            }
+                        }
+                        TheoremMatchResult::Partial(theo) => {
+                            data.push(theo);
+                        }
+                        TheoremMatchResult::Conflict => {}
+                    }
+                }
+            }
+        }
+
+        // FIXME: Should reduce the elements that has different result but matcher are same.
+        data.sort();
+        data.dedup();
+
+        Ok(TheoremPool { data: data })
     }
 
-    for theo in nonhint_theorem {
-        let sz = theo.size();
-        for r in (1 - sz.0 .. side_map.row() + sz.0 - 1) {
-            for c in (1 - sz.1 .. side_map.column() + sz.1 - 1) {
-                match try!(theo.clone().shift(Move(r, c)).matches(side_map)) {
-                    TheoremMatch::Complete(result) => {
+    pub fn apply_all(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
+        let mut rev = side_map.revision();
+        loop {
+            let new_theorem = Vec::with_capacity(self.data.len());
+
+            for theo in mem::replace(&mut self.data, new_theorem) {
+                match try!(theo.matches(side_map)) {
+                    TheoremMatchResult::Complete(result) => {
                         for pat in &result {
                             pat.apply(side_map);
                         }
                     }
-                    TheoremMatch::Partial(theo) => {
-                        theorem.push(theo)
+                    TheoremMatchResult::Partial(theo) => {
+                        self.data.push(theo)
                     }
-                    TheoremMatch::Conflict => {}
+                    TheoremMatchResult::Conflict => {}
                 }
             }
-        }
-    }
 
-    theorem.sort();
-    theorem.dedup();
-
-    Ok(theorem)
-}
-
-pub fn run(side_map: &mut SideMap, theorem: &mut Vec<Theorem>)
-           -> SolverResult<()>
-{
-    let mut rev = side_map.revision();
-    loop {
-        let new_theorem = Vec::with_capacity(theorem.len());
-
-        for theo in mem::replace(theorem, new_theorem) {
-            match try!(theo.matches(side_map)) {
-                TheoremMatch::Complete(result) => {
-                    for pat in &result {
-                        pat.apply(side_map);
-                    }
-                }
-                TheoremMatch::Partial(theo) => {
-                    theorem.push(theo)
-                }
-                TheoremMatch::Conflict => {}
+            if side_map.revision() == rev {
+                break;
             }
+            rev = side_map.revision()
         }
 
-        if side_map.revision() == rev {
-            break;
-        }
-        rev = side_map.revision()
+        Ok(())
     }
-
-    Ok(())
 }
