@@ -97,6 +97,7 @@ pub struct Theorem {
     result: Vec<Pattern>
 }
 
+#[derive(Clone, Debug)]
 pub enum TheoremMatch {
     Complete(Vec<Pattern>),
     Partial(Theorem),
