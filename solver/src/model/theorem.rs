@@ -147,8 +147,6 @@ impl Theorem {
                             h_deg0, h_deg90, h_deg180, h_deg270];
 
         rots.sort();
-        // FIXME: Should reduce the elements that has different result but size
-        //        and matcher are same.
         rots.dedup();
 
         rots
@@ -179,8 +177,7 @@ pub enum TheoremMatchResult {
 }
 
 impl TheoremMatcher {
-    pub fn matches(mut self, side_map: &mut SideMap) -> SolverResult<TheoremMatchResult>
-    {
+    pub fn matches(mut self, side_map: &mut SideMap) -> SolverResult<TheoremMatchResult> {
         unsafe {
             // Assume the elements of self.matcher is copyable.
             let len = self.matcher.len();
@@ -209,6 +206,17 @@ impl TheoremMatcher {
             TheoremMatchResult::Partial(self)
         };
         Ok(m)
+    }
+
+    pub fn merge(&mut self, other: &TheoremMatcher) -> Result<(), ()> {
+        if self.matcher != other.matcher {
+            return Err(());
+        }
+
+        self.result.extend(other.result.iter().cloned());
+        self.result.sort();
+        self.result.dedup();
+        Ok(())
     }
 }
 

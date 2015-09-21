@@ -36,21 +36,11 @@ impl TheoremPool {
                 if let Some(x) = side_map.hint()[p] {
                     for theo in &hint_theorem[x as usize] {
                         let o = match theo.head() {
-                            Pattern::Hint(_, p) => p,
+                            Pattern::Hint(_, o) => o,
                             _ => panic!()
                         };
-
-                        match try!(theo.clone().shift(p - o).into_matcher().matches(side_map)) {
-                            TheoremMatchResult::Complete(result) => {
-                                for pat in &result {
-                                    pat.apply(side_map);
-                                }
-                            }
-                            TheoremMatchResult::Partial(theo) => {
-                                data.push(theo);
-                            }
-                            TheoremMatchResult::Conflict => {}
-                        }
+                        let matcher = theo.clone().shift(p - o).into_matcher();
+                        try!(Self::matches(matcher, side_map, &mut data));
                     }
                 }
             }
@@ -60,46 +50,24 @@ impl TheoremPool {
             let sz = theo.size();
             for r in (1 - sz.0 .. side_map.row() + sz.0 - 1) {
                 for c in (1 - sz.1 .. side_map.column() + sz.1 - 1) {
-                    let mv = Move(r, c);
-                    match try!(theo.clone().shift(mv).into_matcher().matches(side_map)) {
-                        TheoremMatchResult::Complete(result) => {
-                            for pat in &result {
-                                pat.apply(side_map);
-                            }
-                        }
-                        TheoremMatchResult::Partial(theo) => {
-                            data.push(theo);
-                        }
-                        TheoremMatchResult::Conflict => {}
-                    }
+                    let matcher = theo.clone().shift(Move(r, c)).into_matcher();
+                    try!(Self::matches(matcher, side_map, &mut data));
                 }
             }
         }
 
-        // FIXME: Should reduce the elements that has different result but matcher are same.
-        data.sort();
-        data.dedup();
+        let mut pool = TheoremPool { data: data };
+        pool.merge_dup();
 
-        Ok(TheoremPool { data: data })
+        Ok(pool)
     }
 
     pub fn apply_all(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
         let mut rev = side_map.revision();
         loop {
-            let new_theorem = Vec::with_capacity(self.data.len());
-
-            for theo in mem::replace(&mut self.data, new_theorem) {
-                match try!(theo.matches(side_map)) {
-                    TheoremMatchResult::Complete(result) => {
-                        for pat in &result {
-                            pat.apply(side_map);
-                        }
-                    }
-                    TheoremMatchResult::Partial(theo) => {
-                        self.data.push(theo)
-                    }
-                    TheoremMatchResult::Conflict => {}
-                }
+            let cap = self.data.len();
+            for matcher in mem::replace(&mut self.data, Vec::with_capacity(cap)) {
+                try!(Self::matches(matcher, side_map, &mut self.data));
             }
 
             if side_map.revision() == rev {
@@ -109,5 +77,50 @@ impl TheoremPool {
         }
 
         Ok(())
+    }
+
+    fn matches(matcher: TheoremMatcher,
+               side_map: &mut SideMap,
+               new_matchers: &mut Vec<TheoremMatcher>
+               ) -> SolverResult<()> {
+        match try!(matcher.matches(side_map)) {
+            TheoremMatchResult::Complete(result) => {
+                for pat in &result {
+                    pat.apply(side_map);
+                }
+            }
+            TheoremMatchResult::Partial(theo) => {
+                new_matchers.push(theo)
+            }
+            TheoremMatchResult::Conflict => {}
+        }
+
+        Ok(())
+    }
+
+    fn merge_dup(&mut self) {
+        self.data.sort();
+        // Merge elements that have same matchers.
+        unsafe {
+            let len = self.data.len();
+            let p = self.data.as_mut_ptr();
+
+            let mut w = 1;
+            for r in 1..len {
+                let read = p.offset(r as isize);
+                let cmp = p.offset((w - 1) as isize);
+
+                match (*cmp).merge(&*read) {
+                    Ok(()) => {}
+                    Err(()) => {
+                        let write = cmp.offset(1);
+                        mem::swap(&mut *write, &mut *read);
+                        w += 1;
+                    }
+                }
+            }
+
+            self.data.truncate(w);
+        }
     }
 }
