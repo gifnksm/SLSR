@@ -182,13 +182,17 @@ impl TheoremMatcher {
     pub fn matches(mut self, side_map: &mut SideMap) -> SolverResult<TheoremMatchResult>
     {
         unsafe {
+            // Assume the elements of self.matcher is copyable.
+            let len = self.matcher.len();
+            let p = self.matcher.as_mut_ptr();
             let mut w = 0;
-            for r in 0..self.matcher.len() {
-                let read = self.matcher[r];
+            for r in 0..len {
+                let read = *p.offset(r as isize);
+
                 match try!(read.matches(side_map)) {
                     PatternMatchResult::Complete => {},
                     PatternMatchResult::Partial => {
-                        self.matcher[w] = read;
+                        *p.offset(w as isize) = read;
                         w += 1;
                     }
                     PatternMatchResult::Conflict => {
