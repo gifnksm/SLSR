@@ -113,7 +113,7 @@ impl Table {
     {
         let row = board.row();
         try!(LabelRow::pprint(printer, conf, board));
-        for y in (0 .. row) {
+        for y in 0..row {
             try!(EdgeRow::pprint(printer, conf, board, y));
             try!(CellRow::pprint(printer, conf, board, y));
         }
@@ -130,7 +130,7 @@ impl LabelRow {
     {
         try!(printer.write_plain_fmt(
             format_args!("{:1$}", "", conf.cell_width)));
-        for x in 0 .. board.column() {
+        for x in 0..board.column() {
             try!(printer.write_plain_fmt(
                 format_args!("{:1$}", "", 1)));
             try!(Label::pprint(printer, conf, x, true));
@@ -148,7 +148,7 @@ impl EdgeRow {
         let col = board.column();
         try!(printer.write_plain_fmt(
             format_args!("{:1$}", "", conf.cell_width)));
-        for x in (0 .. col) {
+        for x in 0..col {
             try!(Corner::pprint(printer, conf, board, Point(y, x)));
             try!(EdgeH::pprint(printer, conf, board, Point(y, x)));
         }
@@ -162,10 +162,10 @@ struct CellRow;
 impl CellRow {
     fn pprint(printer: &mut Printer, conf: &Config, board: &Board, y: i32) -> io::Result<()> {
         let col = board.column();
-        for i in (0 .. conf.cell_height) {
+        for i in 0..conf.cell_height {
             let num_line = (conf.cell_height - 1) / 2 == i;
             try!(Label::pprint(printer, conf, y, num_line));
-            for x in (0 .. col) {
+            for x in 0..col {
                 try!(EdgeV::pprint(printer, conf, board, Point(y, x)));
                 try!(Cell::pprint(printer, conf, board, Point(y, x), num_line));
             }
@@ -228,7 +228,7 @@ impl EdgeH {
             Some(Edge::Line)  => ("-", None),
             None => ("~", None)
         };
-        for _ in (0 .. conf.cell_width) {
+        for _ in 0..conf.cell_width {
             try!(printer.write_pretty(ty, s));
         }
         Ok(())

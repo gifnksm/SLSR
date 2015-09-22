@@ -209,8 +209,8 @@ mod tests {
     #[test]
     fn rotate_mat() {
         let mat = [Rotation::UCW0, Rotation::UCW90, Rotation::UCW180, Rotation::UCW270];
-        for i in (0 .. mat.len()) {
-            for j in (0 .. mat.len()) {
+        for i in 0..mat.len() {
+            for j in 0..mat.len() {
                 assert_eq!(mat[(i + j) % mat.len()], mat[i] * mat[j]);
             }
         }
@@ -221,9 +221,9 @@ mod tests {
         let mat = [Rotation::UCW0, Rotation::UCW90, Rotation::UCW180, Rotation::UCW270];
         let vec = [[Move::UP, Move::LEFT, Move::DOWN, Move::RIGHT],
                    [Move::UP + Move::RIGHT, Move::LEFT + Move::UP, Move::DOWN + Move::LEFT, Move::RIGHT + Move::DOWN]];
-        for i in 0 .. mat.len() {
+        for i in 0..mat.len() {
             for v in &vec {
-                for j in (0 .. v.len()) {
+                for j in 0..v.len() {
                     assert_eq!(v[(i + j) % v.len()], mat[i] * v[j]);
                 }
             }

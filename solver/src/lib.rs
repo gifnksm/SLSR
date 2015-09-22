@@ -19,8 +19,8 @@ use std::fmt;
 use slsr_core::board::Board;
 use slsr_core::geom::{CellId, Geom, Point};
 
-use model::connect_map::{ConnectMap, ConnectMapAccess};
-use model::side_map::{SideMap, SideMapAccess};
+use model::connect_map::ConnectMap;
+use model::side_map::SideMap;
 use step::apply_theorem::TheoremPool;
 use theorem_define::THEOREM_DEFINE;
 
@@ -96,8 +96,8 @@ fn solve_by_logic(
 fn get_unknown_points(conn_map: &mut ConnectMap) -> Vec<CellId> {
     let mut pts = vec![];
 
-    for r in (0 .. conn_map.row()) {
-        for c in (0 .. conn_map.column()) {
+    for r in 0..conn_map.row() {
+        for c in 0..conn_map.column() {
             let p = conn_map.point_to_cellid(Point(r, c));
             let a = conn_map.get(p);
             if p != a.coord() { continue }
@@ -181,7 +181,7 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
             if check_answer(&mut side_map, &mut conn_map).is_err() {
                 continue
             }
-            return side_map.to_board()
+            return side_map.into()
         }
 
         debug_assert!(conn_map.is_some());
@@ -195,7 +195,7 @@ pub fn solve(board: &Board) -> Result<Board, LogicError> {
                         if check_answer(&mut side_map, &mut conn_map).is_err() {
                             continue
                         }
-                        return side_map.to_board()
+                        return side_map.into()
                     }
                     pts = get_unknown_points(conn_map.as_mut().unwrap());
                 }

@@ -149,7 +149,7 @@ mod from_str_impl {
         if row == 0 { return Err(()) }
         let col = mat[0].len();
         if col == 0 { return Err(()) }
-        if mat[1 ..].iter().any(|r| r.len() != col) { return Err(()) }
+        if mat[1..].iter().any(|r| r.len() != col) { return Err(()) }
 
         let hint = mat.iter().flat_map(|line| {
             line.iter().filter_map(|&c| {
@@ -215,7 +215,7 @@ mod display_impl {
     impl<'a> fmt::Display for EdgeRow<'a> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let EdgeRow(board, r) = *self;
-            for c in (0 .. board.column()) {
+            for c in 0..board.column() {
                 let p = Point(r, c);
                 try!(write!(f, "{}", Cross));
                 try!(write!(f, "{}", HEdge(board, p)));
@@ -229,7 +229,7 @@ mod display_impl {
     impl<'a> fmt::Display for CellRow<'a> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             let CellRow(board, r) = *self;
-            for c in (0 .. board.column()) {
+            for c in 0..board.column() {
                 let p = Point(r, c);
                 try!(write!(f, "{}", VEdge(board, p)));
                 match board.hint[p] {
@@ -244,7 +244,7 @@ mod display_impl {
 
     impl fmt::Display for Board {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            for r in (0 .. self.row()) {
+            for r in 0..self.row() {
                 try!(writeln!(f, "{}", EdgeRow(self, r)));
                 try!(writeln!(f, "{}", CellRow(self, r)));
             }

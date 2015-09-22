@@ -48,8 +48,8 @@ impl TheoremPool {
 
         for theo in nonhint_theorem {
             let sz = theo.size();
-            for r in (1 - sz.0 .. side_map.row() + sz.0 - 1) {
-                for c in (1 - sz.1 .. side_map.column() + sz.1 - 1) {
+            for r in (1 - sz.0)..(side_map.row() + sz.0 - 1) {
+                for c in (1 - sz.1)..(side_map.column() + sz.1 - 1) {
                     let matcher = theo.clone().shift(Move(r, c));
                     try!(Self::matches(matcher, side_map, &mut data));
                 }

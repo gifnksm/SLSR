@@ -3,8 +3,8 @@ use slsr_core::board::Side;
 use slsr_core::geom::{CellId, Geom, Point, OUTSIDE_CELL_ID};
 
 use ::{State, SolverResult};
-use ::model::connect_map::{ConnectMap, ConnectMapAccess};
-use ::model::side_map::{SideMap, SideMapAccess};
+use ::model::connect_map::ConnectMap;
+use ::model::side_map::SideMap;
 
 fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
                      -> (Vec<CellId>, Vec<Vec<usize>>)
@@ -14,8 +14,8 @@ fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
         pts.push(OUTSIDE_CELL_ID)
     }
 
-    for r in (0 .. conn_map.row()) {
-        for c in (0 .. conn_map.column()) {
+    for r in 0..conn_map.row() {
+        for c in 0..conn_map.column() {
             let p = conn_map.point_to_cellid(Point(r, c));
             let a = conn_map.get(p);
             if a.coord() == p && a.side() != State::Fixed(filter_side) {
@@ -62,8 +62,9 @@ fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
             if u == v { continue }
 
             if !visited[u] {
-                num_child += 1;
                 dfs(graph, u, visited, ord, low, ord_cnt, arts);
+
+                num_child += 1;
                 low[v] = cmp::min(low[v], low[u]);
                 if ord[v] != 1 && ord[v] <= low[u] {
                     is_articulation = true;
@@ -165,13 +166,10 @@ pub fn run(side_map: &mut SideMap, conn_map: &mut ConnectMap)
     loop {
         try!(conn_map.sync(side_map));
 
-        for &set_side in &[Side::In, Side::Out] {
-            let filter_side = if set_side == Side::In {
-                Side::Out
-            } else {
-                Side::In
-            };
+        let sides = &[(Side::In, Side::Out),
+                      (Side::Out, Side::In)];
 
+        for &(set_side, filter_side) in sides {
             let (pts, graph) = create_conn_graph(conn_map, filter_side);
             let (arts, visited) = get_articulation(&graph, 0);
 

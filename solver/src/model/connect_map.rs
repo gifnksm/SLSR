@@ -5,7 +5,7 @@ use slsr_core::board::{Edge, Side};
 use slsr_core::geom::{CellId, Geom, Point, Size, Move, OUTSIDE_CELL_ID};
 
 use ::{LogicError, State, SolverResult};
-use ::model::side_map::{SideMap, SideMapAccess};
+use ::model::side_map::SideMap;
 
 #[derive(Clone, Debug)]
 pub struct Area {
@@ -116,28 +116,20 @@ impl ConnectMap {
         }
         cnt
     }
+
+    pub fn union(&mut self, i: CellId, j: CellId) -> bool {
+        self.uf.union(i.id(), j.id())
+    }
+    pub fn get(&mut self, i: CellId) -> &Area {
+        self.uf.get(i.id())
+    }
+    pub fn get_mut(&mut self, i: CellId) -> &mut Area {
+        self.uf.get_mut(i.id())
+    }
 }
 
 impl Geom for ConnectMap {
     fn size(&self) -> Size { self.size }
-}
-
-pub trait ConnectMapAccess<T> {
-    fn union(&mut self, p0: T, p1: T) -> bool;
-    fn get(&mut self, p: T) -> &Area;
-    fn get_mut(&mut self, p: T) -> &mut Area;
-}
-
-impl ConnectMapAccess<CellId> for ConnectMap {
-    fn union(&mut self, i: CellId, j: CellId) -> bool {
-        self.uf.union(i.id(), j.id())
-    }
-    fn get(&mut self, i: CellId) -> &Area {
-        self.uf.get(i.id())
-    }
-    fn get_mut(&mut self, i: CellId) -> &mut Area {
-        self.uf.get_mut(i.id())
-    }
 }
 
 impl<'a> From<&'a mut SideMap> for ConnectMap {

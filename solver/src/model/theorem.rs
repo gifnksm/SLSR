@@ -4,7 +4,7 @@ use slsr_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
 use slsr_core::lattice_parser::LatticeParser;
 
 use ::{State, SolverResult, LogicError};
-use ::model::side_map::{SideMap, SideMapAccess};
+use ::model::side_map::SideMap;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct HintPattern {
@@ -346,7 +346,7 @@ impl FromStr for Theorem {
 
         let mut idx = 0;
         for &p in &m_pat {
-            match r_pat[idx ..].iter().position(|&x| x == p) {
+            match r_pat[idx..].iter().position(|&x| x == p) {
                 Some(i) => {
                     idx += i;
                     let _ = r_pat.remove(idx);
@@ -445,12 +445,12 @@ impl FromStr for Theorem {
                 }
 
                 if ps0.len() > 0 {
-                    for &p in &ps0[1 ..] {
+                    for &p in &ps0[1..] {
                         pat.push(Pattern::cross(ps0[0], p));
                     }
                 }
                 if ps1.len() > 0 {
-                    for &p in &ps1[1 ..] {
+                    for &p in &ps1[1..] {
                         pat.push(Pattern::cross(ps1[0], p));
                     }
                 }
