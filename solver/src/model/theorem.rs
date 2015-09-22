@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use slsr_core::board::Edge;
-use slsr_core::geom::{Point, Rotation, Move, Size};
+use slsr_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
 use slsr_core::lattice_parser::LatticeParser;
 
 use ::{State, SolverResult, LogicError};
@@ -43,40 +43,53 @@ impl HintPattern {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct EdgePattern {
+pub struct EdgePattern<P> {
     edge: Edge,
-    points: (Point, Point)
+    points: (P, P)
 }
 
-impl EdgePattern {
-    fn cross(p0: Point, p1: Point) -> EdgePattern {
+impl EdgePattern<Point> {
+    fn cross(p0: Point, p1: Point) -> EdgePattern<Point> {
         EdgePattern { edge: Edge::Cross, points: (p0, p1) }.normalized()
     }
-    fn line(p0: Point, p1: Point) -> EdgePattern {
+    fn line(p0: Point, p1: Point) -> EdgePattern<Point> {
         EdgePattern { edge: Edge::Line, points: (p0, p1) }.normalized()
     }
 
-    fn normalized(self) -> EdgePattern {
+    fn normalized(self) -> EdgePattern<Point> {
         let mut points = self.points;
         if self.points.1 < self.points.0 {
             points = (self.points.1, self.points.0);
         }
         EdgePattern { edge: self.edge, points: points }
     }
-    fn rotate(mut self, rot: Rotation) -> EdgePattern {
+    fn rotate(mut self, rot: Rotation) -> EdgePattern<Point> {
         let o = Point(0, 0);
         let ps = self.points;
         self.points = (o + rot * (ps.0 - o), o + rot * (ps.1 - o));
         self.normalized()
     }
-    fn shift(mut self, d: Move) -> EdgePattern {
+    fn shift(mut self, d: Move) -> EdgePattern<Point> {
         let ps = self.points;
         self.points = (ps.0 + d, ps.1 + d);
         self.normalized()
     }
 
+    fn to_cellid(self, side_map: &mut SideMap) -> EdgePattern<CellId> {
+        let p0 = side_map.point_to_cellid(self.points.0);
+        let p1 = side_map.point_to_cellid(self.points.1);
+        EdgePattern { edge: self.edge, points: (p0, p1) }
+    }
+
     fn matches(self, side_map: &mut SideMap)
-               -> SolverResult<PatternMatchResult<EdgePattern>> {
+               -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
+        self.to_cellid(side_map).matches(side_map)
+    }
+}
+
+impl EdgePattern<CellId> {
+    fn matches(self, side_map: &mut SideMap)
+               -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
         let ps = self.points;
         match side_map.get_edge(ps.0, ps.1) {
             State::Fixed(edg) => {
@@ -100,7 +113,7 @@ impl EdgePattern {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Pattern {
     Hint(HintPattern),
-    Edge(EdgePattern)
+    Edge(EdgePattern<Point>)
 }
 
 enum PatternMatchResult<T> {
@@ -132,7 +145,7 @@ impl Pattern {
     }
 
     fn matches(self, side_map: &mut SideMap)
-               -> SolverResult<PatternMatchResult<EdgePattern>> {
+               -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
         match self {
             Pattern::Hint(h) => h.matches(side_map),
             Pattern::Edge(e) => e.matches(side_map)
@@ -148,7 +161,7 @@ pub trait Match {
 pub struct Theorem {
     size: Size,
     matcher: Vec<Pattern>,
-    result: Vec<EdgePattern>
+    result: Vec<EdgePattern<Point>>
 }
 
 impl Theorem {
@@ -225,12 +238,17 @@ impl Match for Theorem {
             }
         }
 
+        let result = self.result
+            .into_iter()
+            .map(|pat| pat.to_cellid(side_map))
+            .collect();
+
         if new_matcher.is_empty() {
-            Ok(TheoremMatchResult::Complete(self.result))
+            Ok(TheoremMatchResult::Complete(result))
         } else {
             Ok(TheoremMatchResult::Partial(TheoremMatcher {
                 matcher: new_matcher,
-                result: self.result
+                result: result
             }))
         }
     }
@@ -238,13 +256,13 @@ impl Match for Theorem {
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct TheoremMatcher {
-    matcher: Vec<EdgePattern>,
-    result: Vec<EdgePattern>
+    matcher: Vec<EdgePattern<CellId>>,
+    result: Vec<EdgePattern<CellId>>
 }
 
 #[derive(Clone, Debug)]
 pub enum TheoremMatchResult {
-    Complete(Vec<EdgePattern>),
+    Complete(Vec<EdgePattern<CellId>>),
     Partial(TheoremMatcher),
     Conflict
 }

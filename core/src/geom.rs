@@ -106,6 +106,15 @@ impl Mul<Move> for Rotation {
     }
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct CellId(usize);
+impl CellId {
+    pub fn new(id: usize) -> CellId { CellId(id) }
+    pub fn id(self) -> usize { self.0 }
+}
+pub const OUTSIDE_CELL_ID: CellId = CellId(0);
+pub const OUTSIDE_POINT: Point = Point(-1, -1);
+
 pub trait Geom {
     #[inline]
     fn size(&self) -> Size;
@@ -122,12 +131,22 @@ pub trait Geom {
     }
 
     #[inline]
-    fn point_to_index(&self, p: Point) -> usize {
-        (p.0 * self.column() + p.1) as usize
+    fn point_to_cellid(&self, p: Point) -> CellId {
+        if self.contains(p) {
+            CellId((p.0 * self.column() + p.1 + 1) as usize)
+        } else {
+            OUTSIDE_CELL_ID
+        }
     }
     #[inline]
-    fn index_to_point(&self, idx: usize) -> Point {
-        Point((idx as i32) / self.column(), (idx as i32) % self.column())
+    fn cellid_to_point(&self, id: CellId) -> Point {
+        if id == OUTSIDE_CELL_ID {
+            OUTSIDE_POINT
+        } else {
+            let idx = id.id() - 1;
+            Point((idx as i32) / self.column(),
+                  (idx as i32) % self.column())
+        }
     }
 }
 
@@ -139,17 +158,15 @@ impl Geom for Size {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Table<T> {
     size: Size,
-    outside: T,
     data: Vec<T>
 }
 
 impl<T> Table<T> {
     #[inline]
-    pub fn new(size: Size, outside: T, data: Vec<T>) -> Table<T> {
+    pub fn new(size: Size, outside: T, mut data: Vec<T>) -> Table<T> {
         assert_eq!((size.0 * size.1) as usize, data.len());
-        Table {
-            size: size, outside: outside, data: data
-        }
+        data.insert(0, outside);
+        Table { size: size, data: data }
     }
 
     #[inline]
@@ -171,25 +188,16 @@ impl<T> Index<Point> for Table<T> {
 
     #[inline]
     fn index(&self, p: Point) -> &T {
-        unsafe {
-            if self.contains(p) {
-                let idx = self.point_to_index(p);
-                self.data.get_unchecked(idx)
-            } else {
-                &self.outside
-            }
-        }
+        let idx = self.point_to_cellid(p).id();
+        &self.data[idx]
     }
 }
 
 impl<T> IndexMut<Point> for Table<T> {
     #[inline]
     fn index_mut(&mut self, p: Point) -> &mut T {
-        unsafe {
-            assert!(self.contains(p));
-            let idx = self.point_to_index(p);
-            self.data.get_unchecked_mut(idx)
-        }
+        let idx = self.point_to_cellid(p).id();
+        &mut self.data[idx]
     }
 }
 

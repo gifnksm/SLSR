@@ -2,25 +2,24 @@ use std::iter::FromIterator;
 use std::mem;
 use union_find::{Union, UnionFind, UnionResult, QuickFindUf as Uf};
 use slsr_core::board::{Edge, Side};
-use slsr_core::geom::{Geom, Point, Size, Move};
+use slsr_core::geom::{CellId, Geom, Point, Size, Move, OUTSIDE_CELL_ID};
 
 use ::{LogicError, State, SolverResult};
-use ::model::cell_geom::{CellId, CellGeom};
 use ::model::side_map::{SideMap, SideMapAccess};
 
 #[derive(Clone, Debug)]
 pub struct Area {
-    coord: Point,
+    coord: CellId,
     side: State<Side>,
-    unknown_edge: Vec<Point>,
+    unknown_edge: Vec<CellId>,
     sum_of_hint: u32,
     size: usize
 }
 
 impl Area {
-    pub fn coord(&self) -> Point { self.coord }
+    pub fn coord(&self) -> CellId { self.coord }
     pub fn side(&self) -> State<Side> { self.side }
-    pub fn unknown_edge(&self) -> &[Point] { &self.unknown_edge }
+    pub fn unknown_edge(&self) -> &[CellId] { &self.unknown_edge }
     pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
 }
 
@@ -69,20 +68,17 @@ pub struct ConnectMap {
 }
 
 impl ConnectMap {
-    fn new<F>(size: Size, mut f: F) -> ConnectMap
+    fn new<F>(size: Size, f: F) -> ConnectMap
         where F: FnMut(Point) -> Area
     {
         let len = (size.0 * size.1 + 1) as usize;
+        let it = (0..len).map(|id| {
+            size.cellid_to_point(CellId::new(id))
+        }).map(f);
+
         ConnectMap {
             size: size,
-            uf: FromIterator::from_iter((0 .. len).map(|i| {
-                let p = if i == 0 {
-                    Point(-1, -1)
-                } else {
-                    size.index_to_point(i - 1)
-                };
-                f(p)
-            }))
+            uf: FromIterator::from_iter(it)
         }
     }
 
@@ -90,12 +86,13 @@ impl ConnectMap {
         let rev = side_map.revision();
         loop {
             let mut updated = false;
-            for r in (0 .. side_map.row()) {
-                for c in (0 .. side_map.column()) {
-                    updated |= try!(update_conn(side_map, self, Point(r, c)));
+            for r in 0..self.row() {
+                for c in 0..self.column() {
+                    let c = self.point_to_cellid(Point(r, c));
+                    updated |= try!(update_conn(side_map, self, c));
                 }
             }
-            updated |= try!(update_conn(side_map, self, Point(-1, -1)));
+            updated |= try!(update_conn(side_map, self, OUTSIDE_CELL_ID));
 
             if updated {
                 debug_assert_eq!(rev, side_map.revision());
@@ -109,10 +106,10 @@ impl ConnectMap {
 
     pub fn count_area(&mut self) -> usize {
         let mut cnt = 1; // counts (-1, -1)
-        for r in (0 .. self.row()) {
-            for c in (0 .. self.column()) {
-                let p = Point(r, c);
-                if p == self.get(p).coord() {
+        for r in 0..self.row() {
+            for c in 0..self.column() {
+                let c = self.point_to_cellid(Point(r, c));
+                if self.get(c).coord() == c {
                     cnt += 1;
                 }
             }
@@ -124,8 +121,6 @@ impl ConnectMap {
 impl Geom for ConnectMap {
     fn size(&self) -> Size { self.size }
 }
-
-impl CellGeom for ConnectMap {}
 
 pub trait ConnectMapAccess<T> {
     fn union(&mut self, p0: T, p1: T) -> bool;
@@ -145,50 +140,34 @@ impl ConnectMapAccess<CellId> for ConnectMap {
     }
 }
 
-impl ConnectMapAccess<Point> for ConnectMap {
-    fn union(&mut self, p0: Point, p1: Point) -> bool {
-        let i = self.cell_id(p0);
-        let j = self.cell_id(p1);
-        self.union(i, j)
-    }
-
-    fn get(&mut self, p: Point) -> &Area {
-        let i = self.cell_id(p);
-        self.get(i)
-    }
-
-    fn get_mut(&mut self, p: Point) -> &mut Area {
-        let i = self.cell_id(p);
-        self.get_mut(i)
-    }
-}
-
 impl<'a> From<&'a mut SideMap> for ConnectMap {
     fn from(side_map: &'a mut SideMap) -> ConnectMap {
         let mut conn_map = ConnectMap::new(side_map.size(), |p| {
+            let cp = side_map.point_to_cellid(p);
             let sum = side_map.hint()[p].unwrap_or(0);
 
             let mut edge = vec![];
-            if side_map.contains(p) {
+            if cp != OUTSIDE_CELL_ID {
                 for &r in &Move::ALL_DIRECTIONS {
-                    if side_map.get_edge(p, p + r) == State::Unknown {
-                        edge.push(p + r);
+                    let cp_r = side_map.point_to_cellid(p + r);
+                    if side_map.get_edge(cp, cp_r) == State::Unknown {
+                        edge.push(cp_r);
                     }
                 }
             } else {
                 for r in 0 .. side_map.row() {
                     for &c in &[0, side_map.column() - 1] {
-                        let p2 = Point(r, c);
-                        if side_map.get_edge(p, p2) == State::Unknown {
-                            edge.push(p2);
+                        let cp2 = side_map.point_to_cellid(Point(r, c));
+                        if side_map.get_edge(cp, cp2) == State::Unknown {
+                            edge.push(cp2);
                         }
                     }
                 }
                 for c in 0 .. side_map.column() {
                     for &r in &[0, side_map.row() - 1] {
-                        let p2 = Point(r, c);
-                        if side_map.get_edge(p, p2) == State::Unknown {
-                            edge.push(p2);
+                        let cp2 = side_map.point_to_cellid(Point(r, c));
+                        if side_map.get_edge(cp, cp2) == State::Unknown {
+                            edge.push(cp2);
                         }
                     }
                 }
@@ -197,21 +176,23 @@ impl<'a> From<&'a mut SideMap> for ConnectMap {
             edge.dedup();
 
             Area {
-                coord: p,
-                side: side_map.get_side(p),
+                coord: cp,
+                side: side_map.get_side(cp),
                 unknown_edge: edge,
                 sum_of_hint: sum as u32,
                 size: 1
             }
         });
 
-        for r in (0 .. side_map.row()) {
-            for c in 0 .. side_map.column() {
+        for r in 0..side_map.row() {
+            for c in 0..side_map.column() {
                 let p = Point(r, c);
+                let cp = side_map.point_to_cellid(p);
                 for &r in &Move::ALL_DIRECTIONS {
                     let p2 = p + r;
-                    if side_map.get_edge(p, p2) == State::Fixed(Edge::Cross) {
-                        conn_map.union(p, p2);
+                    let cp2 = side_map.point_to_cellid(p2);
+                    if side_map.get_edge(cp, cp2) == State::Fixed(Edge::Cross) {
+                        conn_map.union(cp, cp2);
                     }
                 }
             }
@@ -220,8 +201,8 @@ impl<'a> From<&'a mut SideMap> for ConnectMap {
     }
 }
 
-fn filter_edge(side_map: &mut SideMap, p: Point, edge: Vec<Point>)
-               -> SolverResult<(Vec<Point>, Vec<Point>)>
+fn filter_edge(side_map: &mut SideMap, p: CellId, edge: Vec<CellId>)
+               -> SolverResult<(Vec<CellId>, Vec<CellId>)>
 {
     let mut unknown = vec![];
     let mut same = vec![];
@@ -242,7 +223,7 @@ fn filter_edge(side_map: &mut SideMap, p: Point, edge: Vec<Point>)
     Ok((same, unknown))
 }
 
-fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: Point)
+fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId)
                -> SolverResult<bool>
 {
     let mut edge = {

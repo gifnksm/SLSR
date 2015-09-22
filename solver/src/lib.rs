@@ -17,7 +17,7 @@ extern crate slsr_core;
 
 use std::fmt;
 use slsr_core::board::Board;
-use slsr_core::geom::{Geom, Point};
+use slsr_core::geom::{CellId, Geom, Point};
 
 use model::connect_map::{ConnectMap, ConnectMapAccess};
 use model::side_map::{SideMap, SideMapAccess};
@@ -25,7 +25,6 @@ use step::apply_theorem::TheoremPool;
 use theorem_define::THEOREM_DEFINE;
 
 mod model {
-    pub mod cell_geom;
     pub mod connect_map;
     pub mod side_map;
     pub mod theorem;
@@ -94,12 +93,12 @@ fn solve_by_logic(
     Ok(())
 }
 
-fn get_unknown_points(conn_map: &mut ConnectMap) -> Vec<Point> {
+fn get_unknown_points(conn_map: &mut ConnectMap) -> Vec<CellId> {
     let mut pts = vec![];
 
     for r in (0 .. conn_map.row()) {
         for c in (0 .. conn_map.column()) {
-            let p = Point(r, c);
+            let p = conn_map.point_to_cellid(Point(r, c));
             let a = conn_map.get(p);
             if p != a.coord() { continue }
             if a.side() != State::Unknown { continue }
@@ -113,7 +112,7 @@ fn get_unknown_points(conn_map: &mut ConnectMap) -> Vec<Point> {
 
 fn solve_by_backtracking_one_step(
     side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>,
-    theorem_pool: &mut TheoremPool, pts: &[Point])
+    theorem_pool: &mut TheoremPool, pts: &[CellId])
     -> SolverResult<bool>
 {
     let rev = side_map.revision();

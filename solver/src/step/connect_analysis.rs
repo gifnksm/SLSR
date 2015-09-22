@@ -1,22 +1,22 @@
 use std::cmp;
 use slsr_core::board::Side;
-use slsr_core::geom::{Geom, Point};
+use slsr_core::geom::{CellId, Geom, Point, OUTSIDE_CELL_ID};
 
 use ::{State, SolverResult};
 use ::model::connect_map::{ConnectMap, ConnectMapAccess};
 use ::model::side_map::{SideMap, SideMapAccess};
 
 fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
-                     -> (Vec<Point>, Vec<Vec<usize>>)
+                     -> (Vec<CellId>, Vec<Vec<usize>>)
 {
     let mut pts = vec![];
     if filter_side != Side::Out {
-        pts.push(Point(-1, -1))
+        pts.push(OUTSIDE_CELL_ID)
     }
 
     for r in (0 .. conn_map.row()) {
         for c in (0 .. conn_map.column()) {
-            let p = Point(r, c);
+            let p = conn_map.point_to_cellid(Point(r, c));
             let a = conn_map.get(p);
             if a.coord() == p && a.side() != State::Fixed(filter_side) {
                 pts.push(p);
@@ -85,7 +85,7 @@ fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
     (arts, visited)
 }
 
-fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool])
+fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[CellId], visited: &[bool])
                      -> SolverResult<Vec<usize>>
 {
     let mut disconn = vec![];
@@ -127,7 +127,7 @@ fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[Point], visited: &[bool])
 }
 
 fn splits(graph: &[Vec<usize>], v: usize,
-          conn_map: &mut ConnectMap, pts: &[Point], side: Side) -> bool {
+          conn_map: &mut ConnectMap, pts: &[CellId], side: Side) -> bool {
     if graph.is_empty() { return false }
 
     let mut contain_cnt = 0;
@@ -144,7 +144,7 @@ fn splits(graph: &[Vec<usize>], v: usize,
     }
 
     fn dfs(graph: &[Vec<usize>], v: usize, visited: &mut [bool],
-           conn_map: &mut ConnectMap, pts: &[Point], side: Side) -> bool {
+           conn_map: &mut ConnectMap, pts: &[CellId], side: Side) -> bool {
         let mut contains = conn_map.get(pts[v]).side() == State::Fixed(side);
         visited[v] = true;
 

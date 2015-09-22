@@ -1,9 +1,8 @@
 use union_find::{UnionFind, UnionBySizeRank as Union, QuickFindUf as Uf};
 use slsr_core::board::{Board, Hint, Edge, Side};
-use slsr_core::geom::{Geom, Point, Size, Table, Move};
+use slsr_core::geom::{CellId, Geom, Point, Size, Table, Move, OUTSIDE_CELL_ID};
 
 use ::{State, LogicError};
-use ::model::cell_geom::{CellId, CellGeom, OUTSIDE_CELL_ID};
 
 trait Key {
     fn key0(self) -> usize;
@@ -24,7 +23,7 @@ pub struct SideMap {
 
 impl SideMap {
     pub fn new(hint: Table<Hint>) -> SideMap {
-        let num_cell = (hint.size().0 * hint.size().1 + 1) as usize;
+        let num_cell = (hint.row() * hint.column() + 1) as usize;
         SideMap {
             hint: hint,
             uf: UnionFind::new(num_cell * 2),
@@ -34,26 +33,35 @@ impl SideMap {
 
     pub fn to_board(&mut self) -> Result<Board, LogicError> {
         let mut board = Board::new(self.size());
-        for r in (0 .. self.row()) {
-            for c in (0 .. self.column()) {
+        for r in 0..self.row() {
+            for c in 0..self.column() {
                 let p = Point(r, c);
                 let p_u = p + Move::UP;
                 let p_l = p + Move::LEFT;
 
+                let cp = self.point_to_cellid(p);
+                let cp_u = self.point_to_cellid(p_u);
+                let cp_l = self.point_to_cellid(p_l);
+
                 board.hint_mut()[p] = self.hint[p];
-                board.side_mut()[p] = try!(self.get_side(p).into());
-                board.edge_h_mut()[p] = try!(self.get_edge(p, p_u).into());
-                board.edge_v_mut()[p] = try!(self.get_edge(p, p_l).into());
+                board.side_mut()[p] = try!(self.get_side(cp).into());
+                board.edge_h_mut()[p] = try!(self.get_edge(cp, cp_u).into());
+                board.edge_v_mut()[p] = try!(self.get_edge(cp, cp_l).into());
             }
 
             let p = Point(r, board.column());
             let p_l = p + Move::LEFT;
-            board.edge_v_mut()[p] = try!(self.get_edge(p, p_l).into());
+            let cp = self.point_to_cellid(p);
+            let cp_l = self.point_to_cellid(p_l);
+            board.edge_v_mut()[p] = try!(self.get_edge(cp, cp_l).into());
         }
-        for c in (0 .. board.column()) {
+
+        for c in 0..board.column() {
             let p = Point(board.row(), c);
             let p_u = p + Move::UP;
-            board.edge_h_mut()[p] = try!(self.get_edge(p, p_u).into());
+            let cp = self.point_to_cellid(p);
+            let cp_u = self.point_to_cellid(p_u);
+            board.edge_h_mut()[p] = try!(self.get_edge(cp, cp_u).into());
         }
         Ok(board)
     }
@@ -68,7 +76,6 @@ impl SideMap {
 impl Geom for SideMap {
     fn size(&self) -> Size { self.hint.size() }
 }
-impl CellGeom for SideMap { }
 
 pub trait SideMapAccess<T> {
     fn get_side(&mut self, p: T) -> State<Side>;
@@ -143,63 +150,49 @@ impl SideMapAccess<CellId> for SideMap {
     }
 }
 
-impl SideMapAccess<Point> for SideMap {
-    fn get_side(&mut self, p: Point) -> State<Side> {
-        let i = self.cell_id(p);
-        self.get_side(i)
-    }
-    fn get_edge(&mut self, p0: Point, p1: Point) -> State<Edge> {
-        let i = self.cell_id(p0);
-        let j = self.cell_id(p1);
-        self.get_edge(i, j)
-    }
-
-    fn set_outside(&mut self, p: Point) -> bool {
-        let i = self.cell_id(p);
-        self.set_outside(i)
-    }
-    fn set_inside(&mut self, p: Point) -> bool {
-        let i = self.cell_id(p);
-        self.set_inside(i)
-    }
-
-    fn set_same(&mut self, p0: Point, p1: Point) -> bool {
-        let i = self.cell_id(p0);
-        let j = self.cell_id(p1);
-        self.set_same(i, j)
-    }
-    fn set_different(&mut self, p0: Point, p1: Point) -> bool {
-        let i = self.cell_id(p0);
-        let j = self.cell_id(p1);
-        self.set_different(i, j)
-    }
-}
-
 impl<'a> From<&'a Board> for SideMap {
     fn from(board: &'a Board) -> SideMap {
         let mut map = SideMap::new(board.hint().clone());
-        for r in (0 .. board.row()) {
-            for c in (0 .. board.column()) {
+        for r in 0..board.row() {
+            for c in 0..board.column() {
                 let p = Point(r, c);
+                let p_u = p + Move::UP;
+                let p_l = p + Move::LEFT;
+
+                let cp = board.point_to_cellid(p);
+                let cp_u = board.point_to_cellid(p_u);
+                let cp_l = board.point_to_cellid(p_l);
+
                 if let Some(side) = board.side()[p] {
-                    map.set_side(p, side);
+                    map.set_side(cp, side);
                 }
                 if let Some(edge) = board.edge_h()[p] {
-                    map.set_edge(p, p + Move::UP, edge);
+                    map.set_edge(cp, cp_u, edge);
                 }
                 if let Some(edge) = board.edge_v()[p] {
-                    map.set_edge(p, p + Move::LEFT, edge);
+                    map.set_edge(cp, cp_l, edge);
                 }
             }
+
             let p = Point(r, board.column());
+            let p_l = p + Move::LEFT;
+
+            let cp = board.point_to_cellid(p);
+            let cp_l = board.point_to_cellid(p_l);
+
             if let Some(edge) = board.edge_v()[p] {
-                map.set_edge(p, p + Move::LEFT, edge);
+                map.set_edge(cp, cp_l, edge);
             }
         }
         for c in (0 .. board.column()) {
             let p = Point(board.row(), c);
+            let p_u = p + Move::UP;
+
+            let cp = board.point_to_cellid(p);
+            let cp_u = board.point_to_cellid(p_u);
+
             if let Some(edge) = board.edge_h()[p] {
-                map.set_edge(p, p + Move::UP, edge);
+                map.set_edge(cp, cp_u, edge);
             }
         }
         map
