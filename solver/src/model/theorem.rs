@@ -470,7 +470,7 @@ mod tests {
 
     #[test]
     fn parse() {
-        fn check(size: Size, mut matcher: Vec<Pattern>, mut result: Vec<EdgePattern>,
+        fn check(size: Size, mut matcher: Vec<Pattern>, mut result: Vec<EdgePattern<Point>>,
                  input: &str)
         {
             matcher.sort();
