@@ -122,6 +122,10 @@ pub trait Geom {
     fn row(&self) -> i32 { self.size().0 }
     #[inline]
     fn column(&self) -> i32 { self.size().1 }
+    #[inline]
+    fn cell_len(&self) -> usize {
+        (self.row() * self.column() + 1) as usize
+    }
 
     #[inline]
     fn contains(&self, p: Point) -> bool {

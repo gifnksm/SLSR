@@ -23,7 +23,7 @@ pub struct SideMap {
 
 impl SideMap {
     pub fn new(hint: Table<Hint>) -> SideMap {
-        let num_cell = (hint.row() * hint.column() + 1) as usize;
+        let num_cell = hint.cell_len();
         SideMap {
             hint: hint,
             uf: UnionFind::new(num_cell * 2),

@@ -71,10 +71,10 @@ impl ConnectMap {
     fn new<F>(size: Size, f: F) -> ConnectMap
         where F: FnMut(Point) -> Area
     {
-        let len = (size.0 * size.1 + 1) as usize;
-        let it = (0..len).map(|id| {
-            size.cellid_to_point(CellId::new(id))
-        }).map(f);
+        let len = size.cell_len();
+        let it = (0..len).
+            map(|id| size.cellid_to_point(CellId::new(id)))
+            .map(f);
 
         ConnectMap {
             size: size,
@@ -86,13 +86,10 @@ impl ConnectMap {
         let rev = side_map.revision();
         loop {
             let mut updated = false;
-            for r in 0..self.row() {
-                for c in 0..self.column() {
-                    let c = self.point_to_cellid(Point(r, c));
-                    updated |= try!(update_conn(side_map, self, c));
-                }
+            for i in 0..self.cell_len() {
+                let c = CellId::new(i);
+                updated |= try!(update_conn(side_map, self, c));
             }
-            updated |= try!(update_conn(side_map, self, OUTSIDE_CELL_ID));
 
             if updated {
                 debug_assert_eq!(rev, side_map.revision());
@@ -105,16 +102,10 @@ impl ConnectMap {
     }
 
     pub fn count_area(&mut self) -> usize {
-        let mut cnt = 1; // counts (-1, -1)
-        for r in 0..self.row() {
-            for c in 0..self.column() {
-                let c = self.point_to_cellid(Point(r, c));
-                if self.get(c).coord() == c {
-                    cnt += 1;
-                }
-            }
-        }
-        cnt
+        (0..self.cell_len())
+            .map(CellId::new)
+            .filter(|&c| self.get(c).coord() == c)
+            .count()
     }
 
     pub fn union(&mut self, i: CellId, j: CellId) -> bool {
@@ -147,7 +138,7 @@ impl<'a> From<&'a mut SideMap> for ConnectMap {
                     }
                 }
             } else {
-                for r in 0 .. side_map.row() {
+                for r in 0..side_map.row() {
                     for &c in &[0, side_map.column() - 1] {
                         let cp2 = side_map.point_to_cellid(Point(r, c));
                         if side_map.get_edge(cp, cp2) == State::Unknown {
@@ -155,7 +146,7 @@ impl<'a> From<&'a mut SideMap> for ConnectMap {
                         }
                     }
                 }
-                for c in 0 .. side_map.column() {
+                for c in 0..side_map.column() {
                     for &r in &[0, side_map.row() - 1] {
                         let cp2 = side_map.point_to_cellid(Point(r, c));
                         if side_map.get_edge(cp, cp2) == State::Unknown {
