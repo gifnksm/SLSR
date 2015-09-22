@@ -137,36 +137,36 @@ impl Geom for Size {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Matrix<T> {
+pub struct Table<T> {
     size: Size,
     outside: T,
     data: Vec<T>
 }
 
-impl<T> Matrix<T> {
+impl<T> Table<T> {
     #[inline]
-    pub fn new(size: Size, outside: T, data: Vec<T>) -> Matrix<T> {
+    pub fn new(size: Size, outside: T, data: Vec<T>) -> Table<T> {
         assert_eq!((size.0 * size.1) as usize, data.len());
-        Matrix {
+        Table {
             size: size, outside: outside, data: data
         }
     }
 
     #[inline]
-    pub fn new_empty(size: Size, outside: T, init: T) -> Matrix<T>
+    pub fn new_empty(size: Size, outside: T, init: T) -> Table<T>
         where T: Clone
     {
         let data = vec![init; (size.0 * size.1) as usize];
-        Matrix::new(size, outside, data)
+        Table::new(size, outside, data)
     }
 }
 
-impl<T> Geom for Matrix<T> {
+impl<T> Geom for Table<T> {
     #[inline]
     fn size(&self) -> Size { self.size }
 }
 
-impl<T> Index<Point> for Matrix<T> {
+impl<T> Index<Point> for Table<T> {
     type Output = T;
 
     #[inline]
@@ -182,7 +182,7 @@ impl<T> Index<Point> for Matrix<T> {
     }
 }
 
-impl<T> IndexMut<Point> for Matrix<T> {
+impl<T> IndexMut<Point> for Table<T> {
     #[inline]
     fn index_mut(&mut self, p: Point) -> &mut T {
         unsafe {

@@ -1,6 +1,6 @@
 use union_find::{UnionFind, UnionBySizeRank as Union, QuickFindUf as Uf};
 use slsr_core::board::{Board, Hint, Edge, Side};
-use slsr_core::geom::{Geom, Point, Size, Matrix, Move};
+use slsr_core::geom::{Geom, Point, Size, Table, Move};
 
 use ::{State, LogicError};
 use ::model::cell_geom::{CellId, CellGeom, OUTSIDE_CELL_ID};
@@ -17,13 +17,13 @@ impl Key for CellId {
 
 #[derive(Clone, Debug)]
 pub struct SideMap {
-    hint: Matrix<Hint>,
+    hint: Table<Hint>,
     uf: Uf<Union>,
     revision: u32
 }
 
 impl SideMap {
-    pub fn new(hint: Matrix<Hint>) -> SideMap {
+    pub fn new(hint: Table<Hint>) -> SideMap {
         let num_cell = (hint.size().0 * hint.size().1 + 1) as usize;
         SideMap {
             hint: hint,
@@ -58,7 +58,7 @@ impl SideMap {
         Ok(board)
     }
 
-    pub fn hint(&self) -> &Matrix<Hint> { &self.hint }
+    pub fn hint(&self) -> &Table<Hint> { &self.hint }
     pub fn revision(&self) -> u32 { self.revision }
     pub fn all_filled(&self) -> bool {
         self.revision() == (self.row() * self.column()) as u32

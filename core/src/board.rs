@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 
-use geom::{Geom, Point, Size, Matrix};
+use geom::{Geom, Point, Size, Table};
 
 pub type Hint = Option<u8>;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -11,20 +11,20 @@ pub enum Edge { Line, Cross }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Board {
     size: Size,
-    hint: Matrix<Hint>,
-    side: Matrix<Option<Side>>,
-    edge_v: Matrix<Option<Edge>>,
-    edge_h: Matrix<Option<Edge>>
+    hint: Table<Hint>,
+    side: Table<Option<Side>>,
+    edge_v: Table<Option<Edge>>,
+    edge_h: Table<Option<Edge>>
 }
 
 impl Board {
     #[inline]
     pub fn new(size: Size) -> Board {
         assert!(size.0 > 0 && size.1 > 0);
-        let hint = Matrix::new_empty(size, None, None);
-        let side = Matrix::new_empty(size, Some(Side::Out), None);
-        let edge_v = Matrix::new_empty(Size(size.0, size.1 + 1), Some(Edge::Cross), None);
-        let edge_h = Matrix::new_empty(Size(size.0 + 1, size.1), Some(Edge::Cross), None);
+        let hint = Table::new_empty(size, None, None);
+        let side = Table::new_empty(size, Some(Side::Out), None);
+        let edge_v = Table::new_empty(Size(size.0, size.1 + 1), Some(Edge::Cross), None);
+        let edge_h = Table::new_empty(Size(size.0 + 1, size.1), Some(Edge::Cross), None);
         Board { size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h }
     }
 
@@ -32,28 +32,28 @@ impl Board {
     fn with_data(size: Size, hint: Vec<Hint>, side: Vec<Option<Side>>,
                  edge_v: Vec<Option<Edge>>, edge_h: Vec<Option<Edge>>) -> Board {
         assert!(size.0 > 0 && size.1 > 0);
-        let hint = Matrix::new(size, None, hint);
-        let side = Matrix::new(size, Some(Side::Out), side);
-        let edge_v = Matrix::new(Size(size.0, size.1 + 1), Some(Edge::Cross), edge_v);
-        let edge_h = Matrix::new(Size(size.0 + 1, size.1), Some(Edge::Cross), edge_h);
+        let hint = Table::new(size, None, hint);
+        let side = Table::new(size, Some(Side::Out), side);
+        let edge_v = Table::new(Size(size.0, size.1 + 1), Some(Edge::Cross), edge_v);
+        let edge_h = Table::new(Size(size.0 + 1, size.1), Some(Edge::Cross), edge_h);
         Board { size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h }
     }
 
     #[inline]
-    pub fn hint(&self) -> &Matrix<Hint> { &self.hint }
+    pub fn hint(&self) -> &Table<Hint> { &self.hint }
     #[inline]
-    pub fn side(&self) -> &Matrix<Option<Side>> { &self.side }
+    pub fn side(&self) -> &Table<Option<Side>> { &self.side }
     #[inline]
-    pub fn edge_h(&self) -> &Matrix<Option<Edge>> { &self.edge_h }
+    pub fn edge_h(&self) -> &Table<Option<Edge>> { &self.edge_h }
     #[inline]
-    pub fn edge_v(&self) -> &Matrix<Option<Edge>> { &self.edge_v }
+    pub fn edge_v(&self) -> &Table<Option<Edge>> { &self.edge_v }
 
     #[inline]
-    pub fn side_mut(&mut self) -> &mut Matrix<Option<Side>> { &mut self.side }
+    pub fn side_mut(&mut self) -> &mut Table<Option<Side>> { &mut self.side }
     #[inline]
-    pub fn edge_h_mut(&mut self) -> &mut Matrix<Option<Edge>> { &mut self.edge_h }
+    pub fn edge_h_mut(&mut self) -> &mut Table<Option<Edge>> { &mut self.edge_h }
     #[inline]
-    pub fn edge_v_mut(&mut self) -> &mut Matrix<Option<Edge>> { &mut self.edge_v }
+    pub fn edge_v_mut(&mut self) -> &mut Table<Option<Edge>> { &mut self.edge_v }
 }
 
 impl Geom for Board {
