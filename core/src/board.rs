@@ -1,6 +1,4 @@
-use std::ops::{Index, IndexMut};
-
-use geom::{Geom, Point, Size, Table};
+use geom::{Geom, Size, Table};
 
 pub type Hint = Option<u8>;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -49,6 +47,8 @@ impl Board {
     pub fn edge_v(&self) -> &Table<Option<Edge>> { &self.edge_v }
 
     #[inline]
+    pub fn hint_mut(&mut self) -> &mut Table<Hint> { &mut self.hint }
+    #[inline]
     pub fn side_mut(&mut self) -> &mut Table<Option<Side>> { &mut self.side }
     #[inline]
     pub fn edge_h_mut(&mut self) -> &mut Table<Option<Edge>> { &mut self.edge_h }
@@ -59,22 +59,6 @@ impl Board {
 impl Geom for Board {
     #[inline]
     fn size(&self) -> Size { self.size }
-}
-
-impl Index<Point> for Board {
-    type Output = Hint;
-
-    #[inline]
-    fn index(&self, p: Point) -> &Hint {
-        &self.hint[p]
-    }
-}
-
-impl IndexMut<Point> for Board {
-    #[inline]
-    fn index_mut(&mut self, p: Point) -> &mut Hint {
-        &mut self.hint[p]
-    }
 }
 
 mod from_str_impl {
@@ -281,7 +265,8 @@ mod tests {
 ______
 3_____
 ";
-        let hint = input.parse::<Board>().unwrap();
+        let board = input.parse::<Board>().unwrap();
+        let hint = board.hint();
         assert_eq!(Size(3, 6), hint.size());
         assert_eq!(Some(1), hint[Point(0, 0)]);
         assert_eq!(Some(2), hint[Point(0, 1)]);
@@ -302,7 +287,7 @@ ______
         assert_eq!(None, hint[Point(2, 4)]);
         assert_eq!(None, hint[Point(2, 5)]);
 
-        assert_eq!(Ok(&hint), hint.to_string().parse::<Board>().as_ref());
+        assert_eq!(Ok(&board), board.to_string().parse::<Board>().as_ref());
 
         assert_eq!(Err(()), "1243".parse::<Board>());
 
@@ -320,10 +305,11 @@ ______
 + + + + +
 ";
 
-        let hint = input.parse::<Board>().unwrap();
+        let board = input.parse::<Board>().unwrap();
+        let hint = board.hint();
         assert_eq!(Some(1), hint[Point(1, 1)]);
         assert_eq!(Some(2), hint[Point(1, 3)]);
-        assert_eq!(output, hint.to_string());
+        assert_eq!(output, board.to_string());
 
         assert_eq!(Err(()), "".parse::<Board>());
 
@@ -332,7 +318,8 @@ ______
  1 2 3
 + + + +
 ";
-        let hint = input.parse::<Board>().unwrap();
+        let board = input.parse::<Board>().unwrap();
+        let hint = board.hint();
         assert_eq!(Some(1), hint[Point(0, 0)]);
         assert_eq!(Some(2), hint[Point(0, 1)]);
         assert_eq!(Some(3), hint[Point(0, 2)]);

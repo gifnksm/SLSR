@@ -40,7 +40,7 @@ impl SideMap {
                 let p_u = p + Move::UP;
                 let p_l = p + Move::LEFT;
 
-                board[p] = self.hint[p];
+                board.hint_mut()[p] = self.hint[p];
                 board.side_mut()[p] = try!(self.get_side(p).into());
                 board.edge_h_mut()[p] = try!(self.get_edge(p, p_u).into());
                 board.edge_v_mut()[p] = try!(self.get_edge(p, p_l).into());

@@ -274,7 +274,7 @@ impl Cell {
               -> io::Result<()>
     {
         let ty = board.side()[p];
-        match board[p] {
+        match board.hint()[p] {
             Some(x) if num_line => {
                 try!(printer.write_pretty_fmt(
                     ty, format_args!("{:^1$}", x, conf.cell_width)));
