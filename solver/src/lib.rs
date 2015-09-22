@@ -19,12 +19,13 @@ use std::fmt;
 use slsr_core::board::Board;
 use slsr_core::geom::{Geom, Point};
 
-use model::connect_map::ConnectMap;
-use model::side_map::SideMap;
+use model::connect_map::{ConnectMap, ConnectMapAccess};
+use model::side_map::{SideMap, SideMapAccess};
 use step::apply_theorem::TheoremPool;
 use theorem_define::THEOREM_DEFINE;
 
 mod model {
+    pub mod cell_geom;
     pub mod connect_map;
     pub mod side_map;
     pub mod theorem;
@@ -51,8 +52,8 @@ enum State<T> {
     Fixed(T), Unknown, Conflict
 }
 
-impl<T> State<T> {
-    fn into_option(self) -> Result<Option<T>, LogicError> {
+impl<T> Into<Result<Option<T>, LogicError>> for State<T> {
+    fn into(self) -> Result<Option<T>, LogicError> {
         match self {
             State::Fixed(st) => Ok(Some(st)),
             State::Unknown => Ok(None),
@@ -80,7 +81,7 @@ fn solve_by_logic(
         }
 
         if conn_map.is_none() {
-            *conn_map = Some(ConnectMap::from_side_map(side_map));
+            *conn_map = Some(ConnectMap::from(&mut *side_map));
         }
         try!(step::connect_analysis::run(side_map, conn_map.as_mut().unwrap()));
         if side_map.revision() == rev {
@@ -154,7 +155,7 @@ fn check_answer(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>)
                 -> SolverResult<()>
 {
     if conn_map.is_none() {
-        *conn_map = Some(ConnectMap::from_side_map(side_map));
+        *conn_map = Some(ConnectMap::from(&mut *side_map));
     }
     let conn_map = conn_map.as_mut().unwrap();
     try!(conn_map.sync(side_map));
@@ -166,7 +167,7 @@ fn check_answer(side_map: &mut SideMap, conn_map: &mut Option<ConnectMap>)
 }
 
 pub fn solve(board: &Board) -> Result<Board, LogicError> {
-    let mut side_map = SideMap::from_board(board);
+    let mut side_map = SideMap::from(board);
     let it = THEOREM_DEFINE.iter().map(|theo| theo.parse().unwrap());
     let theorem_pool = try!(TheoremPool::new(it, &mut side_map));
 

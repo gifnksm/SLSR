@@ -4,7 +4,7 @@ use slsr_core::geom::{Point, Rotation, Move, Size};
 use slsr_core::lattice_parser::LatticeParser;
 
 use ::{State, SolverResult, LogicError};
-use ::model::side_map::SideMap;
+use ::model::side_map::{SideMap, SideMapAccess};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct HintPattern {

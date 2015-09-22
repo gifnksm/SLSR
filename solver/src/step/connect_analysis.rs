@@ -3,8 +3,8 @@ use slsr_core::board::Side;
 use slsr_core::geom::{Geom, Point};
 
 use ::{State, SolverResult};
-use ::model::connect_map::ConnectMap;
-use ::model::side_map::SideMap;
+use ::model::connect_map::{ConnectMap, ConnectMapAccess};
+use ::model::side_map::{SideMap, SideMapAccess};
 
 fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
                      -> (Vec<Point>, Vec<Vec<usize>>)
