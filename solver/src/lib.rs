@@ -45,6 +45,11 @@ impl fmt::Display for LogicError {
 
 pub type SolverResult<T> = Result<T, LogicError>;
 
+enum FillResult {
+    Completed(Solver),
+    Partial(Solver, Vec<CellId>)
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum State<T> {
     Fixed(T), Unknown, Conflict
@@ -60,8 +65,7 @@ impl<T> Into<Result<Option<T>, LogicError>> for State<T> {
     }
 }
 
-fn solve_by_logic(solver: &mut Solver) -> SolverResult<()>
-{
+fn fill_absolutely_fixed(solver: &mut Solver) -> SolverResult<()> {
     while !solver.all_filled() {
         let rev = solver.revision();
 
@@ -81,79 +85,79 @@ fn solve_by_logic(solver: &mut Solver) -> SolverResult<()>
     Ok(())
 }
 
-fn solve_by_backtracking_one_step(solver: &mut Solver, pts: &[CellId])
-                                  -> SolverResult<bool>
+fn fill_by_shallow_backtracking(solver: &mut Solver, pts: &[CellId])
+                                -> SolverResult<bool>
 {
     let rev = solver.revision();
 
     for &p in pts {
         match solver.get_side(p) {
-            State::Fixed(_) => continue,
+            State::Fixed(_) => { continue }
             State::Unknown => {}
             State::Conflict => { return Err(LogicError) }
         }
 
-        let mut solver_0 = solver.clone();
-        solver_0.set_inside(p);
+        let mut solver_in = solver.clone();
+        solver_in.set_inside(p);
 
-        if solve_by_logic(&mut solver_0).is_err() {
+        if fill_absolutely_fixed(&mut solver_in).is_err() {
             solver.set_outside(p);
-            try!(solve_by_logic(solver));
+            try!(fill_absolutely_fixed(solver));
             continue
         }
 
-        let mut solver_1 = solver.clone();
-        solver_1.set_outside(p);
+        let mut solver_out = solver.clone();
+        solver_out.set_outside(p);
 
-        if solve_by_logic(&mut solver_1).is_err() {
-            *solver = solver_0;
+        if fill_absolutely_fixed(&mut solver_out).is_err() {
+            *solver = solver_in;
         }
     }
 
     Ok(solver.revision() != rev)
 }
 
+fn fill(mut solver: Solver) -> SolverResult<FillResult> {
+    try!(fill_absolutely_fixed(&mut solver));
+
+    if solver.all_filled() {
+        return Ok(FillResult::Completed(solver))
+    }
+
+    let mut pts = solver.get_unknown_points();
+    while try!(fill_by_shallow_backtracking(&mut solver, &pts)) {
+        if solver.all_filled() {
+            return Ok(FillResult::Completed(solver))
+        }
+        pts = solver.get_unknown_points();
+    }
+
+    Ok(FillResult::Partial(solver, pts))
+}
+
 pub fn solve(board: &Board) -> Result<Board, LogicError> {
     let theorem = THEOREM_DEFINE.iter().map(|theo| theo.parse().unwrap());
-
     let mut queue = vec![try!(Solver::new(board, theorem))];
 
-    'failure: while let Some(mut solver) = queue.pop() {
-        if solve_by_logic(&mut solver).is_err() {
-            continue
-        }
-
-        if solver.all_filled() {
-            if solver.validate_result().is_err() {
-                continue
-            }
-            return solver.into()
-        }
-
-        let mut pts = solver.get_unknown_points();
-        loop {
-            match solve_by_backtracking_one_step(&mut solver, &pts) {
-                Ok(true) => {
-                    if solver.all_filled() {
-                        if solver.validate_result().is_err() {
-                            continue
-                        }
-                        return solver.into()
-                    }
-                    pts = solver.get_unknown_points();
+    while let Some(solver) = queue.pop() {
+        let (solver,pts) = match fill(solver) {
+            Ok(FillResult::Completed(mut solver)) => {
+                if solver.validate_result().is_err() {
+                    continue
                 }
-                Ok(false) => break,
-                Err(_) => continue 'failure,
+                return solver.into()
             }
-        }
+            Ok(FillResult::Partial(solver, pts)) => (solver, pts),
+            Err(_) => continue
+        };
 
         let p = *pts.last().unwrap();
-        let mut solver_0 = solver.clone();
-        let mut solver_1 = solver;
-        solver_0.set_outside(p);
-        solver_1.set_inside(p);
-        queue.push(solver_0);
-        queue.push(solver_1);
+        let mut solver_in = solver.clone();
+        let mut solver_out = solver;
+        solver_in.set_inside(p);
+        solver_out.set_outside(p);
+        queue.push(solver_in);
+        queue.push(solver_out);
     }
 
     Err(LogicError)
