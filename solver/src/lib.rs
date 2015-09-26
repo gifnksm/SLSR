@@ -70,11 +70,6 @@ fn solve_by_logic(solver: &mut Solver) -> SolverResult<()>
         if solver.all_filled() {
             return Ok(())
         }
-        // FIXME: apply_all_theorem do the same thing with this
-        if solver.revision() != rev {
-            rev = solver.revision();
-            continue
-        }
 
         try!(solver.connect_analysis());
         if solver.revision() == rev {
