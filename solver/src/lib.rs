@@ -62,21 +62,38 @@ impl<T> Into<Result<Option<T>, LogicError>> for State<T> {
 
 fn solve_by_logic(solver: &mut Solver) -> SolverResult<()>
 {
-    let mut rev = solver.revision();
+    let mut init_rev = solver.revision();
 
     while !solver.all_filled() {
-        try!(solver.apply_all_theorem());
+        let mut rev = solver.revision();
+        loop {
+            try!(solver.apply_all_theorem());
+
+            if solver.revision() == rev {
+                break
+            }
+            rev = solver.revision();
+        }
 
         if solver.all_filled() {
             return Ok(())
         }
 
-        try!(solver.connect_analysis());
-        if solver.revision() == rev {
+        let mut rev = solver.revision();
+        loop {
+            try!(solver.connect_analysis());
+
+            if solver.revision() == rev {
+                break
+            }
+            rev = solver.revision();
+        }
+
+        if solver.revision() == init_rev {
             break;
         }
 
-        rev = solver.revision();
+        init_rev = solver.revision();
     }
 
     Ok(())

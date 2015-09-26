@@ -162,38 +162,29 @@ fn splits(graph: &[Vec<usize>], v: usize,
 pub fn run(side_map: &mut SideMap, conn_map: &mut ConnectMap)
     -> SolverResult<()>
 {
-    let mut rev = side_map.revision();
-    loop {
-        try!(conn_map.sync(side_map));
+    try!(conn_map.sync(side_map));
 
-        let sides = &[(Side::In, Side::Out),
-                      (Side::Out, Side::In)];
+    let sides = &[(Side::In, Side::Out),
+                  (Side::Out, Side::In)];
 
-        for &(set_side, filter_side) in sides {
-            let (pts, graph) = create_conn_graph(conn_map, filter_side);
-            let (arts, visited) = get_articulation(&graph, 0);
+    for &(set_side, filter_side) in sides {
+        let (pts, graph) = create_conn_graph(conn_map, filter_side);
+        let (arts, visited) = get_articulation(&graph, 0);
 
-            let disconn = try!(find_disconn_area(conn_map, &pts, &visited));
-            for &v in &disconn {
-                side_map.set_side(pts[v], filter_side);
-            }
-            for &v in &arts {
-                let p = pts[v];
+        let disconn = try!(find_disconn_area(conn_map, &pts, &visited));
+        for &v in &disconn {
+            side_map.set_side(pts[v], filter_side);
+        }
+        for &v in &arts {
+            let p = pts[v];
 
-                if conn_map.get(p).side() != State::Fixed(set_side) &&
-                    splits(&graph, v, conn_map, &pts, set_side)
-                {
-                    side_map.set_side(p, set_side);
-                }
+            if conn_map.get(p).side() != State::Fixed(set_side) &&
+                splits(&graph, v, conn_map, &pts, set_side)
+            {
+                side_map.set_side(p, set_side);
             }
         }
-
-        if side_map.revision() != rev {
-            rev = side_map.revision();
-            continue
-        }
-
-        break
     }
+
     Ok(())
 }

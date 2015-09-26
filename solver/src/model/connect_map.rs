@@ -83,21 +83,15 @@ impl ConnectMap {
     }
 
     pub fn sync(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
-        let rev = side_map.revision();
-        loop {
-            let mut updated = false;
+        let mut updated = true;
+        while updated {
+            updated = false;
             for i in 0..self.cell_len() {
                 let c = CellId::new(i);
                 updated |= try!(update_conn(side_map, self, c));
             }
-
-            if updated {
-                debug_assert_eq!(rev, side_map.revision());
-                continue
-            }
-
-            break
         }
+
         Ok(())
     }
 

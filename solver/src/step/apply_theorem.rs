@@ -63,17 +63,9 @@ impl TheoremPool {
     }
 
     pub fn apply_all(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
-        let mut rev = side_map.revision();
-        loop {
-            let cap = self.data.len();
-            for matcher in mem::replace(&mut self.data, Vec::with_capacity(cap)) {
-                try!(Self::matches(matcher, side_map, &mut self.data));
-            }
-
-            if side_map.revision() == rev {
-                break;
-            }
-            rev = side_map.revision()
+        let cap = self.data.len();
+        for matcher in mem::replace(&mut self.data, Vec::with_capacity(cap)) {
+            try!(Self::matches(matcher, side_map, &mut self.data));
         }
 
         Ok(())
