@@ -1,5 +1,5 @@
 use slsr_core::board::{Board, Side};
-use slsr_core::geom::{CellId, Geom, Point};
+use slsr_core::geom::{CellId, Geom};
 
 use model::connect_map::ConnectMap;
 use model::side_map::SideMap;
@@ -56,12 +56,10 @@ impl Solver {
 
         let mut conn_map = self.connect_map();
 
-        for r in 0..conn_map.row() {
-            for c in 0..conn_map.column() {
-                let p = conn_map.point_to_cellid(Point(r, c));
-                let a = conn_map.get(p);
-                if p != a.coord() { continue }
-                if a.side() != State::Unknown { continue }
+        for i in 0..conn_map.cell_len() {
+            let p = CellId::new(i);
+            let a = conn_map.get(p);
+            if a.coord() == p && a.side() == State::Unknown {
                 pts.push((p, a.unknown_edge().len()));
             }
         }

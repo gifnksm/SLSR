@@ -1,6 +1,6 @@
 use std::cmp;
 use slsr_core::board::Side;
-use slsr_core::geom::{CellId, Geom, Point, OUTSIDE_CELL_ID};
+use slsr_core::geom::{CellId, Geom, OUTSIDE_CELL_ID};
 
 use ::{State, SolverResult};
 use ::model::connect_map::ConnectMap;
@@ -14,13 +14,11 @@ fn create_conn_graph(conn_map: &mut ConnectMap, filter_side: Side)
         pts.push(OUTSIDE_CELL_ID)
     }
 
-    for r in 0..conn_map.row() {
-        for c in 0..conn_map.column() {
-            let p = conn_map.point_to_cellid(Point(r, c));
-            let a = conn_map.get(p);
-            if a.coord() == p && a.side() != State::Fixed(filter_side) {
-                pts.push(p);
-            }
+    for i in 0..conn_map.cell_len() {
+        let p = CellId::new(i);
+        let a = conn_map.get(p);
+        if a.coord() == p && a.side() != State::Fixed(filter_side) {
+            pts.push(p);
         }
     }
 
