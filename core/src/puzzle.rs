@@ -367,9 +367,10 @@ ______
         assert_eq!(None, hint[Point(2, 4)]);
         assert_eq!(None, hint[Point(2, 5)]);
 
-        assert_eq!(Ok(&puzzle), puzzle.to_string().parse::<Puzzle>().as_ref());
+        assert_eq!(&puzzle,
+                   puzzle.to_string().parse::<Puzzle>().as_ref().unwrap());
 
-        assert_eq!(Err(()), "1243".parse::<Puzzle>());
+        assert!("1243".parse::<Puzzle>().is_err());
 
         let input = "
 +--+ +-+!!+asdf
@@ -391,7 +392,7 @@ ______
         assert_eq!(Some(2), hint[Point(1, 3)]);
         assert_eq!(output, puzzle.to_string());
 
-        assert_eq!(Err(()), "".parse::<Puzzle>());
+        assert!("".parse::<Puzzle>().is_err());
 
         let input = "
 + + + +
