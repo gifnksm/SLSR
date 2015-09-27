@@ -10,9 +10,6 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 
-#![feature(plugin)]
-#![plugin(docopt_macros)]
-
 extern crate docopt;
 extern crate libc;
 extern crate rustc_serialize;
@@ -23,12 +20,13 @@ extern crate slsr_solver;
 use std::default::Default;
 use std::io;
 use std::io::prelude::*;
+use docopt::Docopt;
 use slsr_core::board::Board;
 use pprint::{Config as PpConfig, Mode as PpMode};
 
 mod pprint;
 
-docopt!(Args derive Copy Clone Debug, "
+const USAGE: &'static str = "
 Usage: slither [options]
        slither --help
 
@@ -38,7 +36,14 @@ Options:
                    Valid values: auto, color, ascii, none [default: auto]
   --width WIDTH    Specify cell width [default: 2].
   --height HEIGHT  Specify cell height [default: 1].
-", flag_pretty: Option<Pretty>, flag_width: Option<Width>, flag_height: Option<Height>);
+";
+
+#[derive(Copy, Clone, Debug, RustcDecodable)]
+struct Args {
+    flag_pretty: Option<Pretty>,
+    flag_width: Option<Width>,
+    flag_height: Option<Height>
+}
 
 #[derive(Copy, Clone, Debug)]
 struct Width(usize);
@@ -87,7 +92,9 @@ enum OutputType {
 }
 
 fn parse_arg() -> OutputType {
-    let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
+    let args: Args = Docopt::new(USAGE)
+        .and_then(|d| d.decode())
+        .unwrap_or_else(|e| e.exit());
 
     let pretty = match args.flag_pretty.unwrap_or_default() {
         Pretty::Auto => {

@@ -12,7 +12,6 @@ name = "slsr-cli"
 
 [dependencies]
 docopt = "*"
-docopt_macros = "*"
 libc = "*"
 rustc-serialize = "*"
 term = "*"
