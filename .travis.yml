@@ -23,7 +23,9 @@ script:
   - |
       if [ "${PKGDIR}" = "cli" ]; then
         travis-cargo run -- --release < ../puzzle/example.txt
-        travis-cargo run -- --release -- --all < ../puzzle/empty.txt
+        # FIXME: huonw/travis-cargo#22
+        # cannot pass arguments to slsr-cli
+        # travis-cargo run -- --release -- --all < ../puzzle/empty.txt
       fi
   - travis-cargo test
   - travis-cargo bench
