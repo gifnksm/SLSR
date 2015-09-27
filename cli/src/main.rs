@@ -24,24 +24,23 @@ use std::default::Default;
 use std::io;
 use std::io::prelude::*;
 use slsr_core::board::Board;
+use pprint::{Config as PpConfig, Mode as PpMode};
 
 mod pprint;
 
-docopt! {
-    Args derive Debug, "
+docopt!(Args derive Copy Clone Debug, "
 Usage: slither [options]
        slither --help
 
 Options:
   -h, --help       Show this message.
-  --width WIDTH    Specify cell width.
-  --height HEIGHT  Specify cell height.
-",
-    flag_width: Option<Width>,
-    flag_height: Option<Height>
-}
+  --pretty MODE    Specify pretty-print mode.
+                   Valid values: auto, color, ascii, none [default: auto]
+  --width WIDTH    Specify cell width [default: 2].
+  --height HEIGHT  Specify cell height [default: 1].
+", flag_pretty: Option<Pretty>, flag_width: Option<Width>, flag_height: Option<Height>);
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 struct Width(usize);
 impl rustc_serialize::Decodable for Width {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Width, D::Error> {
@@ -57,7 +56,7 @@ impl Default for Width {
     fn default() -> Width { Width(2) }
 }
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 struct Height(usize);
 impl rustc_serialize::Decodable for Height {
     fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Height, D::Error> {
@@ -73,21 +72,60 @@ impl Default for Height {
     fn default() -> Height { Height(1) }
 }
 
-fn main() {
+#[derive(Copy, Clone, Debug, RustcDecodable)]
+enum Pretty {
+    Auto, Color, Ascii, None
+}
+impl Default for Pretty {
+    fn default() -> Pretty { Pretty::Auto }
+}
+
+#[derive(Copy, Clone, Debug)]
+enum OutputType {
+    Pretty(PpConfig),
+    Raw
+}
+
+fn parse_arg() -> OutputType {
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
+
+    let pretty = match args.flag_pretty.unwrap_or_default() {
+        Pretty::Auto => {
+            if pprint::is_pprintable() {
+                Some(PpMode::Color)
+            } else {
+                Some(PpMode::Ascii)
+            }
+        }
+        Pretty::Color => Some(PpMode::Color),
+        Pretty::Ascii => Some(PpMode::Ascii),
+        Pretty::None => None
+    };
+
+    match pretty {
+        Some(m) => OutputType::Pretty(PpConfig {
+            mode: m,
+            cell_width: args.flag_width.unwrap_or_default().0,
+            cell_height: args.flag_height.unwrap_or_default().0
+        }),
+        None => OutputType::Raw
+    }
+}
+
+fn main() {
+    let output = parse_arg();
 
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input).unwrap();
     let board = input.parse::<Board>().unwrap();
     let board = slsr_solver::solve(&board).unwrap();
 
-    if pprint::is_pprintable() {
-        let conf = pprint::Config {
-            cell_width: args.flag_width.unwrap_or_default().0,
-            cell_height: args.flag_height.unwrap_or_default().0
-        };
-        let _ = pprint::print(&conf, &board);
-    } else {
-        print!("{}", board.to_string());
+    match output {
+        OutputType::Pretty(conf) => {
+            let _ = pprint::print(&conf, &board);
+        }
+        OutputType::Raw => {
+            print!("{}", board.to_string());
+        }
     }
 }

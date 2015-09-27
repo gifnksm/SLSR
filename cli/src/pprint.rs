@@ -7,7 +7,14 @@ use slsr_core::geom::{Geom, Point, Move};
 use term::{self, Terminal};
 use term::color::{self, Color};
 
+#[derive(Copy, Clone, Debug)]
+pub enum Mode {
+    Color, Ascii
+}
+
+#[derive(Copy, Clone, Debug)]
 pub struct Config {
+    pub mode: Mode,
     pub cell_width: usize,
     pub cell_height: usize
 }
@@ -53,14 +60,15 @@ struct Printer {
 }
 
 impl Printer {
-    fn new() -> Printer {
-        let output = if is_pprintable() {
-            match term::stdout() {
-                Some(t) => Output::Pretty(t),
-                None    => Output::Raw(io::stdout())
+    fn new(conf: &Config) -> Printer {
+        let output = match conf.mode {
+            Mode::Color => {
+                match term::stdout() {
+                    Some(t) => Output::Pretty(t),
+                    None    => Output::Raw(io::stdout())
+                }
             }
-        } else {
-            Output::Raw(io::stdout())
+            Mode::Ascii => Output::Raw(io::stdout())
         };
         Printer { output: output }
     }
@@ -289,5 +297,5 @@ impl Cell {
 }
 
 pub fn print(conf: &Config, board: &Board) -> io::Result<()> {
-    Table::pprint(&mut Printer::new(), conf, board)
+    Table::pprint(&mut Printer::new(conf), conf, board)
 }
