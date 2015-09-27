@@ -17,122 +17,94 @@ extern crate term;
 extern crate slsr_core;
 extern crate slsr_solver;
 
-use std::default::Default;
-use std::io;
+use std::{fmt, io, process};
+use std::error::Error;
 use std::io::prelude::*;
-use docopt::Docopt;
-use slsr_core::puzzle::Puzzle;
-use pprint::{Config as PpConfig, Mode as PpMode};
 
+use slsr_core::puzzle::{Puzzle, ParsePuzzleError};
+use slsr_solver as solver;
+
+use parse_arg::{Config, OutputType};
+
+mod parse_arg;
 mod pprint;
 
-const USAGE: &'static str = "
-Usage: slither [options]
-       slither --help
-
-Options:
-  -h, --help       Show this message.
-  --pretty MODE    Specify pretty-print mode.
-                   Valid values: auto, color, ascii, none [default: auto]
-  --width WIDTH    Specify cell width [default: 2].
-  --height HEIGHT  Specify cell height [default: 1].
-";
-
-#[derive(Copy, Clone, Debug, RustcDecodable)]
-struct Args {
-    flag_pretty: Option<Pretty>,
-    flag_width: Option<Width>,
-    flag_height: Option<Height>
+#[derive(Debug)]
+enum AppError {
+    Io(io::Error),
+    ParsePuzzle(ParsePuzzleError),
+    Solver(solver::Error),
 }
 
-#[derive(Copy, Clone, Debug)]
-struct Width(usize);
-impl rustc_serialize::Decodable for Width {
-    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Width, D::Error> {
-        let w = try!(d.read_usize());
-        if w == 0 {
-            Err(d.error(&format!("Could not decode '{}' as width.", w)))
-        } else {
-            Ok(Width(w))
-        }
-    }
-}
-impl Default for Width {
-    fn default() -> Width { Width(2) }
-}
-
-#[derive(Copy, Clone, Debug)]
-struct Height(usize);
-impl rustc_serialize::Decodable for Height {
-    fn decode<D: rustc_serialize::Decoder>(d: &mut D) -> Result<Height, D::Error> {
-        let h = try!(d.read_usize());
-        if h == 0 {
-            Err(d.error(&format!("Could not decode '{}' as height.", h)))
-        } else {
-            Ok(Height(h))
-        }
-    }
-}
-impl Default for Height {
-    fn default() -> Height { Height(1) }
-}
-
-#[derive(Copy, Clone, Debug, RustcDecodable)]
-enum Pretty {
-    Auto, Color, Ascii, None
-}
-impl Default for Pretty {
-    fn default() -> Pretty { Pretty::Auto }
-}
-
-#[derive(Copy, Clone, Debug)]
-enum OutputType {
-    Pretty(PpConfig),
-    Raw
-}
-
-fn parse_arg() -> OutputType {
-    let args: Args = Docopt::new(USAGE)
-        .and_then(|d| d.decode())
-        .unwrap_or_else(|e| e.exit());
-
-    let pretty = match args.flag_pretty.unwrap_or_default() {
-        Pretty::Auto => {
-            if pprint::is_pprintable() {
-                Some(PpMode::Color)
-            } else {
-                Some(PpMode::Ascii)
-            }
-        }
-        Pretty::Color => Some(PpMode::Color),
-        Pretty::Ascii => Some(PpMode::Ascii),
-        Pretty::None => None
-    };
-
-    match pretty {
-        Some(m) => OutputType::Pretty(PpConfig {
-            mode: m,
-            cell_width: args.flag_width.unwrap_or_default().0,
-            cell_height: args.flag_height.unwrap_or_default().0
-        }),
-        None => OutputType::Raw
+impl From<io::Error> for AppError {
+    fn from(err: io::Error) -> AppError {
+        AppError::Io(err)
     }
 }
 
-fn main() {
-    let output = parse_arg();
+impl From<ParsePuzzleError> for AppError {
+    fn from(err: ParsePuzzleError) -> AppError {
+        AppError::ParsePuzzle(err)
+    }
+}
+
+impl From<solver::Error> for AppError {
+    fn from(err: solver::Error) -> AppError {
+        AppError::Solver(err)
+    }
+}
+
+impl Error for AppError {
+    fn description(&self) -> &str {
+        match *self {
+            AppError::Io(ref e) => e.description(),
+            AppError::ParsePuzzle(ref e) => e.description(),
+            AppError::Solver(ref e) => e.description(),
+        }
+    }
+    fn cause(&self) -> Option<&Error> {
+        match *self {
+            AppError::Io(ref e) => Some(e),
+            AppError::ParsePuzzle(ref e) => Some(e),
+            AppError::Solver(ref e) => Some(e),
+        }
+    }
+}
+
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            AppError::Io(ref e) => write!(f, "IO error: {}", e),
+            AppError::ParsePuzzle(ref e) => write!(f, "parse puzzle error: {}", e),
+            AppError::Solver(ref e) => write!(f, "solver error: {}", e)
+        }
+    }
+}
+
+type AppResult<T> = Result<T, AppError>;
+
+fn run() -> AppResult<()> {
+    let config = Config::parse();
 
     let mut input = String::new();
-    let _ = io::stdin().read_to_string(&mut input).unwrap();
-    let puzzle = input.parse::<Puzzle>().unwrap();
-    let puzzle = slsr_solver::solve(&puzzle).unwrap();
+    let _ = try!(io::stdin().read_to_string(&mut input));
+    let puzzle = try!(input.parse::<Puzzle>());
+    let puzzle = try!(solver::solve(&puzzle));
 
-    match output {
+    match config.output_type {
         OutputType::Pretty(conf) => {
             let _ = pprint::print(&conf, &puzzle);
         }
         OutputType::Raw => {
             print!("{}", puzzle.to_string());
         }
+    }
+    Ok(())
+}
+
+fn main() {
+    if let Err(e) = run() {
+        let _ = writeln!(&mut io::stderr(), "{}", e);
+        process::exit(255);
     }
 }

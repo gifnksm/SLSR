@@ -1,5 +1,37 @@
-use std::iter;
+use std::{iter, fmt};
+use std::error::Error;
 use geom::Point;
+
+#[derive(Copy, Clone, Debug)]
+pub struct ParseLatticeError {
+    kind: LatticeErrorKind
+}
+
+#[derive(Copy, Clone, Debug)]
+enum LatticeErrorKind {
+    InvalidLatticePoint
+}
+
+impl Error for ParseLatticeError {
+    fn description(&self) -> &str {
+        match self.kind {
+            LatticeErrorKind::InvalidLatticePoint
+                => "invalid lattice point found in string"
+        }
+    }
+}
+
+impl fmt::Display for ParseLatticeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.description().fmt(f)
+    }
+}
+
+impl ParseLatticeError {
+    fn invalid_lattice_point() -> ParseLatticeError {
+        ParseLatticeError { kind: LatticeErrorKind::InvalidLatticePoint }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct LatticeParser<'a> {
@@ -9,7 +41,11 @@ pub struct LatticeParser<'a> {
 }
 
 impl<'a> LatticeParser<'a> {
-    pub fn new(lines: &'a[Vec<char>]) -> Option<LatticeParser<'a>> {
+    pub fn from_lines(lines: &'a[Vec<char>])
+                      -> Result<LatticeParser<'a>, ParseLatticeError>
+    {
+        use self::ParseLatticeError as Error;
+
         let rows = lines.iter()
             .enumerate()
             .filter(|&(_, cs)| cs.iter().any(|&c| c == '+'))
@@ -21,24 +57,20 @@ impl<'a> LatticeParser<'a> {
             .map(|(i, _)| i)
             .collect::<Vec<_>>();
 
-        for &r in &rows {
-            if lines[r].iter().position(|&c| c == '+') != Some(cols[0]) {
-                return None
-            }
-            if lines[r].iter().rposition(|&c| c == '+') != Some(cols[cols.len() - 1]) {
-                return None
-            }
-            for &c in &cols {
-                if lines[r].len() <= c {
-                    return None
-                }
-                if lines[r][c] != '+' {
-                    return None
-                }
+        // check all rows have same lattice points
+        for &r in &rows[1..] {
+            let cur_rows = lines[r].iter()
+                .enumerate()
+                .filter(|&(_, &c)| c == '+')
+                .map(|(i, _)| i);
+
+            let count = cur_rows.zip(&cols).filter(|&(p, &q)| p == q).count();
+            if count != cols.len() {
+                return Err(Error::invalid_lattice_point())
             }
         }
 
-        Some(LatticeParser { mat: lines, rows: rows, cols: cols })
+        Ok(LatticeParser { mat: lines, rows: rows, cols: cols })
     }
 
     #[inline]

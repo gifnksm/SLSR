@@ -2,7 +2,7 @@ use union_find::{UnionFind, UnionBySizeRank as Union, QuickFindUf as Uf};
 use slsr_core::puzzle::{Puzzle, Hint, Edge, Side};
 use slsr_core::geom::{CellId, Geom, Point, Size, Table, Move, OUTSIDE_CELL_ID};
 
-use ::{State, LogicError};
+use ::{SolverResult, State};
 
 trait Key {
     fn key0(self) -> usize;
@@ -144,8 +144,8 @@ impl<'a> From<&'a Puzzle> for SideMap {
     }
 }
 
-impl Into<Result<Puzzle, LogicError>> for SideMap {
-    fn into(mut self) -> Result<Puzzle, LogicError> {
+impl Into<SolverResult<Puzzle>> for SideMap {
+    fn into(mut self) -> SolverResult<Puzzle> {
         let mut puzzle = Puzzle::new(self.size());
         for r in 0..self.row() {
             for c in 0..self.column() {

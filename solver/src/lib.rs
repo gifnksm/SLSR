@@ -16,6 +16,8 @@ extern crate union_find;
 extern crate slsr_core;
 
 use std::fmt;
+use std::error::Error as ErrorTrait;
+
 use slsr_core::puzzle::Puzzle;
 use slsr_core::geom::CellId;
 
@@ -35,15 +37,36 @@ mod theorem_define;
 mod solver;
 
 #[derive(Copy, Clone, Debug)]
-pub struct LogicError;
+pub struct Error {
+    kind: ErrorKind
+}
 
-impl fmt::Display for LogicError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}", *self)
+#[derive(Copy, Clone, Debug)]
+enum ErrorKind {
+    InvalidBoard
+}
+
+impl ErrorTrait for Error {
+    fn description(&self) -> &str {
+        match self.kind {
+            ErrorKind::InvalidBoard => "invalid board data"
+        }
     }
 }
 
-pub type SolverResult<T> = Result<T, LogicError>;
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.description().fmt(f)
+    }
+}
+
+impl Error {
+    fn invalid_board() -> Error {
+        Error { kind: ErrorKind::InvalidBoard }
+    }
+}
+
+pub type SolverResult<T> = Result<T, Error>;
 
 enum FillResult {
     Completed(Solver),
@@ -55,12 +78,12 @@ enum State<T> {
     Fixed(T), Unknown, Conflict
 }
 
-impl<T> Into<Result<Option<T>, LogicError>> for State<T> {
-    fn into(self) -> Result<Option<T>, LogicError> {
+impl<T> Into<SolverResult<Option<T>>> for State<T> {
+    fn into(self) -> SolverResult<Option<T>> {
         match self {
             State::Fixed(st) => Ok(Some(st)),
             State::Unknown => Ok(None),
-            State::Conflict => Err(LogicError)
+            State::Conflict => Err(Error::invalid_board())
         }
     }
 }
@@ -94,7 +117,7 @@ fn fill_by_shallow_backtracking(solver: &mut Solver, pts: &[CellId])
         match solver.get_side(p) {
             State::Fixed(_) => { continue }
             State::Unknown => {}
-            State::Conflict => { return Err(LogicError) }
+            State::Conflict => { return Err(Error::invalid_board()) }
         }
 
         let mut solver_in = solver.clone();
@@ -135,7 +158,7 @@ fn fill(mut solver: Solver) -> SolverResult<FillResult> {
     Ok(FillResult::Partial(solver, pts))
 }
 
-pub fn solve(puzzle: &Puzzle) -> Result<Puzzle, LogicError> {
+pub fn solve(puzzle: &Puzzle) -> SolverResult<Puzzle> {
     let theorem = THEOREM_DEFINE.iter().map(|theo| theo.parse().unwrap());
     let mut queue = vec![try!(Solver::new(puzzle, theorem))];
 
@@ -160,5 +183,5 @@ pub fn solve(puzzle: &Puzzle) -> Result<Puzzle, LogicError> {
         queue.push(solver_out);
     }
 
-    Err(LogicError)
+    Err(Error::invalid_board())
 }

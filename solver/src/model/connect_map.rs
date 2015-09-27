@@ -4,7 +4,7 @@ use union_find::{Union, UnionFind, UnionResult, QuickFindUf as Uf};
 use slsr_core::puzzle::{Edge, Side};
 use slsr_core::geom::{CellId, Geom, Point, Size, Move, OUTSIDE_CELL_ID};
 
-use ::{LogicError, State, SolverResult};
+use ::{Error, State, SolverResult};
 use ::model::side_map::SideMap;
 
 #[derive(Clone, Debug)]
@@ -189,7 +189,7 @@ fn filter_edge(side_map: &mut SideMap, p: CellId, edge: Vec<CellId>)
             State::Fixed(Edge::Cross) => same.push(p2),
             State::Fixed(Edge::Line) => {}
             State::Unknown => unknown.push(p2),
-            State::Conflict => return Err(LogicError)
+            State::Conflict => return Err(Error::invalid_board())
         }
     }
 

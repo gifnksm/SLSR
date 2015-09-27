@@ -5,7 +5,7 @@ use model::connect_map::ConnectMap;
 use model::side_map::SideMap;
 use model::theorem::Theorem;
 use step::apply_theorem::TheoremPool;
-use ::{SolverResult, State, LogicError};
+use ::{Error, SolverResult, State};
 
 #[derive(Clone, Debug)]
 pub struct Solver {
@@ -46,7 +46,7 @@ impl Solver {
     pub fn validate_result(&mut self) -> SolverResult<()> {
         try!(self.sync_connection());
         if self.connect_map().count_area() != 2 {
-            return Err(LogicError)
+            return Err(Error::invalid_board())
         }
         Ok(())
     }
@@ -92,8 +92,8 @@ impl Solver {
     }
 }
 
-impl Into<Result<Puzzle, LogicError>> for Solver {
-    fn into(self) -> Result<Puzzle, LogicError> {
+impl Into<SolverResult<Puzzle>> for Solver {
+    fn into(self) -> SolverResult<Puzzle> {
         self.side_map.into()
     }
 }

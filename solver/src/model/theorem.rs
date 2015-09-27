@@ -1,9 +1,12 @@
+use std::fmt;
 use std::str::FromStr;
+use std::error::Error as ErrorTrait;
+
 use slsr_core::puzzle::Edge;
 use slsr_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
-use slsr_core::lattice_parser::LatticeParser;
+use slsr_core::lattice_parser::{LatticeParser, ParseLatticeError};
 
-use ::{State, SolverResult, LogicError};
+use ::{Error, State, SolverResult};
 use ::model::side_map::SideMap;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -100,7 +103,7 @@ impl EdgePattern<CellId> {
                 }
             }
             State::Unknown => Ok(PatternMatchResult::Partial(self)),
-            State::Conflict => Err(LogicError)
+            State::Conflict => Err(Error::invalid_board())
         }
     }
 
@@ -313,10 +316,81 @@ impl Match for TheoremMatcher {
     }
 }
 
-impl FromStr for Theorem {
-    type Err = ();
+#[derive(Copy, Clone, Debug)]
+pub struct ParseTheoremError {
+    kind: TheoremErrorKind
+}
 
-    fn from_str(s: &str) -> Result<Theorem, ()> {
+#[derive(Copy, Clone, Debug)]
+enum TheoremErrorKind {
+    NoSeparator,
+    TooSmallRows,
+    TooSmallColumns,
+    SizeMismatch,
+    MatcherDisappear,
+    Lattice(ParseLatticeError)
+}
+
+impl From<ParseLatticeError> for ParseTheoremError {
+    fn from(err: ParseLatticeError) -> ParseTheoremError {
+        ParseTheoremError {
+            kind: TheoremErrorKind::Lattice(err)
+        }
+    }
+}
+
+impl ErrorTrait for ParseTheoremError {
+    fn description(&self) -> &str {
+        use self::TheoremErrorKind::*;
+        match self.kind {
+            NoSeparator => "cannot found separator `!` in string",
+            TooSmallRows => "the number of rows is too small to parse puzzle",
+            TooSmallColumns => "the number of columns is too small to parse puzzle",
+            SizeMismatch => "size of the matcher does not match size of the pattern",
+            MatcherDisappear => "some elements in the matcher disappear in the pattern",
+            Lattice(ref e) => e.description()
+        }
+    }
+    fn cause(&self) -> Option<&ErrorTrait> {
+        use self::TheoremErrorKind::*;
+        match self.kind {
+            NoSeparator | TooSmallRows | TooSmallColumns | SizeMismatch | MatcherDisappear
+                => None,
+            Lattice(ref e) => Some(e)
+        }
+    }
+}
+
+impl fmt::Display for ParseTheoremError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.description().fmt(f)
+    }
+}
+
+impl ParseTheoremError {
+    fn no_separator() -> ParseTheoremError {
+        ParseTheoremError { kind: TheoremErrorKind::NoSeparator }
+    }
+    fn too_small_rows() -> ParseTheoremError {
+        ParseTheoremError { kind: TheoremErrorKind::TooSmallRows }
+    }
+    fn too_small_columns() -> ParseTheoremError {
+        ParseTheoremError { kind: TheoremErrorKind::TooSmallColumns }
+    }
+    fn size_mismatch() -> ParseTheoremError {
+        ParseTheoremError { kind: TheoremErrorKind::SizeMismatch }
+    }
+    fn matcher_disappear() -> ParseTheoremError {
+        ParseTheoremError { kind: TheoremErrorKind::MatcherDisappear }
+    }
+}
+
+impl FromStr for Theorem {
+    type Err = ParseTheoremError;
+
+    fn from_str(s: &str) -> Result<Theorem, ParseTheoremError> {
+        use self::ParseTheoremError as Error;
+
         let mut matcher_lines = vec![];
         let mut result_lines = vec![];
 
@@ -326,23 +400,19 @@ impl FromStr for Theorem {
 
         for line in lines {
             let mut it = line.splitn(2, '!');
-            if let Some(l) = it.next() {
-                matcher_lines.push(l.chars().collect());
-            } else {
-                return Err(())
-            }
+            matcher_lines.push(it.next().unwrap().chars().collect());
 
             if let Some(l) = it.next() {
                 result_lines.push(l.chars().collect());
             } else {
-                return Err(())
+                return Err(Error::no_separator())
             }
         }
 
 
         let (m_size, m_pat) = try!(parse_lines(&matcher_lines));
         let (r_size, mut r_pat) = try!(parse_lines(&result_lines));
-        if m_size != r_size { return Err(()) }
+        if m_size != r_size { return Err(Error::size_mismatch()) }
 
         let mut idx = 0;
         for &p in &m_pat {
@@ -351,7 +421,7 @@ impl FromStr for Theorem {
                     idx += i;
                     let _ = r_pat.remove(idx);
                 }
-                None => { return Err(()) }
+                None => { return Err(Error::matcher_disappear()) }
             }
         }
 
@@ -362,16 +432,14 @@ impl FromStr for Theorem {
 
         return Ok(Theorem { size: m_size, matcher: m_pat, result: r_pat });
 
-        fn parse_lines(lines: &[Vec<char>]) -> Result<(Size, Vec<Pattern>), ()> {
-            let parser = match LatticeParser::new(lines) {
-                Some(x) => x, None => return Err(())
-            };
+        fn parse_lines(lines: &[Vec<char>]) -> Result<(Size, Vec<Pattern>), ParseTheoremError> {
+            let parser = try!(LatticeParser::from_lines(lines));
 
             let rows = parser.num_rows();
             let cols = parser.num_cols();
 
-            if rows <= 1 { return Err(()) }
-            if cols <= 1 { return Err(()) }
+            if rows <= 1 { return Err(Error::too_small_rows()) }
+            if cols <= 1 { return Err(Error::too_small_columns()) }
 
             let size = Size((rows - 1) as i32, (cols - 1) as i32);
 
@@ -477,8 +545,8 @@ mod tests {
             matcher.dedup();
             result.sort();
             result.dedup();
-            assert_eq!(Ok(Theorem { size: size, matcher: matcher, result: result }),
-                       input.parse::<Theorem>())
+            assert_eq!(Theorem { size: size, matcher: matcher, result: result },
+                       input.parse::<Theorem>().unwrap())
         }
 
         check(Size(1, 1),

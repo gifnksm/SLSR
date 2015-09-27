@@ -1,4 +1,8 @@
-use geom::{Geom, Size, Table};
+use std::error::Error;
+use std::fmt;
+
+use ::geom::{Geom, Size, Table};
+use ::lattice_parser::ParseLatticeError;
 
 pub type Hint = Option<u8>;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -61,27 +65,97 @@ impl Geom for Puzzle {
     fn size(&self) -> Size { self.size }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub struct ParsePuzzleError {
+    kind: PuzzleErrorKind
+}
+
+#[derive(Copy, Clone, Debug)]
+enum PuzzleErrorKind {
+    Empty,
+    TooSmallRows,
+    TooSmallColumns,
+    LengthMismatch,
+    InvalidHint,
+    Lattice(ParseLatticeError)
+}
+
+impl From<ParseLatticeError> for ParsePuzzleError {
+    fn from(err: ParseLatticeError) -> ParsePuzzleError {
+        ParsePuzzleError {
+            kind: PuzzleErrorKind::Lattice(err)
+        }
+    }
+}
+
+impl Error for ParsePuzzleError {
+    fn description(&self) -> &str {
+        use self::PuzzleErrorKind::*;
+        match self.kind {
+            Empty => "cannot parse puzzle from empty string",
+            TooSmallRows => "the number of rows is too small to parse puzzle",
+            TooSmallColumns => "the number of columns is too small to parse puzzle",
+            LengthMismatch => "the length of lines are not same",
+            InvalidHint => "invalid hint found in string",
+            Lattice(ref e) => e.description()
+        }
+    }
+    fn cause(&self) -> Option<&Error> {
+        use self::PuzzleErrorKind::*;
+        match self.kind {
+            Empty | TooSmallRows | TooSmallColumns | LengthMismatch | InvalidHint
+                => None,
+            Lattice(ref e) => Some(e)
+        }
+    }
+}
+
+impl fmt::Display for ParsePuzzleError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.description().fmt(f)
+    }
+}
+
+impl ParsePuzzleError {
+    fn empty() -> ParsePuzzleError {
+        ParsePuzzleError { kind: PuzzleErrorKind::Empty }
+    }
+    fn too_small_rows() -> ParsePuzzleError {
+        ParsePuzzleError { kind: PuzzleErrorKind::TooSmallRows }
+    }
+    fn too_small_columns() -> ParsePuzzleError {
+        ParsePuzzleError { kind: PuzzleErrorKind::TooSmallColumns }
+    }
+    fn length_mismatch() -> ParsePuzzleError {
+        ParsePuzzleError { kind: PuzzleErrorKind::LengthMismatch }
+    }
+    fn invalid_hint() -> ParsePuzzleError {
+        ParsePuzzleError { kind: PuzzleErrorKind::InvalidHint }
+    }
+}
+
 mod from_str_impl {
-    use super::{Puzzle, Edge};
+    use super::{Puzzle, Edge, ParsePuzzleError as Error};
     use std::str::FromStr;
     use geom::Size;
     use lattice_parser::LatticeParser;
 
     impl FromStr for Puzzle {
-        type Err = ();
+        type Err = Error;
 
-        fn from_str(s: &str) -> Result<Puzzle, ()> {
+        fn from_str(s: &str) -> Result<Puzzle, Error> {
             let mut mat = s.lines()
                 .map(|l| l.trim_matches('\n'))
                 .map(|l| l.chars().collect::<Vec<_>>())
                 .skip_while(|l| l.is_empty())
                 .collect::<Vec<_>>();
 
+            // Drop trailing empty lines
             while mat.last().map(|l| l.len()) == Some(0) {
                 let _ = mat.pop();
             }
 
-            if mat.len() == 0 { return Err(()) }
+            if mat.len() == 0 { return Err(Error::empty()) }
 
             if mat[0].iter().any(|&c| c == '+') {
                 parse_pat1(mat)
@@ -91,16 +165,14 @@ mod from_str_impl {
         }
     }
 
-    fn parse_pat1(mat: Vec<Vec<char>>) -> Result<Puzzle, ()> {
-        let parser = match LatticeParser::new(&mat) {
-            Some(x) => x, None => return Err(())
-        };
+    fn parse_pat1(mat: Vec<Vec<char>>) -> Result<Puzzle, Error> {
+        let parser = try!(LatticeParser::from_lines(&mat));
 
         let rows = parser.num_rows();
         let cols = parser.num_cols();
 
-        if rows <= 1 { return Err(()) }
-        if cols <= 1 { return Err(()) }
+        if rows <= 1 { return Err(Error::too_small_rows()) }
+        if cols <= 1 { return Err(Error::too_small_columns()) }
 
         let edge_v = parser.v_edges()
             .map(|(_, s)| {
@@ -129,27 +201,33 @@ mod from_str_impl {
             }).collect();
 
         let hint = parser.cells()
-            .map(|(_, s)| {
+            .filter_map(|(_, s)| {
                 match s.trim_matches(' ') {
-                    "0" => Some(0),
-                    "1" => Some(1),
-                    "2" => Some(2),
-                    "3" => Some(3),
+                    "0" => Some(Some(0)),
+                    "1" => Some(Some(1)),
+                    "2" => Some(Some(2)),
+                    "3" => Some(Some(3)),
+                    "" | "_" | "-" => Some(None),
                     _ => None
                 }
-            }).collect();
+            }).collect::<Vec<_>>();
+        if hint.len() != (rows - 1) * (cols - 1) {
+            return Err(Error::invalid_hint())
+        }
 
         let size = Size((rows - 1) as i32, (cols - 1) as i32);
         let side = vec![None; (rows - 1) * (cols - 1)];
         Ok(Puzzle::with_data(size, hint, side, edge_v, edge_h))
     }
 
-    fn parse_pat2(mat: Vec<Vec<char>>) -> Result<Puzzle, ()> {
+    fn parse_pat2(mat: Vec<Vec<char>>) -> Result<Puzzle, Error> {
         let row = mat.len();
-        if row == 0 { return Err(()) }
+        if row < 1 { return Err(Error::too_small_rows()) }
         let col = mat[0].len();
-        if col == 0 { return Err(()) }
-        if mat[1..].iter().any(|r| r.len() != col) { return Err(()) }
+        if col < 1 { return Err(Error::too_small_columns()) }
+        if mat[1..].iter().any(|r| r.len() != col) {
+            return Err(Error::length_mismatch())
+        }
 
         let hint = mat.iter().flat_map(|line| {
             line.iter().filter_map(|&c| {
@@ -163,7 +241,9 @@ mod from_str_impl {
                 }
             })
         }).collect::<Vec<_>>();
-        if hint.len() != row * col { return Err(()) }
+        if hint.len() != row * col {
+            return Err(Error::invalid_hint())
+        }
 
         let size = Size(row as i32, col as i32);
         let side = vec![None; row * col];
