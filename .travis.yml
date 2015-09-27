@@ -23,6 +23,7 @@ script:
   - |
       if [ "${PKGDIR}" = "cli" ]; then
         travis-cargo run -- --release < ../puzzle/example.txt
+        travis-cargo run -- --release -- --all < ../puzzle/empty.txt
       fi
   - travis-cargo test
   - travis-cargo bench

@@ -22,7 +22,7 @@ use std::error::Error;
 use std::io::prelude::*;
 
 use slsr_core::puzzle::{Puzzle, ParsePuzzleError};
-use slsr_solver as solver;
+use slsr_solver::{self as solver, Solutions};
 
 use parse_arg::{Config, OutputType};
 
@@ -83,22 +83,35 @@ impl fmt::Display for AppError {
 
 type AppResult<T> = Result<T, AppError>;
 
+fn output(config: &Config, solution: Puzzle) -> io::Result<()> {
+    match config.output_type {
+        OutputType::Pretty(conf) => {
+            try!(pprint::print(&conf, &solution));
+        }
+        OutputType::Raw => {
+            print!("{}", solution.to_string());
+        }
+    }
+
+    Ok(())
+}
+
 fn run() -> AppResult<()> {
     let config = Config::parse();
 
     let mut input = String::new();
     let _ = try!(io::stdin().read_to_string(&mut input));
     let puzzle = try!(input.parse::<Puzzle>());
-    let puzzle = try!(solver::solve(&puzzle));
 
-    match config.output_type {
-        OutputType::Pretty(conf) => {
-            let _ = pprint::print(&conf, &puzzle);
+    if config.show_all {
+        for solution in try!(Solutions::new(&puzzle)) {
+            try!(output(&config, solution));
         }
-        OutputType::Raw => {
-            print!("{}", puzzle.to_string());
-        }
+    } else {
+        let solution = try!(solver::solve(&puzzle));
+        try!(output(&config, solution));
     }
+
     Ok(())
 }
 

@@ -9,6 +9,7 @@ Usage: slither [options]
 
 Options:
   -h, --help       Show this message.
+  --all            Show all solutions (if any).
   --pretty MODE    Specify pretty-print mode.
                    Valid values: auto, color, ascii, none [default: auto]
   --width WIDTH    Specify cell width [default: 2].
@@ -17,6 +18,7 @@ Options:
 
 #[derive(Copy, Clone, Debug, RustcDecodable)]
 struct Args {
+    flag_all: bool,
     flag_pretty: Option<Pretty>,
     flag_width: Option<Width>,
     flag_height: Option<Height>
@@ -64,6 +66,7 @@ impl Default for Pretty {
 
 #[derive(Copy, Clone, Debug)]
 pub struct Config {
+    pub show_all: bool,
     pub output_type: OutputType
 }
 
@@ -102,6 +105,7 @@ impl Config {
         };
 
         Config {
+            show_all: args.flag_all,
             output_type: output_type
         }
     }

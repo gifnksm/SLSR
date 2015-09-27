@@ -158,32 +158,57 @@ fn fill(mut solver: Solver) -> SolverResult<FillResult> {
     Ok(FillResult::Partial(solver, pts))
 }
 
+#[derive(Clone, Debug)]
+pub struct Solutions {
+    queue: Vec<Solver>
+}
+
+impl Solutions {
+    pub fn new(puzzle: &Puzzle) -> SolverResult<Solutions> {
+        let theorem = THEOREM_DEFINE.iter().map(|theo| theo.parse().unwrap());
+        Ok(Solutions {
+            queue: vec![try!(Solver::new(puzzle, theorem))]
+        })
+    }
+}
+
+impl Iterator for Solutions {
+    type Item = Puzzle;
+
+    fn next(&mut self) -> Option<Puzzle> {
+        while !self.queue.is_empty() {
+            let solver = self.queue.remove(0);
+            let (solver,pts) = match fill(solver) {
+                Ok(FillResult::Completed(mut solver)) => {
+                    if solver.validate_result().is_err() {
+                        continue
+                    }
+                    match solver.into() {
+                        Ok(result) => return Some(result),
+                        Err(_) => continue
+                    }
+                }
+                Ok(FillResult::Partial(solver, pts)) => (solver, pts),
+                Err(_) => continue
+            };
+
+            let p = *pts.last().unwrap();
+            let mut solver_in = solver.clone();
+            let mut solver_out = solver;
+            solver_in.set_inside(p);
+            solver_out.set_outside(p);
+            self.queue.push(solver_in);
+            self.queue.push(solver_out);
+        }
+
+        None
+    }
+}
+
 pub fn solve(puzzle: &Puzzle) -> SolverResult<Puzzle> {
-    let theorem = THEOREM_DEFINE.iter().map(|theo| theo.parse().unwrap());
-    let mut queue = vec![try!(Solver::new(puzzle, theorem))];
-
-    while let Some(solver) = queue.pop() {
-        let (solver,pts) = match fill(solver) {
-            Ok(FillResult::Completed(mut solver)) => {
-                if solver.validate_result().is_err() {
-                    continue
-                }
-                match solver.into() {
-                    Ok(result) => return Ok(result),
-                    Err(_) => continue
-                }
-            }
-            Ok(FillResult::Partial(solver, pts)) => (solver, pts),
-            Err(_) => continue
-        };
-
-        let p = *pts.last().unwrap();
-        let mut solver_in = solver.clone();
-        let mut solver_out = solver;
-        solver_in.set_inside(p);
-        solver_out.set_outside(p);
-        queue.push(solver_in);
-        queue.push(solver_out);
+    let mut it = try!(Solutions::new(puzzle));
+    if let Some(solution) = it.next() {
+        return Ok(solution)
     }
 
     Err(Error::invalid_board())
