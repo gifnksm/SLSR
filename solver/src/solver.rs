@@ -1,4 +1,4 @@
-use slsr_core::board::{Board, Side};
+use slsr_core::puzzle::{Puzzle, Side};
 use slsr_core::geom::{CellId, Geom};
 
 use model::connect_map::ConnectMap;
@@ -15,10 +15,10 @@ pub struct Solver {
 }
 
 impl Solver {
-    pub fn new<I>(board: &Board, theorem: I) -> SolverResult<Solver>
+    pub fn new<I>(puzzle: &Puzzle, theorem: I) -> SolverResult<Solver>
         where I: Iterator<Item=Theorem>
     {
-        let mut side_map = SideMap::from(board);
+        let mut side_map = SideMap::from(puzzle);
         Ok(Solver {
             theorem_pool: try!(TheoremPool::new(theorem, &mut side_map)),
             side_map: side_map,
@@ -92,8 +92,8 @@ impl Solver {
     }
 }
 
-impl Into<Result<Board, LogicError>> for Solver {
-    fn into(self) -> Result<Board, LogicError> {
+impl Into<Result<Puzzle, LogicError>> for Solver {
+    fn into(self) -> Result<Puzzle, LogicError> {
         self.side_map.into()
     }
 }

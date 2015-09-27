@@ -16,7 +16,7 @@ extern crate union_find;
 extern crate slsr_core;
 
 use std::fmt;
-use slsr_core::board::Board;
+use slsr_core::puzzle::Puzzle;
 use slsr_core::geom::CellId;
 
 use solver::Solver;
@@ -135,9 +135,9 @@ fn fill(mut solver: Solver) -> SolverResult<FillResult> {
     Ok(FillResult::Partial(solver, pts))
 }
 
-pub fn solve(board: &Board) -> Result<Board, LogicError> {
+pub fn solve(puzzle: &Puzzle) -> Result<Puzzle, LogicError> {
     let theorem = THEOREM_DEFINE.iter().map(|theo| theo.parse().unwrap());
-    let mut queue = vec![try!(Solver::new(board, theorem))];
+    let mut queue = vec![try!(Solver::new(puzzle, theorem))];
 
     while let Some(solver) = queue.pop() {
         let (solver,pts) = match fill(solver) {

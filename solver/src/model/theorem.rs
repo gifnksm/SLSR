@@ -1,5 +1,5 @@
 use std::str::FromStr;
-use slsr_core::board::Edge;
+use slsr_core::puzzle::Edge;
 use slsr_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
 use slsr_core::lattice_parser::LatticeParser;
 

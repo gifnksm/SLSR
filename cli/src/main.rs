@@ -21,7 +21,7 @@ use std::default::Default;
 use std::io;
 use std::io::prelude::*;
 use docopt::Docopt;
-use slsr_core::board::Board;
+use slsr_core::puzzle::Puzzle;
 use pprint::{Config as PpConfig, Mode as PpMode};
 
 mod pprint;
@@ -124,15 +124,15 @@ fn main() {
 
     let mut input = String::new();
     let _ = io::stdin().read_to_string(&mut input).unwrap();
-    let board = input.parse::<Board>().unwrap();
-    let board = slsr_solver::solve(&board).unwrap();
+    let puzzle = input.parse::<Puzzle>().unwrap();
+    let puzzle = slsr_solver::solve(&puzzle).unwrap();
 
     match output {
         OutputType::Pretty(conf) => {
-            let _ = pprint::print(&conf, &board);
+            let _ = pprint::print(&conf, &puzzle);
         }
         OutputType::Raw => {
-            print!("{}", board.to_string());
+            print!("{}", puzzle.to_string());
         }
     }
 }

@@ -7,7 +7,7 @@ pub enum Side { In, Out }
 pub enum Edge { Line, Cross }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Board {
+pub struct Puzzle {
     size: Size,
     hint: Table<Hint>,
     side: Table<Option<Side>>,
@@ -15,26 +15,26 @@ pub struct Board {
     edge_h: Table<Option<Edge>>
 }
 
-impl Board {
+impl Puzzle {
     #[inline]
-    pub fn new(size: Size) -> Board {
+    pub fn new(size: Size) -> Puzzle {
         assert!(size.0 > 0 && size.1 > 0);
         let hint = Table::new_empty(size, None, None);
         let side = Table::new_empty(size, Some(Side::Out), None);
         let edge_v = Table::new_empty(Size(size.0, size.1 + 1), Some(Edge::Cross), None);
         let edge_h = Table::new_empty(Size(size.0 + 1, size.1), Some(Edge::Cross), None);
-        Board { size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h }
+        Puzzle { size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h }
     }
 
     #[inline]
     fn with_data(size: Size, hint: Vec<Hint>, side: Vec<Option<Side>>,
-                 edge_v: Vec<Option<Edge>>, edge_h: Vec<Option<Edge>>) -> Board {
+                 edge_v: Vec<Option<Edge>>, edge_h: Vec<Option<Edge>>) -> Puzzle {
         assert!(size.0 > 0 && size.1 > 0);
         let hint = Table::new(size, None, hint);
         let side = Table::new(size, Some(Side::Out), side);
         let edge_v = Table::new(Size(size.0, size.1 + 1), Some(Edge::Cross), edge_v);
         let edge_h = Table::new(Size(size.0 + 1, size.1), Some(Edge::Cross), edge_h);
-        Board { size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h }
+        Puzzle { size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h }
     }
 
     #[inline]
@@ -56,21 +56,21 @@ impl Board {
     pub fn edge_v_mut(&mut self) -> &mut Table<Option<Edge>> { &mut self.edge_v }
 }
 
-impl Geom for Board {
+impl Geom for Puzzle {
     #[inline]
     fn size(&self) -> Size { self.size }
 }
 
 mod from_str_impl {
-    use super::{Board, Edge};
+    use super::{Puzzle, Edge};
     use std::str::FromStr;
     use geom::Size;
     use lattice_parser::LatticeParser;
 
-    impl FromStr for Board {
+    impl FromStr for Puzzle {
         type Err = ();
 
-        fn from_str(s: &str) -> Result<Board, ()> {
+        fn from_str(s: &str) -> Result<Puzzle, ()> {
             let mut mat = s.lines()
                 .map(|l| l.trim_matches('\n'))
                 .map(|l| l.chars().collect::<Vec<_>>())
@@ -91,7 +91,7 @@ mod from_str_impl {
         }
     }
 
-    fn parse_pat1(mat: Vec<Vec<char>>) -> Result<Board, ()> {
+    fn parse_pat1(mat: Vec<Vec<char>>) -> Result<Puzzle, ()> {
         let parser = match LatticeParser::new(&mat) {
             Some(x) => x, None => return Err(())
         };
@@ -141,10 +141,10 @@ mod from_str_impl {
 
         let size = Size((rows - 1) as i32, (cols - 1) as i32);
         let side = vec![None; (rows - 1) * (cols - 1)];
-        Ok(Board::with_data(size, hint, side, edge_v, edge_h))
+        Ok(Puzzle::with_data(size, hint, side, edge_v, edge_h))
     }
 
-    fn parse_pat2(mat: Vec<Vec<char>>) -> Result<Board, ()> {
+    fn parse_pat2(mat: Vec<Vec<char>>) -> Result<Puzzle, ()> {
         let row = mat.len();
         if row == 0 { return Err(()) }
         let col = mat[0].len();
@@ -169,12 +169,12 @@ mod from_str_impl {
         let side = vec![None; row * col];
         let edge_v = vec![None; row * (col + 1)];
         let edge_h = vec![None; (row + 1) * col];
-        Ok(Board::with_data(size, hint, side, edge_v, edge_h))
+        Ok(Puzzle::with_data(size, hint, side, edge_v, edge_h))
     }
 }
 
 mod display_impl {
-    use super::{Board, Edge};
+    use super::{Puzzle, Edge};
     use std::fmt;
     use geom::{Geom, Point};
 
@@ -185,11 +185,11 @@ mod display_impl {
         }
     }
 
-    struct HEdge<'a>(&'a Board, Point);
+    struct HEdge<'a>(&'a Puzzle, Point);
     impl<'a> fmt::Display for HEdge<'a> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let HEdge(board, p) = *self;
-            match board.edge_h[p] {
+            let HEdge(puzzle, p) = *self;
+            match puzzle.edge_h[p] {
                 Some(Edge::Cross) => try!(write!(f, "x")),
                 Some(Edge::Line) => try!(write!(f, "-")),
                 None => try!(write!(f, " "))
@@ -198,11 +198,11 @@ mod display_impl {
         }
     }
 
-    struct VEdge<'a>(&'a Board, Point);
+    struct VEdge<'a>(&'a Puzzle, Point);
     impl<'a> fmt::Display for VEdge<'a> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let VEdge(board, p) = *self;
-            match board.edge_v[p] {
+            let VEdge(puzzle, p) = *self;
+            match puzzle.edge_v[p] {
                 Some(Edge::Cross) => try!(write!(f, "x")),
                 Some(Edge::Line) => try!(write!(f, "|")),
                 None => try!(write!(f, " "))
@@ -211,38 +211,38 @@ mod display_impl {
         }
     }
 
-    struct EdgeRow<'a>(&'a Board, i32);
+    struct EdgeRow<'a>(&'a Puzzle, i32);
     impl<'a> fmt::Display for EdgeRow<'a> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let EdgeRow(board, r) = *self;
-            for c in 0..board.column() {
+            let EdgeRow(puzzle, r) = *self;
+            for c in 0..puzzle.column() {
                 let p = Point(r, c);
                 try!(write!(f, "{}", Cross));
-                try!(write!(f, "{}", HEdge(board, p)));
+                try!(write!(f, "{}", HEdge(puzzle, p)));
             }
             try!(write!(f, "{}", Cross));
             Ok(())
         }
     }
 
-    struct CellRow<'a>(&'a Board, i32);
+    struct CellRow<'a>(&'a Puzzle, i32);
     impl<'a> fmt::Display for CellRow<'a> {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let CellRow(board, r) = *self;
-            for c in 0..board.column() {
+            let CellRow(puzzle, r) = *self;
+            for c in 0..puzzle.column() {
                 let p = Point(r, c);
-                try!(write!(f, "{}", VEdge(board, p)));
-                match board.hint[p] {
+                try!(write!(f, "{}", VEdge(puzzle, p)));
+                match puzzle.hint[p] {
                     Some(n) => try!(write!(f, "{}", n)),
                     None => try!(write!(f, " "))
                 }
             }
-            try!(write!(f, "{}", VEdge(board, Point(r, board.column()))));
+            try!(write!(f, "{}", VEdge(puzzle, Point(r, puzzle.column()))));
             Ok(())
         }
     }
 
-    impl fmt::Display for Board {
+    impl fmt::Display for Puzzle {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             for r in 0..self.row() {
                 try!(writeln!(f, "{}", EdgeRow(self, r)));
@@ -256,7 +256,7 @@ mod display_impl {
 
 #[cfg(test)]
 mod tests {
-    use super::Board;
+    use super::Puzzle;
     use geom::{Geom, Size, Point};
 
     #[test]
@@ -265,8 +265,8 @@ mod tests {
 ______
 3_____
 ";
-        let board = input.parse::<Board>().unwrap();
-        let hint = board.hint();
+        let puzzle = input.parse::<Puzzle>().unwrap();
+        let hint = puzzle.hint();
         assert_eq!(Size(3, 6), hint.size());
         assert_eq!(Some(1), hint[Point(0, 0)]);
         assert_eq!(Some(2), hint[Point(0, 1)]);
@@ -287,9 +287,9 @@ ______
         assert_eq!(None, hint[Point(2, 4)]);
         assert_eq!(None, hint[Point(2, 5)]);
 
-        assert_eq!(Ok(&board), board.to_string().parse::<Board>().as_ref());
+        assert_eq!(Ok(&puzzle), puzzle.to_string().parse::<Puzzle>().as_ref());
 
-        assert_eq!(Err(()), "1243".parse::<Board>());
+        assert_eq!(Err(()), "1243".parse::<Puzzle>());
 
         let input = "
 +--+ +-+!!+asdf
@@ -305,21 +305,21 @@ ______
 + + + + +
 ";
 
-        let board = input.parse::<Board>().unwrap();
-        let hint = board.hint();
+        let puzzle = input.parse::<Puzzle>().unwrap();
+        let hint = puzzle.hint();
         assert_eq!(Some(1), hint[Point(1, 1)]);
         assert_eq!(Some(2), hint[Point(1, 3)]);
-        assert_eq!(output, board.to_string());
+        assert_eq!(output, puzzle.to_string());
 
-        assert_eq!(Err(()), "".parse::<Board>());
+        assert_eq!(Err(()), "".parse::<Puzzle>());
 
         let input = "
 + + + +
  1 2 3
 + + + +
 ";
-        let board = input.parse::<Board>().unwrap();
-        let hint = board.hint();
+        let puzzle = input.parse::<Puzzle>().unwrap();
+        let hint = puzzle.hint();
         assert_eq!(Some(1), hint[Point(0, 0)]);
         assert_eq!(Some(2), hint[Point(0, 1)]);
         assert_eq!(Some(3), hint[Point(0, 2)]);

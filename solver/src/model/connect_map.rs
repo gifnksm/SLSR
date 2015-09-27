@@ -1,7 +1,7 @@
 use std::iter::FromIterator;
 use std::mem;
 use union_find::{Union, UnionFind, UnionResult, QuickFindUf as Uf};
-use slsr_core::board::{Edge, Side};
+use slsr_core::puzzle::{Edge, Side};
 use slsr_core::geom::{CellId, Geom, Point, Size, Move, OUTSIDE_CELL_ID};
 
 use ::{LogicError, State, SolverResult};

@@ -1,5 +1,5 @@
 use std::cmp;
-use slsr_core::board::Side;
+use slsr_core::puzzle::Side;
 use slsr_core::geom::{CellId, Geom, OUTSIDE_CELL_ID};
 
 use ::{State, SolverResult};

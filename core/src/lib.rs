@@ -14,7 +14,6 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 
-pub mod board;
 pub mod geom;
 pub mod lattice_parser;
-
+pub mod puzzle;
