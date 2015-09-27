@@ -168,7 +168,10 @@ pub fn solve(puzzle: &Puzzle) -> SolverResult<Puzzle> {
                 if solver.validate_result().is_err() {
                     continue
                 }
-                return solver.into()
+                match solver.into() {
+                    Ok(result) => return Ok(result),
+                    Err(_) => continue
+                }
             }
             Ok(FillResult::Partial(solver, pts)) => (solver, pts),
             Err(_) => continue
