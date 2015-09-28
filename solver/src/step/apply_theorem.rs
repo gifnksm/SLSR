@@ -18,7 +18,7 @@ impl TheoremPool {
             .into_iter()
             .flat_map(|theo| theo.all_rotations());
 
-        let mut hint_theorem = [vec![], vec![], vec![], vec![]];
+        let mut hint_theorem = [vec![], vec![], vec![], vec![], vec![]];
         let mut nonhint_theorem = vec![];
 
         for theo in it {

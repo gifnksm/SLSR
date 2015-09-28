@@ -17,21 +17,33 @@ impl Key for CellId {
 #[derive(Clone, Debug)]
 pub struct SideMap {
     hint: Table<Hint>,
+    sum_of_hint: u32,
     uf: Uf<Union>,
     revision: u32
 }
 
 impl SideMap {
     pub fn new(hint: Table<Hint>) -> SideMap {
+        let mut sum_of_hint = 0;
+        for r in 0..hint.row() {
+            for c in 0..hint.column() {
+                let p = Point(r, c);
+                if let Some(n) = hint[p] {
+                    sum_of_hint += n as u32;
+                }
+            }
+        }
         let num_cell = hint.cell_len();
         SideMap {
             hint: hint,
+            sum_of_hint: sum_of_hint,
             uf: UnionFind::new(num_cell * 2),
             revision: 0
         }
     }
 
     pub fn hint(&self) -> &Table<Hint> { &self.hint }
+    pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
     pub fn revision(&self) -> u32 { self.revision }
     pub fn all_filled(&self) -> bool {
         self.revision() == (self.row() * self.column()) as u32

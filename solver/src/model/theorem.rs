@@ -164,7 +164,8 @@ pub trait Match {
 pub struct Theorem {
     size: Size,
     matcher: Vec<Pattern>,
-    result: Vec<EdgePattern<Point>>
+    result: Vec<EdgePattern<Point>>,
+    closed_hint: Option<(u32, Vec<HintPattern>)>
 }
 
 impl Theorem {
@@ -173,6 +174,10 @@ impl Theorem {
         self.matcher.dedup();
         self.result.sort();
         self.result.dedup();
+        if let Some((_, ref mut closed)) = self.closed_hint {
+            closed.sort();
+            closed.dedup();
+        }
         self
     }
 
@@ -190,6 +195,11 @@ impl Theorem {
         for x in self.result.iter_mut() {
             *x = x.rotate(rot).shift(d)
         }
+        if let Some((_, ref mut closed)) = self.closed_hint {
+            for x in closed.iter_mut() {
+                *x = x.rotate(rot).shift(d);
+            }
+        }
 
         self.normalized()
     }
@@ -200,6 +210,11 @@ impl Theorem {
         }
         for x in self.result.iter_mut() {
             *x = x.shift(d);
+        }
+        if let Some((_, ref mut closed)) = self.closed_hint {
+            for x in closed.iter_mut() {
+                *x = x.shift(d);
+            }
         }
 
         self
@@ -224,6 +239,28 @@ impl Theorem {
 
     pub fn size(&self) -> Size { self.size }
     pub fn head(&self) -> Pattern { self.matcher[0] }
+
+    fn can_close(side_map: &mut SideMap, sum: u32, hint: &[HintPattern]) -> bool {
+        if side_map.sum_of_hint() > sum {
+            return false;
+        }
+
+        let mut ava_sum = 0;
+        for h in hint {
+            if let Some(n) = side_map.hint()[h.point] {
+                if n != h.hint {
+                    return false;
+                }
+                ava_sum += n as u32;
+            }
+        }
+
+        if ava_sum != side_map.sum_of_hint() {
+            return false;
+        }
+
+        return true;
+    }
 }
 
 impl Match for Theorem {
@@ -238,6 +275,12 @@ impl Match for Theorem {
                 PatternMatchResult::Conflict => {
                     return Ok(TheoremMatchResult::Conflict)
                 }
+            }
+        }
+
+        if let Some((sum, ref hint)) = self.closed_hint {
+            if Theorem::can_close(side_map, sum, hint) {
+                return Ok(TheoremMatchResult::Conflict)
             }
         }
 
@@ -393,13 +436,15 @@ impl FromStr for Theorem {
 
         let mut matcher_lines = vec![];
         let mut result_lines = vec![];
+        let mut closed_lines = vec![];
 
         let lines = s.lines()
             .map(|l| l.trim_matches('\n'))
             .filter(|s| !s.is_empty());
 
         for line in lines {
-            let mut it = line.splitn(2, '!');
+            let mut it = line.splitn(3, '!');
+
             matcher_lines.push(it.next().unwrap().chars().collect());
 
             if let Some(l) = it.next() {
@@ -407,12 +452,23 @@ impl FromStr for Theorem {
             } else {
                 return Err(Error::no_separator())
             }
-        }
 
+            if let Some(l) = it.next() {
+                closed_lines.push(l.chars().collect());
+            }
+        }
 
         let (m_size, m_pat) = try!(parse_lines(&matcher_lines));
         let (r_size, mut r_pat) = try!(parse_lines(&result_lines));
         if m_size != r_size { return Err(Error::size_mismatch()) }
+
+        let c_pat = if closed_lines.is_empty() {
+            None
+        } else {
+            let (c_size, c_pat) = try!(parse_lines(&closed_lines));
+            if m_size != c_size { return Err(Error::size_mismatch()) }
+            Some(c_pat)
+        };
 
         let mut idx = 0;
         for &p in &m_pat {
@@ -430,7 +486,19 @@ impl FromStr for Theorem {
             _ => panic!()
         }).collect();
 
-        return Ok(Theorem { size: m_size, matcher: m_pat, result: r_pat });
+        let c_pat = c_pat.map(|pats| {
+            use std::ops::Add;
+            let hints = pats.into_iter().filter_map(|pat| match pat {
+                Pattern::Hint(h) => Some(h),
+                _ => None
+            }).collect::<Vec<_>>();
+            let sum = hints.iter().map(|h| h.hint as u32).fold(0, Add::add);
+            (sum, hints)
+        });
+
+        return Ok(Theorem {
+            size: m_size, matcher: m_pat, result: r_pat, closed_hint: c_pat
+        });
 
         fn parse_lines(lines: &[Vec<char>]) -> Result<(Size, Vec<Pattern>), ParseTheoremError> {
             let parser = try!(LatticeParser::from_lines(lines));
@@ -482,6 +550,7 @@ impl FromStr for Theorem {
                         '1' => { pat.push(Pattern::hint(1, p)); }
                         '2' => { pat.push(Pattern::hint(2, p)); }
                         '3' => { pat.push(Pattern::hint(3, p)); }
+                        '4' => { pat.push(Pattern::hint(4, p)); }
                         _ if c.is_alphabetic() => {
                             let key = c.to_lowercase().next().unwrap();
                             match pairs.iter().position(|&(k, _, _)| k == key) {

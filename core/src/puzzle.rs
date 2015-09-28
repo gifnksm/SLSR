@@ -207,6 +207,7 @@ mod from_str_impl {
                     "1" => Some(Some(1)),
                     "2" => Some(Some(2)),
                     "3" => Some(Some(3)),
+                    "4" => Some(Some(4)),
                     "" | "_" | "-" => Some(None),
                     _ => None
                 }
@@ -236,6 +237,7 @@ mod from_str_impl {
                     '1' => Some(Some(1)),
                     '2' => Some(Some(2)),
                     '3' => Some(Some(3)),
+                    '4' => Some(Some(4)),
                     '_' | '-' => Some(None),
                     _ => None
                 }
