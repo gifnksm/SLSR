@@ -614,7 +614,13 @@ mod tests {
             matcher.dedup();
             result.sort();
             result.dedup();
-            assert_eq!(Theorem { size: size, matcher: matcher, result: result },
+            let theo = Theorem {
+                size: size,
+                matcher: matcher,
+                result: result,
+                closed_hint: None
+            };
+            assert_eq!(theo,
                        input.parse::<Theorem>().unwrap())
         }
 
