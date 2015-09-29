@@ -176,8 +176,7 @@ impl Iterator for Solutions {
     type Item = Puzzle;
 
     fn next(&mut self) -> Option<Puzzle> {
-        while !self.queue.is_empty() {
-            let solver = self.queue.remove(0);
+        while let Some(solver) = self.queue.pop() {
             let (solver,pts) = match fill(solver) {
                 Ok(FillResult::Completed(mut solver)) => {
                     if solver.validate_result().is_err() {

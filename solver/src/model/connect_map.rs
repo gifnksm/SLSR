@@ -64,23 +64,27 @@ impl Union for Area {
 #[derive(Clone, Debug)]
 pub struct ConnectMap {
     size: Size,
+    sum_of_hint: u32,
     uf: Uf<Area>
 }
 
 impl ConnectMap {
-    fn new<F>(size: Size, f: F) -> ConnectMap
+    fn new<F>(size: Size, sum_of_hint: u32, f: F) -> ConnectMap
         where F: FnMut(Point) -> Area
     {
         let len = size.cell_len();
-        let it = (0..len).
-            map(|id| size.cellid_to_point(CellId::new(id)))
+        let it = (0..len)
+            .map(|id| size.cellid_to_point(CellId::new(id)))
             .map(f);
 
         ConnectMap {
             size: size,
+            sum_of_hint: sum_of_hint,
             uf: FromIterator::from_iter(it)
         }
     }
+
+    pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
 
     pub fn sync(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
         let mut updated = true;
@@ -119,7 +123,8 @@ impl Geom for ConnectMap {
 
 impl<'a> From<&'a mut SideMap> for ConnectMap {
     fn from(side_map: &'a mut SideMap) -> ConnectMap {
-        let mut conn_map = ConnectMap::new(side_map.size(), |p| {
+        let mut conn_map = ConnectMap::new(side_map.size(),
+                                           side_map.sum_of_hint(), |p| {
             let cp = side_map.point_to_cellid(p);
             let sum = side_map.hint()[p].unwrap_or(0);
 
