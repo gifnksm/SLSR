@@ -1,6 +1,6 @@
 use union_find::{UnionFind, UnionBySizeRank as Union, QuickFindUf as Uf};
 use slsr_core::puzzle::{Puzzle, Edge, Side};
-use slsr_core::geom::{CellId, Geom, Point, Move, OUTSIDE_CELL_ID};
+use slsr_core::geom::{CellId, Geom, Move, OUTSIDE_CELL_ID};
 
 use ::{SolverResult, State};
 
@@ -98,27 +98,24 @@ impl SideMap {
     }
 
     pub fn complete_puzzle(&mut self, puzzle: &mut Puzzle) -> SolverResult<()> {
-        for r in 0..puzzle.row() {
-            for c in 0..puzzle.column() {
-                let p = Point(r, c);
-                let cp = puzzle.point_to_cellid(p);
-                let cp_u = puzzle.point_to_cellid(p + Move::UP);
-                let cp_l = puzzle.point_to_cellid(p + Move::LEFT);
+        for p in puzzle.points() {
+            let cp = puzzle.point_to_cellid(p);
+            let cp_u = puzzle.point_to_cellid(p + Move::UP);
+            let cp_l = puzzle.point_to_cellid(p + Move::LEFT);
 
-                puzzle.side_mut()[p] = try!(self.get_side(cp).into());
-                puzzle.edge_h_mut()[p] = try!(self.get_edge(cp, cp_u).into());
-                puzzle.edge_v_mut()[p] = try!(self.get_edge(cp, cp_l).into());
-            }
+            puzzle.side_mut()[p] = try!(self.get_side(cp).into());
+            puzzle.edge_h_mut()[p] = try!(self.get_edge(cp, cp_u).into());
+            puzzle.edge_v_mut()[p] = try!(self.get_edge(cp, cp_l).into());
+        }
 
-            let p = Point(r, puzzle.column());
+        for p in puzzle.points_in_column(puzzle.column()) {
             let cp = puzzle.point_to_cellid(p);
             let cp_l = puzzle.point_to_cellid(p + Move::LEFT);
 
             puzzle.edge_v_mut()[p] = try!(self.get_edge(cp, cp_l).into());
         }
 
-        for c in 0..puzzle.column() {
-            let p = Point(puzzle.row(), c);
+        for p in puzzle.points_in_row(puzzle.row()) {
             let cp = puzzle.point_to_cellid(p);
             let cp_u = puzzle.point_to_cellid(p + Move::UP);
 
@@ -131,25 +128,23 @@ impl SideMap {
 impl<'a> From<&'a Puzzle> for SideMap {
     fn from(puzzle: &'a Puzzle) -> SideMap {
         let mut map = SideMap::new(puzzle);
-        for r in 0..puzzle.row() {
-            for c in 0..puzzle.column() {
-                let p = Point(r, c);
-                let cp = puzzle.point_to_cellid(p);
-                let cp_u = puzzle.point_to_cellid(p + Move::UP);
-                let cp_l = puzzle.point_to_cellid(p + Move::LEFT);
+        for p in puzzle.points() {
+            let cp = puzzle.point_to_cellid(p);
+            let cp_u = puzzle.point_to_cellid(p + Move::UP);
+            let cp_l = puzzle.point_to_cellid(p + Move::LEFT);
 
-                if let Some(side) = puzzle.side()[p] {
-                    map.set_side(cp, side);
-                }
-                if let Some(edge) = puzzle.edge_h()[p] {
-                    map.set_edge(cp, cp_u, edge);
-                }
-                if let Some(edge) = puzzle.edge_v()[p] {
-                    map.set_edge(cp, cp_l, edge);
-                }
+            if let Some(side) = puzzle.side()[p] {
+                map.set_side(cp, side);
             }
+            if let Some(edge) = puzzle.edge_h()[p] {
+                map.set_edge(cp, cp_u, edge);
+            }
+            if let Some(edge) = puzzle.edge_v()[p] {
+                map.set_edge(cp, cp_l, edge);
+            }
+        }
 
-            let p = Point(r, puzzle.column());
+        for p in puzzle.points_in_column(puzzle.column()) {
             let cp = puzzle.point_to_cellid(p);
             let cp_l = puzzle.point_to_cellid(p + Move::LEFT);
 
@@ -157,8 +152,7 @@ impl<'a> From<&'a Puzzle> for SideMap {
                 map.set_edge(cp, cp_l, edge);
             }
         }
-        for c in 0..puzzle.column() {
-            let p = Point(puzzle.row(), c);
+        for p in puzzle.points_in_row(puzzle.row()) {
             let cp = puzzle.point_to_cellid(p);
             let cp_u = puzzle.point_to_cellid(p + Move::UP);
 

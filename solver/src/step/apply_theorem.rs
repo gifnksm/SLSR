@@ -1,5 +1,5 @@
 use std::mem;
-use slsr_core::geom::{Geom, Point, Move, Table};
+use slsr_core::geom::{Geom, Move, Table};
 use slsr_core::puzzle::Hint;
 
 use ::SolverResult;
@@ -35,19 +35,16 @@ impl TheoremPool {
 
         let mut data = vec![];
 
-        for r in 0..hint.row() {
-            for c in 0..hint.column() {
-                let p = Point(r, c);
-                if let Some(x) = hint[p] {
-                    for theo in &hint_theorem[x as usize] {
-                        let o = match theo.head() {
-                            Pattern::Hint(hint) => hint.point(),
-                            _ => panic!()
-                        };
-                        let matcher = theo.clone().shift(p - o);
-                        try!(matcher.matches(hint, sum_of_hint, side_map))
-                            .update(side_map, &mut data);
-                    }
+        for p in hint.points() {
+            if let Some(x) = hint[p] {
+                for theo in &hint_theorem[x as usize] {
+                    let o = match theo.head() {
+                        Pattern::Hint(hint) => hint.point(),
+                        _ => panic!()
+                    };
+                    let matcher = theo.clone().shift(p - o);
+                    try!(matcher.matches(hint, sum_of_hint, side_map))
+                        .update(side_map, &mut data);
                 }
             }
         }

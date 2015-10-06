@@ -37,20 +37,14 @@ impl Area {
                 }
             }
         } else {
-            for r in 0..hint.row() {
-                for &c in &[0, hint.column() - 1] {
-                    let cp2 = hint.point_to_cellid(Point(r, c));
-                    if side_map.get_edge(cp, cp2) == State::Unknown {
-                        edge.push(cp2);
-                    }
-                }
-            }
-            for c in 0..hint.column() {
-                for &r in &[0, hint.row() - 1] {
-                    let cp2 = hint.point_to_cellid(Point(r, c));
-                    if side_map.get_edge(cp, cp2) == State::Unknown {
-                        edge.push(cp2);
-                    }
+            let points = hint.points_in_column(0)
+                .chain(hint.points_in_column(hint.column() - 1))
+                .chain(hint.points_in_row(0))
+                .chain(hint.points_in_row(hint.row() - 1));
+            for p2 in points {
+                let cp2 = hint.point_to_cellid(p2);
+                if side_map.get_edge(cp, cp2) == State::Unknown {
+                    edge.push(cp2);
                 }
             }
         }
@@ -131,16 +125,13 @@ impl ConnectMap {
             uf: uf
         };
 
-        for r in 0..size.row() {
-            for c in 0..size.column() {
-                let p = Point(r, c);
-                let cp = size.point_to_cellid(p);
-                for &r in &Move::ALL_DIRECTIONS {
-                    let p2 = p + r;
-                    let cp2 = size.point_to_cellid(p2);
-                    if side_map.get_edge(cp, cp2) == State::Fixed(Edge::Cross) {
-                        conn_map.union(cp, cp2);
-                    }
+        for p in size.points() {
+            let cp = size.point_to_cellid(p);
+            for &r in &Move::ALL_DIRECTIONS {
+                let p2 = p + r;
+                let cp2 = size.point_to_cellid(p2);
+                if side_map.get_edge(cp, cp2) == State::Fixed(Edge::Cross) {
+                    conn_map.union(cp, cp2);
                 }
             }
         }

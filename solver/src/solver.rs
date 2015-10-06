@@ -1,5 +1,5 @@
 use slsr_core::puzzle::{Puzzle, Side};
-use slsr_core::geom::{CellId, Geom, Point};
+use slsr_core::geom::{CellId, Geom};
 
 use model::connect_map::ConnectMap;
 use model::side_map::SideMap;
@@ -21,12 +21,9 @@ impl<'a> Solver<'a> {
         where I: Iterator<Item=Theorem>
     {
         let mut sum_of_hint = 0;
-        for r in 0..puzzle.row() {
-            for c in 0..puzzle.column() {
-                let p = Point(r, c);
-                if let Some(n) = puzzle.hint()[p] {
-                    sum_of_hint += n as u32;
-                }
+        for p in puzzle.points() {
+            if let Some(n) = puzzle.hint()[p] {
+                sum_of_hint += n as u32;
             }
         }
 

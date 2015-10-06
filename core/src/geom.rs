@@ -1,4 +1,4 @@
-use std::ops::{Add, Mul, Sub, Neg, Index, IndexMut};
+use std::ops::{Add, Mul, Sub, Neg, Index, IndexMut, Range};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Point(pub i32, pub i32);
@@ -152,6 +152,96 @@ pub trait Geom {
                   (idx as i32) % self.column())
         }
     }
+
+    #[inline]
+    fn points(&self) -> Points {
+        if self.row() > 0 && self.column() > 0 {
+            Points { point: Some(Point(0, 0)), size: self.size() }
+        } else {
+            Points { point: None, size: self.size() }
+        }
+    }
+
+    #[inline]
+    fn points_in_row(&self, row: i32) -> PointsInRow {
+        PointsInRow { row: row, columns: 0..self.column() }
+    }
+
+    #[inline]
+    fn points_in_column(&self, column: i32) -> PointsInColumn {
+        PointsInColumn { column: column, rows: 0..self.row() }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct Points {
+    point: Option<Point>,
+    size: Size
+}
+
+impl Iterator for Points {
+    type Item = Point;
+
+    #[inline]
+    fn next(&mut self) -> Option<Point> {
+        if let Some(cur) = self.point {
+            let mut next = cur;
+            let mut end = false;
+            next.1 += 1;
+            if next.1 >= self.size.1 {
+                next.0 += 1;
+                next.1 = 0;
+                if next.0 >= self.size.0 {
+                    end = true;
+                }
+            }
+            if !end {
+                self.point = Some(next);
+            } else {
+                self.point = None;
+            }
+            return Some(cur)
+        }
+        None
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PointsInRow {
+    row: i32,
+    columns: Range<i32>
+}
+
+impl Iterator for PointsInRow {
+    type Item = Point;
+
+    #[inline]
+    fn next(&mut self) -> Option<Point> {
+        if let Some(c) = self.columns.next() {
+            Some(Point(self.row, c))
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct PointsInColumn {
+    rows: Range<i32>,
+    column: i32
+}
+
+impl Iterator for PointsInColumn {
+    type Item = Point;
+
+    #[inline]
+    fn next(&mut self) -> Option<Point> {
+        if let Some(r) = self.rows.next() {
+            Some(Point(r, self.column))
+        } else {
+            None
+        }
+    }
 }
 
 impl Geom for Size {
@@ -209,6 +299,16 @@ impl<T> IndexMut<Point> for Table<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn points() {
+        let pts = [Point(0, 0), Point(0, 1), Point(0, 2),
+                   Point(1, 0), Point(1, 1), Point(1, 2),
+                   Point(2, 0), Point(2, 1), Point(2, 2),
+                   Point(3, 0), Point(3, 1), Point(3, 2)];
+        let size = Size(4, 3);
+        assert_eq!(&pts[..], &size.points().collect::<Vec<_>>()[..]);
+    }
 
     #[test]
     fn rotate_mat() {
