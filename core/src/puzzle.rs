@@ -16,7 +16,8 @@ pub struct Puzzle {
     hint: Table<Hint>,
     side: Table<Option<Side>>,
     edge_v: Table<Option<Edge>>,
-    edge_h: Table<Option<Edge>>
+    edge_h: Table<Option<Edge>>,
+    sum_of_hint: Option<u32>
 }
 
 impl Puzzle {
@@ -27,7 +28,10 @@ impl Puzzle {
         let side = Table::new_empty(size, Some(Side::Out), None);
         let edge_v = Table::new_empty(Size(size.0, size.1 + 1), Some(Edge::Cross), None);
         let edge_h = Table::new_empty(Size(size.0 + 1, size.1), Some(Edge::Cross), None);
-        Puzzle { size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h }
+        Puzzle {
+            size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h,
+            sum_of_hint: None
+        }
     }
 
     #[inline]
@@ -38,7 +42,10 @@ impl Puzzle {
         let side = Table::new(size, Some(Side::Out), side);
         let edge_v = Table::new(Size(size.0, size.1 + 1), Some(Edge::Cross), edge_v);
         let edge_h = Table::new(Size(size.0 + 1, size.1), Some(Edge::Cross), edge_h);
-        Puzzle { size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h }
+        Puzzle {
+            size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h,
+            sum_of_hint: None
+        }
     }
 
     #[inline]
@@ -51,7 +58,10 @@ impl Puzzle {
     pub fn edge_v(&self) -> &Table<Option<Edge>> { &self.edge_v }
 
     #[inline]
-    pub fn hint_mut(&mut self) -> &mut Table<Hint> { &mut self.hint }
+    pub fn hint_mut(&mut self) -> &mut Table<Hint> {
+        self.sum_of_hint = None;
+        &mut self.hint
+    }
     #[inline]
     pub fn side_mut(&mut self) -> &mut Table<Option<Side>> { &mut self.side }
     #[inline]

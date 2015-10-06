@@ -1,8 +1,8 @@
 use std::iter::FromIterator;
 use std::mem;
 use union_find::{Union, UnionFind, UnionResult, QuickFindUf as Uf};
-use slsr_core::puzzle::{Edge, Side};
-use slsr_core::geom::{CellId, Geom, Point, Size, Move, OUTSIDE_CELL_ID};
+use slsr_core::puzzle::{Edge, Hint, Side};
+use slsr_core::geom::{CellId, Geom, Point, Table, Move, OUTSIDE_CELL_ID};
 
 use ::{Error, State, SolverResult};
 use ::model::side_map::SideMap;
@@ -21,6 +21,50 @@ impl Area {
     pub fn side(&self) -> State<Side> { self.side }
     pub fn unknown_edge(&self) -> &[CellId] { &self.unknown_edge }
     pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
+}
+
+impl Area {
+    fn new(p: Point, hint: &Table<Hint>, side_map: &mut SideMap) -> Area {
+        let cp = hint.point_to_cellid(p);
+        let sum = hint[p].unwrap_or(0) as u32;
+
+        let mut edge = vec![];
+        if cp != OUTSIDE_CELL_ID {
+            for &r in &Move::ALL_DIRECTIONS {
+                let cp_r = hint.point_to_cellid(p + r);
+                if side_map.get_edge(cp, cp_r) == State::Unknown {
+                    edge.push(cp_r);
+                }
+            }
+        } else {
+            for r in 0..hint.row() {
+                for &c in &[0, hint.column() - 1] {
+                    let cp2 = hint.point_to_cellid(Point(r, c));
+                    if side_map.get_edge(cp, cp2) == State::Unknown {
+                        edge.push(cp2);
+                    }
+                }
+            }
+            for c in 0..hint.column() {
+                for &r in &[0, hint.row() - 1] {
+                    let cp2 = hint.point_to_cellid(Point(r, c));
+                    if side_map.get_edge(cp, cp2) == State::Unknown {
+                        edge.push(cp2);
+                    }
+                }
+            }
+        }
+        edge.sort();
+        edge.dedup();
+
+        Area {
+            coord: cp,
+            side: side_map.get_side(cp),
+            unknown_edge: edge,
+            sum_of_hint: sum,
+            size: 1
+        }
+    }
 }
 
 impl Union for Area {
@@ -63,27 +107,47 @@ impl Union for Area {
 
 #[derive(Clone, Debug)]
 pub struct ConnectMap {
-    size: Size,
     sum_of_hint: u32,
     uf: Uf<Area>
 }
 
 impl ConnectMap {
-    fn new<F>(size: Size, sum_of_hint: u32, f: F) -> ConnectMap
-        where F: FnMut(Point) -> Area
-    {
-        let len = size.cell_len();
-        let it = (0..len)
-            .map(|id| size.cellid_to_point(CellId::new(id)))
-            .map(f);
+    pub fn new(hint: &Table<Hint>, side_map: &mut SideMap) -> ConnectMap {
+        let size = hint.size();
+        let cell_len = size.cell_len();
 
-        ConnectMap {
-            size: size,
-            sum_of_hint: sum_of_hint,
-            uf: FromIterator::from_iter(it)
+        let mut uf = Uf::from_iter(
+            (0..cell_len)
+                .map(|id| size.cellid_to_point(CellId::new(id)))
+                .map(|p| Area::new(p, hint, side_map)));
+
+        let mut sum_of_hint = 0;
+        for i in 0..cell_len {
+            sum_of_hint += uf.get(i).sum_of_hint;
         }
+
+        let mut conn_map = ConnectMap {
+            sum_of_hint: sum_of_hint,
+            uf: uf
+        };
+
+        for r in 0..size.row() {
+            for c in 0..size.column() {
+                let p = Point(r, c);
+                let cp = size.point_to_cellid(p);
+                for &r in &Move::ALL_DIRECTIONS {
+                    let p2 = p + r;
+                    let cp2 = size.point_to_cellid(p2);
+                    if side_map.get_edge(cp, cp2) == State::Fixed(Edge::Cross) {
+                        conn_map.union(cp, cp2);
+                    }
+                }
+            }
+        }
+        conn_map
     }
 
+    pub fn cell_len(&self) -> usize { self.uf.size() }
     pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
 
     pub fn sync(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
@@ -114,72 +178,6 @@ impl ConnectMap {
     }
     pub fn get_mut(&mut self, i: CellId) -> &mut Area {
         self.uf.get_mut(i.id())
-    }
-}
-
-impl Geom for ConnectMap {
-    fn size(&self) -> Size { self.size }
-}
-
-impl<'a> From<&'a mut SideMap> for ConnectMap {
-    fn from(side_map: &'a mut SideMap) -> ConnectMap {
-        let mut conn_map = ConnectMap::new(side_map.size(),
-                                           side_map.sum_of_hint(), |p| {
-            let cp = side_map.point_to_cellid(p);
-            let sum = side_map.hint()[p].unwrap_or(0);
-
-            let mut edge = vec![];
-            if cp != OUTSIDE_CELL_ID {
-                for &r in &Move::ALL_DIRECTIONS {
-                    let cp_r = side_map.point_to_cellid(p + r);
-                    if side_map.get_edge(cp, cp_r) == State::Unknown {
-                        edge.push(cp_r);
-                    }
-                }
-            } else {
-                for r in 0..side_map.row() {
-                    for &c in &[0, side_map.column() - 1] {
-                        let cp2 = side_map.point_to_cellid(Point(r, c));
-                        if side_map.get_edge(cp, cp2) == State::Unknown {
-                            edge.push(cp2);
-                        }
-                    }
-                }
-                for c in 0..side_map.column() {
-                    for &r in &[0, side_map.row() - 1] {
-                        let cp2 = side_map.point_to_cellid(Point(r, c));
-                        if side_map.get_edge(cp, cp2) == State::Unknown {
-                            edge.push(cp2);
-                        }
-                    }
-                }
-            }
-            edge.sort();
-            edge.dedup();
-
-            Area {
-                coord: cp,
-                side: side_map.get_side(cp),
-                unknown_edge: edge,
-                sum_of_hint: sum as u32,
-                size: 1
-            }
-        });
-
-        for r in 0..side_map.row() {
-            for c in 0..side_map.column() {
-                let p = Point(r, c);
-                let cp = side_map.point_to_cellid(p);
-                for &r in &Move::ALL_DIRECTIONS {
-                    let p2 = p + r;
-                    let cp2 = side_map.point_to_cellid(p2);
-                    if side_map.get_edge(cp, cp2) == State::Fixed(Edge::Cross) {
-                        conn_map.union(cp, cp2);
-                    }
-                }
-            }
-        }
-        conn_map
     }
 }
 

@@ -1,5 +1,5 @@
 use slsr_core::puzzle::{Puzzle, Side};
-use slsr_core::geom::{CellId, Geom};
+use slsr_core::geom::{CellId, Geom, Point};
 
 use model::connect_map::ConnectMap;
 use model::side_map::SideMap;
@@ -8,19 +8,36 @@ use step::apply_theorem::TheoremPool;
 use ::{Error, SolverResult, State};
 
 #[derive(Clone, Debug)]
-pub struct Solver {
+pub struct Solver<'a> {
+    puzzle: &'a Puzzle,
+    sum_of_hint: u32,
     theorem_pool: TheoremPool,
     side_map: SideMap,
     connect_map: Option<ConnectMap>
 }
 
-impl Solver {
-    pub fn new<I>(puzzle: &Puzzle, theorem: I) -> SolverResult<Solver>
+impl<'a> Solver<'a> {
+    pub fn new<I>(puzzle: &'a Puzzle, theorem: I) -> SolverResult<Solver<'a>>
         where I: Iterator<Item=Theorem>
     {
+        let mut sum_of_hint = 0;
+        for r in 0..puzzle.row() {
+            for c in 0..puzzle.column() {
+                let p = Point(r, c);
+                if let Some(n) = puzzle.hint()[p] {
+                    sum_of_hint += n as u32;
+                }
+            }
+        }
+
         let mut side_map = SideMap::from(puzzle);
+        let pool = try!(TheoremPool::new(
+            theorem, puzzle.hint(), sum_of_hint, &mut side_map));
+
         Ok(Solver {
-            theorem_pool: try!(TheoremPool::new(theorem, &mut side_map)),
+            puzzle: puzzle,
+            sum_of_hint: sum_of_hint,
+            theorem_pool: pool,
             side_map: side_map,
             connect_map: None
         })
@@ -79,7 +96,9 @@ impl Solver {
 
     fn create_connect_map(&mut self) {
         if self.connect_map.is_none() {
-            self.connect_map = Some(ConnectMap::from(&mut self.side_map));
+            let conn_map = ConnectMap::new(self.puzzle.hint(),
+                                           &mut self.side_map);
+            self.connect_map = Some(conn_map);
         }
     }
     fn connect_map(&mut self) -> &mut ConnectMap {
@@ -101,8 +120,10 @@ impl Solver {
     // }
 }
 
-impl Into<SolverResult<Puzzle>> for Solver {
-    fn into(self) -> SolverResult<Puzzle> {
-        self.side_map.into()
+impl<'a> Into<SolverResult<Puzzle>> for Solver<'a> {
+    fn into(mut self) -> SolverResult<Puzzle> {
+        let mut puzzle = self.puzzle.clone();
+        try!(self.side_map.complete_puzzle(&mut puzzle));
+        Ok(puzzle)
     }
 }

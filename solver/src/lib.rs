@@ -68,9 +68,9 @@ impl Error {
 
 pub type SolverResult<T> = Result<T, Error>;
 
-enum FillResult {
-    Completed(Solver),
-    Partial(Solver, Vec<CellId>)
+enum FillResult<'a> {
+    Completed(Solver<'a>),
+    Partial(Solver<'a>, Vec<CellId>)
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -159,12 +159,12 @@ fn fill(mut solver: Solver) -> SolverResult<FillResult> {
 }
 
 #[derive(Clone, Debug)]
-pub struct Solutions {
-    queue: Vec<Solver>
+pub struct Solutions<'a> {
+    queue: Vec<Solver<'a>>
 }
 
-impl Solutions {
-    pub fn new(puzzle: &Puzzle) -> SolverResult<Solutions> {
+impl<'a> Solutions<'a> {
+    pub fn new(puzzle: &'a Puzzle) -> SolverResult<Solutions<'a>> {
         let theorem = THEOREM_DEFINE.iter().map(|theo| theo.parse().unwrap());
         Ok(Solutions {
             queue: vec![try!(Solver::new(puzzle, theorem))]
@@ -172,7 +172,7 @@ impl Solutions {
     }
 }
 
-impl Iterator for Solutions {
+impl<'a> Iterator for Solutions<'a> {
     type Item = Puzzle;
 
     fn next(&mut self) -> Option<Puzzle> {

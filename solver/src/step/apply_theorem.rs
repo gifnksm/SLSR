@@ -1,9 +1,10 @@
 use std::mem;
-use slsr_core::geom::{Geom, Point, Move};
+use slsr_core::geom::{Geom, Point, Move, Table};
+use slsr_core::puzzle::Hint;
 
 use ::SolverResult;
 use ::model::side_map::SideMap;
-use ::model::theorem::{Match, Pattern, Theorem, TheoremMatcher, TheoremMatchResult};
+use ::model::theorem::{Pattern, Theorem, TheoremMatcher};
 
 #[derive(Clone, Debug)]
 pub struct TheoremPool {
@@ -11,7 +12,11 @@ pub struct TheoremPool {
 }
 
 impl TheoremPool {
-    pub fn new<'a, T>(theo_defs: T, side_map: &mut SideMap) -> SolverResult<TheoremPool>
+    pub fn new<'a, T>(theo_defs: T,
+                      hint: &Table<Hint>,
+                      sum_of_hint: u32,
+                      side_map: &mut SideMap)
+                      -> SolverResult<TheoremPool>
         where T: IntoIterator<Item=Theorem>
     {
         let it = theo_defs
@@ -30,17 +35,18 @@ impl TheoremPool {
 
         let mut data = vec![];
 
-        for r in 0..side_map.row() {
-            for c in 0..side_map.column() {
+        for r in 0..hint.row() {
+            for c in 0..hint.column() {
                 let p = Point(r, c);
-                if let Some(x) = side_map.hint()[p] {
+                if let Some(x) = hint[p] {
                     for theo in &hint_theorem[x as usize] {
                         let o = match theo.head() {
                             Pattern::Hint(hint) => hint.point(),
                             _ => panic!()
                         };
                         let matcher = theo.clone().shift(p - o);
-                        try!(Self::matches(matcher, side_map, &mut data));
+                        try!(matcher.matches(hint, sum_of_hint, side_map))
+                            .update(side_map, &mut data);
                     }
                 }
             }
@@ -48,10 +54,11 @@ impl TheoremPool {
 
         for theo in nonhint_theorem {
             let sz = theo.size();
-            for r in (1 - sz.0)..(side_map.row() + sz.0 - 1) {
-                for c in (1 - sz.1)..(side_map.column() + sz.1 - 1) {
+            for r in (1 - sz.0)..(hint.row() + sz.0 - 1) {
+                for c in (1 - sz.1)..(hint.column() + sz.1 - 1) {
                     let matcher = theo.clone().shift(Move(r, c));
-                    try!(Self::matches(matcher, side_map, &mut data));
+                    try!(matcher.matches(hint, sum_of_hint, side_map))
+                        .update(side_map, &mut data);
                 }
             }
         }
@@ -64,29 +71,10 @@ impl TheoremPool {
 
     pub fn apply_all(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
         let cap = self.data.len();
+
         for matcher in mem::replace(&mut self.data, Vec::with_capacity(cap)) {
-            try!(Self::matches(matcher, side_map, &mut self.data));
-        }
-
-        Ok(())
-    }
-
-    fn matches<M>(matcher: M,
-                  side_map: &mut SideMap,
-                  new_matchers: &mut Vec<TheoremMatcher>
-                  ) -> SolverResult<()>
-        where M: Match
-    {
-        match try!(matcher.matches(side_map)) {
-            TheoremMatchResult::Complete(result) => {
-                for pat in &result {
-                    pat.apply(side_map);
-                }
-            }
-            TheoremMatchResult::Partial(theo) => {
-                new_matchers.push(theo)
-            }
-            TheoremMatchResult::Conflict => {}
+            try!(matcher.matches(side_map))
+                .update(side_map, &mut self.data);
         }
 
         Ok(())

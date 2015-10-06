@@ -2,8 +2,8 @@ use std::fmt;
 use std::str::FromStr;
 use std::error::Error as ErrorTrait;
 
-use slsr_core::puzzle::Edge;
-use slsr_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
+use slsr_core::puzzle::{Edge, Hint};
+use slsr_core::geom::{CellId, Geom, Point, Rotation, Table, Move, Size};
 use slsr_core::lattice_parser::{LatticeParser, ParseLatticeError};
 
 use ::{Error, State, SolverResult};
@@ -35,9 +35,9 @@ impl HintPattern {
         self.normalized()
     }
 
-    fn matches<T>(self, side_map: &mut SideMap)
+    fn matches<T>(self, hint: &Table<Hint>)
                   -> SolverResult<PatternMatchResult<T>> {
-        if side_map.hint()[self.point] == Some(self.hint) {
+        if hint[self.point] == Some(self.hint) {
             Ok(PatternMatchResult::Complete)
         } else {
             Ok(PatternMatchResult::Conflict)
@@ -78,15 +78,15 @@ impl EdgePattern<Point> {
         self.normalized()
     }
 
-    fn to_cellid(self, side_map: &mut SideMap) -> EdgePattern<CellId> {
-        let p0 = side_map.point_to_cellid(self.points.0);
-        let p1 = side_map.point_to_cellid(self.points.1);
+    fn to_cellid(self, size: Size) -> EdgePattern<CellId> {
+        let p0 = size.point_to_cellid(self.points.0);
+        let p1 = size.point_to_cellid(self.points.1);
         EdgePattern { edge: self.edge, points: (p0, p1) }
     }
 
-    fn matches(self, side_map: &mut SideMap)
+    fn matches(self, size: Size, side_map: &mut SideMap)
                -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
-        self.to_cellid(side_map).matches(side_map)
+        self.to_cellid(size).matches(side_map)
     }
 }
 
@@ -147,17 +147,13 @@ impl Pattern {
         }
     }
 
-    fn matches(self, side_map: &mut SideMap)
+    fn matches(self, hint: &Table<Hint>, side_map: &mut SideMap)
                -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
         match self {
-            Pattern::Hint(h) => h.matches(side_map),
-            Pattern::Edge(e) => e.matches(side_map)
+            Pattern::Hint(h) => h.matches(hint),
+            Pattern::Edge(e) => e.matches(hint.size(), side_map)
         }
     }
-}
-
-pub trait Match {
-    fn matches(mut self, side_map: &mut SideMap) -> SolverResult<TheoremMatchResult>;
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
@@ -240,14 +236,19 @@ impl Theorem {
     pub fn size(&self) -> Size { self.size }
     pub fn head(&self) -> Pattern { self.matcher[0] }
 
-    fn can_close(side_map: &mut SideMap, sum: u32, hint: &[HintPattern]) -> bool {
-        if side_map.sum_of_hint() > sum {
+    fn can_close(hint: &Table<Hint>,
+                 sum_of_hint: u32,
+                 hpat: &[HintPattern],
+                 sum_of_hpat: u32)
+                 -> bool
+    {
+        if sum_of_hint > sum_of_hpat {
             return false;
         }
 
         let mut ava_sum = 0;
-        for h in hint {
-            if let Some(n) = side_map.hint()[h.point] {
+        for h in hpat {
+            if let Some(n) = hint[h.point] {
                 if n != h.hint {
                     return false;
                 }
@@ -255,21 +256,24 @@ impl Theorem {
             }
         }
 
-        if ava_sum != side_map.sum_of_hint() {
+        if ava_sum != sum_of_hint {
             return false;
         }
 
         return true;
     }
-}
 
-impl Match for Theorem {
-    fn matches(self, side_map: &mut SideMap) -> SolverResult<TheoremMatchResult> {
+    pub fn matches(self,
+                   hint: &Table<Hint>,
+                   sum_of_hint: u32,
+                   side_map: &mut SideMap)
+                   -> SolverResult<TheoremMatchResult>
+    {
         let cap = self.matcher.len();
         let mut new_matcher = Vec::with_capacity(cap);
 
         for matcher in self.matcher {
-            match try!(matcher.matches(side_map)) {
+            match try!(matcher.matches(hint, side_map)) {
                 PatternMatchResult::Complete => {},
                 PatternMatchResult::Partial(m) => new_matcher.push(m),
                 PatternMatchResult::Conflict => {
@@ -278,15 +282,15 @@ impl Match for Theorem {
             }
         }
 
-        if let Some((sum, ref hint)) = self.closed_hint {
-            if Theorem::can_close(side_map, sum, hint) {
+        if let Some((sum_of_hpat, ref hpat)) = self.closed_hint {
+            if Theorem::can_close(hint, sum_of_hint, hpat, sum_of_hpat) {
                 return Ok(TheoremMatchResult::Conflict)
             }
         }
 
         let result = self.result
             .into_iter()
-            .map(|pat| pat.to_cellid(side_map))
+            .map(|pat| pat.to_cellid(hint.size()))
             .collect();
 
         if new_matcher.is_empty() {
@@ -313,6 +317,22 @@ pub enum TheoremMatchResult {
     Conflict
 }
 
+impl TheoremMatchResult {
+    pub fn update(self, side_map: &mut SideMap, new_theorem: &mut Vec<TheoremMatcher>) {
+        match self {
+            TheoremMatchResult::Complete(result) => {
+                for pat in &result {
+                    pat.apply(side_map);
+                }
+            }
+            TheoremMatchResult::Partial(theo) => {
+                new_theorem.push(theo)
+            }
+            TheoremMatchResult::Conflict => {}
+        }
+    }
+}
+
 impl TheoremMatcher {
     pub fn merge(&mut self, other: &TheoremMatcher) -> Result<(), ()> {
         if self.matcher != other.matcher {
@@ -324,10 +344,8 @@ impl TheoremMatcher {
         self.result.dedup();
         Ok(())
     }
-}
 
-impl Match for TheoremMatcher {
-    fn matches(mut self, side_map: &mut SideMap) -> SolverResult<TheoremMatchResult> {
+    pub fn matches(mut self, side_map: &mut SideMap) -> SolverResult<TheoremMatchResult> {
         unsafe {
             // Assume the elements of self.matcher is copyable.
             let len = self.matcher.len();
