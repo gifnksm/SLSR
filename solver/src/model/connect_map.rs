@@ -1,8 +1,8 @@
 use std::iter::FromIterator;
 use std::mem;
 use union_find::{Union, UnionFind, UnionResult, QuickFindUf as Uf};
-use slsr_core::puzzle::{Edge, Hint, Side};
-use slsr_core::geom::{CellId, Geom, Point, Table, Move, OUTSIDE_CELL_ID};
+use slsr_core::puzzle::{Edge, Puzzle, Side};
+use slsr_core::geom::{CellId, Geom, Point, Move, OUTSIDE_CELL_ID};
 
 use ::{Error, State, SolverResult};
 use ::model::side_map::SideMap;
@@ -24,25 +24,25 @@ impl Area {
 }
 
 impl Area {
-    fn new(p: Point, hint: &Table<Hint>, side_map: &mut SideMap) -> Area {
-        let cp = hint.point_to_cellid(p);
-        let sum = hint[p].unwrap_or(0) as u32;
+    fn new(p: Point, puzzle: &Puzzle, side_map: &mut SideMap) -> Area {
+        let cp = puzzle.point_to_cellid(p);
+        let sum = puzzle.hint(p).unwrap_or(0) as u32;
 
         let mut edge = vec![];
         if cp != OUTSIDE_CELL_ID {
             for &r in &Move::ALL_DIRECTIONS {
-                let cp_r = hint.point_to_cellid(p + r);
+                let cp_r = puzzle.point_to_cellid(p + r);
                 if side_map.get_edge(cp, cp_r) == State::Unknown {
                     edge.push(cp_r);
                 }
             }
         } else {
-            let points = hint.points_in_column(0)
-                .chain(hint.points_in_column(hint.column() - 1))
-                .chain(hint.points_in_row(0))
-                .chain(hint.points_in_row(hint.row() - 1));
+            let points = puzzle.points_in_column(0)
+                .chain(puzzle.points_in_column(puzzle.column() - 1))
+                .chain(puzzle.points_in_row(0))
+                .chain(puzzle.points_in_row(puzzle.row() - 1));
             for p2 in points {
-                let cp2 = hint.point_to_cellid(p2);
+                let cp2 = puzzle.point_to_cellid(p2);
                 if side_map.get_edge(cp, cp2) == State::Unknown {
                     edge.push(cp2);
                 }
@@ -106,14 +106,14 @@ pub struct ConnectMap {
 }
 
 impl ConnectMap {
-    pub fn new(hint: &Table<Hint>, side_map: &mut SideMap) -> ConnectMap {
-        let size = hint.size();
+    pub fn new(puzzle: &Puzzle, side_map: &mut SideMap) -> ConnectMap {
+        let size = puzzle.size();
         let cell_len = size.cell_len();
 
         let mut uf = Uf::from_iter(
             (0..cell_len)
                 .map(|id| size.cellid_to_point(CellId::new(id)))
-                .map(|p| Area::new(p, hint, side_map)));
+                .map(|p| Area::new(p, puzzle, side_map)));
 
         let mut sum_of_hint = 0;
         for i in 0..cell_len {

@@ -1,6 +1,6 @@
 use std::mem;
-use slsr_core::geom::{Geom, Move, Table};
-use slsr_core::puzzle::Hint;
+use slsr_core::geom::{Geom, Move};
+use slsr_core::puzzle::Puzzle;
 
 use ::SolverResult;
 use ::model::side_map::SideMap;
@@ -13,7 +13,7 @@ pub struct TheoremPool {
 
 impl TheoremPool {
     pub fn new<'a, T>(theo_defs: T,
-                      hint: &Table<Hint>,
+                      puzzle: &Puzzle,
                       sum_of_hint: u32,
                       side_map: &mut SideMap)
                       -> SolverResult<TheoremPool>
@@ -35,15 +35,15 @@ impl TheoremPool {
 
         let mut data = vec![];
 
-        for p in hint.points() {
-            if let Some(x) = hint[p] {
+        for p in puzzle.points() {
+            if let Some(x) = puzzle.hint(p) {
                 for theo in &hint_theorem[x as usize] {
                     let o = match theo.head() {
                         Pattern::Hint(hint) => hint.point(),
                         _ => panic!()
                     };
                     let matcher = theo.clone().shift(p - o);
-                    try!(matcher.matches(hint, sum_of_hint, side_map))
+                    try!(matcher.matches(puzzle, sum_of_hint, side_map))
                         .update(side_map, &mut data);
                 }
             }
@@ -51,10 +51,10 @@ impl TheoremPool {
 
         for theo in nonhint_theorem {
             let sz = theo.size();
-            for r in (1 - sz.0)..(hint.row() + sz.0 - 1) {
-                for c in (1 - sz.1)..(hint.column() + sz.1 - 1) {
+            for r in (1 - sz.0)..(puzzle.row() + sz.0 - 1) {
+                for c in (1 - sz.1)..(puzzle.column() + sz.1 - 1) {
                     let matcher = theo.clone().shift(Move(r, c));
-                    try!(matcher.matches(hint, sum_of_hint, side_map))
+                    try!(matcher.matches(puzzle, sum_of_hint, side_map))
                         .update(side_map, &mut data);
                 }
             }

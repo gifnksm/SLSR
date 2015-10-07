@@ -103,23 +103,23 @@ impl SideMap {
             let cp_u = puzzle.point_to_cellid(p + Move::UP);
             let cp_l = puzzle.point_to_cellid(p + Move::LEFT);
 
-            puzzle.side_mut()[p] = try!(self.get_side(cp).into());
-            puzzle.edge_h_mut()[p] = try!(self.get_edge(cp, cp_u).into());
-            puzzle.edge_v_mut()[p] = try!(self.get_edge(cp, cp_l).into());
+            puzzle.set_side(p, try!(self.get_side(cp).into()));
+            puzzle.set_edge_h(p, try!(self.get_edge(cp, cp_u).into()));
+            puzzle.set_edge_v(p, try!(self.get_edge(cp, cp_l).into()));
         }
 
         for p in puzzle.points_in_column(puzzle.column()) {
             let cp = puzzle.point_to_cellid(p);
             let cp_l = puzzle.point_to_cellid(p + Move::LEFT);
 
-            puzzle.edge_v_mut()[p] = try!(self.get_edge(cp, cp_l).into());
+            puzzle.set_edge_v(p, try!(self.get_edge(cp, cp_l).into()));
         }
 
         for p in puzzle.points_in_row(puzzle.row()) {
             let cp = puzzle.point_to_cellid(p);
             let cp_u = puzzle.point_to_cellid(p + Move::UP);
 
-            puzzle.edge_h_mut()[p] = try!(self.get_edge(cp, cp_u).into());
+            puzzle.set_edge_h(p, try!(self.get_edge(cp, cp_u).into()));
         }
         Ok(())
     }
@@ -133,13 +133,13 @@ impl<'a> From<&'a Puzzle> for SideMap {
             let cp_u = puzzle.point_to_cellid(p + Move::UP);
             let cp_l = puzzle.point_to_cellid(p + Move::LEFT);
 
-            if let Some(side) = puzzle.side()[p] {
+            if let Some(side) = puzzle.side(p) {
                 map.set_side(cp, side);
             }
-            if let Some(edge) = puzzle.edge_h()[p] {
+            if let Some(edge) = puzzle.edge_h(p) {
                 map.set_edge(cp, cp_u, edge);
             }
-            if let Some(edge) = puzzle.edge_v()[p] {
+            if let Some(edge) = puzzle.edge_v(p) {
                 map.set_edge(cp, cp_l, edge);
             }
         }
@@ -148,7 +148,7 @@ impl<'a> From<&'a Puzzle> for SideMap {
             let cp = puzzle.point_to_cellid(p);
             let cp_l = puzzle.point_to_cellid(p + Move::LEFT);
 
-            if let Some(edge) = puzzle.edge_v()[p] {
+            if let Some(edge) = puzzle.edge_v(p) {
                 map.set_edge(cp, cp_l, edge);
             }
         }
@@ -156,7 +156,7 @@ impl<'a> From<&'a Puzzle> for SideMap {
             let cp = puzzle.point_to_cellid(p);
             let cp_u = puzzle.point_to_cellid(p + Move::UP);
 
-            if let Some(edge) = puzzle.edge_h()[p] {
+            if let Some(edge) = puzzle.edge_h(p) {
                 map.set_edge(cp, cp_u, edge);
             }
         }

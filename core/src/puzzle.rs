@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt;
 
-use ::geom::{Geom, Size, Table};
+use ::geom::{Geom, Point, Size, Table};
 use ::lattice_parser::ParseLatticeError;
 
 pub type Hint = Option<u8>;
@@ -17,57 +17,77 @@ pub struct Puzzle {
     side: Table<Option<Side>>,
     edge_v: Table<Option<Edge>>,
     edge_h: Table<Option<Edge>>,
-    sum_of_hint: Option<u32>
+    sum_of_hint: u32
 }
 
 impl Puzzle {
     #[inline]
     pub fn new(size: Size) -> Puzzle {
         assert!(size.0 > 0 && size.1 > 0);
-        let hint = Table::new_empty(size, None, None);
-        let side = Table::new_empty(size, Some(Side::Out), None);
-        let edge_v = Table::new_empty(Size(size.0, size.1 + 1), Some(Edge::Cross), None);
-        let edge_h = Table::new_empty(Size(size.0 + 1, size.1), Some(Edge::Cross), None);
-        Puzzle {
-            size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h,
-            sum_of_hint: None
-        }
+        let hint = vec![None; (size.0 * size.1) as usize];
+        let side = vec![None; (size.0 * size.1) as usize];
+        let edge_v = vec![None; (size.0 * (size.1 + 1)) as usize];
+        let edge_h = vec![None; ((size.0 + 1) * size.1) as usize];
+        Puzzle::with_data(size, hint, side, edge_v, edge_h)
     }
 
     #[inline]
     fn with_data(size: Size, hint: Vec<Hint>, side: Vec<Option<Side>>,
                  edge_v: Vec<Option<Edge>>, edge_h: Vec<Option<Edge>>) -> Puzzle {
         assert!(size.0 > 0 && size.1 > 0);
+        let mut sum_of_hint = 0;
+        for &h in &hint {
+            if let Some(n) = h {
+                sum_of_hint += n as u32;
+            }
+        }
         let hint = Table::new(size, None, hint);
         let side = Table::new(size, Some(Side::Out), side);
         let edge_v = Table::new(Size(size.0, size.1 + 1), Some(Edge::Cross), edge_v);
         let edge_h = Table::new(Size(size.0 + 1, size.1), Some(Edge::Cross), edge_h);
         Puzzle {
             size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h,
-            sum_of_hint: None
+            sum_of_hint: sum_of_hint
         }
     }
 
     #[inline]
-    pub fn hint(&self) -> &Table<Hint> { &self.hint }
-    #[inline]
-    pub fn side(&self) -> &Table<Option<Side>> { &self.side }
-    #[inline]
-    pub fn edge_h(&self) -> &Table<Option<Edge>> { &self.edge_h }
-    #[inline]
-    pub fn edge_v(&self) -> &Table<Option<Edge>> { &self.edge_v }
-
-    #[inline]
-    pub fn hint_mut(&mut self) -> &mut Table<Hint> {
-        self.sum_of_hint = None;
-        &mut self.hint
+    pub fn hint(&self, p: Point) -> Hint {
+        self.hint[p]
     }
     #[inline]
-    pub fn side_mut(&mut self) -> &mut Table<Option<Side>> { &mut self.side }
+    pub fn set_hint(&mut self, p: Point, hint: Hint) {
+        if let Some(n) = self.hint[p] {
+            self.sum_of_hint -= n as u32;
+        }
+        if let Some(n) = hint {
+            self.sum_of_hint += n as u32;
+        }
+        self.hint[p] = hint;
+    }
+
     #[inline]
-    pub fn edge_h_mut(&mut self) -> &mut Table<Option<Edge>> { &mut self.edge_h }
+    pub fn side(&self, p: Point) -> Option<Side> {
+        self.side[p]
+    }
     #[inline]
-    pub fn edge_v_mut(&mut self) -> &mut Table<Option<Edge>> { &mut self.edge_v }
+    pub fn set_side(&mut self, p: Point, side: Option<Side>) {
+        self.side[p] = side;
+    }
+
+    #[inline]
+    pub fn edge_h(&self, p: Point) -> Option<Edge> { self.edge_h[p] }
+    #[inline]
+    pub fn set_edge_h(&mut self, p: Point, edge: Option<Edge>) {
+        self.edge_h[p] = edge;
+    }
+
+    #[inline]
+    pub fn edge_v(&self, p: Point) -> Option<Edge> { self.edge_v[p] }
+    #[inline]
+    pub fn set_edge_v(&mut self, p: Point, edge: Option<Edge>) {
+        self.edge_v[p] = edge;
+    }
 }
 
 impl Geom for Puzzle {
@@ -358,37 +378,34 @@ ______
 3_____
 ";
         let puzzle = input.parse::<Puzzle>().unwrap();
-        let hint = puzzle.hint();
-        assert_eq!(Size(3, 6), hint.size());
-        assert_eq!(Some(1), hint[Point(0, 0)]);
-        assert_eq!(Some(2), hint[Point(0, 1)]);
-        assert_eq!(Some(3), hint[Point(0, 2)]);
-        assert_eq!(None, hint[Point(0, 3)]);
-        assert_eq!(None, hint[Point(0, 4)]);
-        assert_eq!(None, hint[Point(0, 5)]);
-        assert_eq!(None, hint[Point(1, 0)]);
-        assert_eq!(None, hint[Point(1, 1)]);
-        assert_eq!(None, hint[Point(1, 2)]);
-        assert_eq!(None, hint[Point(1, 3)]);
-        assert_eq!(None, hint[Point(1, 4)]);
-        assert_eq!(None, hint[Point(1, 5)]);
-        assert_eq!(Some(3), hint[Point(2, 0)]);
-        assert_eq!(None, hint[Point(2, 1)]);
-        assert_eq!(None, hint[Point(2, 2)]);
-        assert_eq!(None, hint[Point(2, 3)]);
-        assert_eq!(None, hint[Point(2, 4)]);
-        assert_eq!(None, hint[Point(2, 5)]);
-
+        assert_eq!(Size(3, 6), puzzle.size());
+        assert_eq!(Some(1), puzzle.hint(Point(0, 0)));
+        assert_eq!(Some(2), puzzle.hint(Point(0, 1)));
+        assert_eq!(Some(3), puzzle.hint(Point(0, 2)));
+        assert_eq!(None, puzzle.hint(Point(0, 3)));
+        assert_eq!(None, puzzle.hint(Point(0, 4)));
+        assert_eq!(None, puzzle.hint(Point(0, 5)));
+        assert_eq!(None, puzzle.hint(Point(1, 0)));
+        assert_eq!(None, puzzle.hint(Point(1, 1)));
+        assert_eq!(None, puzzle.hint(Point(1, 2)));
+        assert_eq!(None, puzzle.hint(Point(1, 3)));
+        assert_eq!(None, puzzle.hint(Point(1, 4)));
+        assert_eq!(None, puzzle.hint(Point(1, 5)));
+        assert_eq!(Some(3), puzzle.hint(Point(2, 0)));
+        assert_eq!(None, puzzle.hint(Point(2, 1)));
+        assert_eq!(None, puzzle.hint(Point(2, 2)));
+        assert_eq!(None, puzzle.hint(Point(2, 3)));
+        assert_eq!(None, puzzle.hint(Point(2, 4)));
+        assert_eq!(None, puzzle.hint(Point(2, 5)));
         assert_eq!(&puzzle,
                    puzzle.to_string().parse::<Puzzle>().as_ref().unwrap());
 
         let puzzle = "1243".parse::<Puzzle>().unwrap();
-        let hint = puzzle.hint();
-        assert_eq!(Size(1, 4), hint.size());
-        assert_eq!(Some(1), hint[Point(0, 0)]);
-        assert_eq!(Some(2), hint[Point(0, 1)]);
-        assert_eq!(Some(4), hint[Point(0, 2)]);
-        assert_eq!(Some(3), hint[Point(0, 3)]);
+        assert_eq!(Size(1, 4), puzzle.size());
+        assert_eq!(Some(1), puzzle.hint(Point(0, 0)));
+        assert_eq!(Some(2), puzzle.hint(Point(0, 1)));
+        assert_eq!(Some(4), puzzle.hint(Point(0, 2)));
+        assert_eq!(Some(3), puzzle.hint(Point(0, 3)));
 
         assert!("1253".parse::<Puzzle>().is_err());
 
@@ -407,9 +424,8 @@ ______
 ";
 
         let puzzle = input.parse::<Puzzle>().unwrap();
-        let hint = puzzle.hint();
-        assert_eq!(Some(1), hint[Point(1, 1)]);
-        assert_eq!(Some(2), hint[Point(1, 3)]);
+        assert_eq!(Some(1), puzzle.hint(Point(1, 1)));
+        assert_eq!(Some(2), puzzle.hint(Point(1, 3)));
         assert_eq!(output, puzzle.to_string());
 
         assert!("".parse::<Puzzle>().is_err());
@@ -420,9 +436,8 @@ ______
 + + + +
 ";
         let puzzle = input.parse::<Puzzle>().unwrap();
-        let hint = puzzle.hint();
-        assert_eq!(Some(1), hint[Point(0, 0)]);
-        assert_eq!(Some(2), hint[Point(0, 1)]);
-        assert_eq!(Some(3), hint[Point(0, 2)]);
+        assert_eq!(Some(1), puzzle.hint(Point(0, 0)));
+        assert_eq!(Some(2), puzzle.hint(Point(0, 1)));
+        assert_eq!(Some(3), puzzle.hint(Point(0, 2)));
     }
 }

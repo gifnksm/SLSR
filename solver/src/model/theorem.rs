@@ -2,8 +2,8 @@ use std::fmt;
 use std::str::FromStr;
 use std::error::Error as ErrorTrait;
 
-use slsr_core::puzzle::{Edge, Hint};
-use slsr_core::geom::{CellId, Geom, Point, Rotation, Table, Move, Size};
+use slsr_core::puzzle::{Edge, Puzzle};
+use slsr_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
 use slsr_core::lattice_parser::{LatticeParser, ParseLatticeError};
 
 use ::{Error, State, SolverResult};
@@ -35,9 +35,8 @@ impl HintPattern {
         self.normalized()
     }
 
-    fn matches<T>(self, hint: &Table<Hint>)
-                  -> SolverResult<PatternMatchResult<T>> {
-        if hint[self.point] == Some(self.hint) {
+    fn matches<T>(self, puzzle: &Puzzle) -> SolverResult<PatternMatchResult<T>> {
+        if puzzle.hint(self.point) == Some(self.hint) {
             Ok(PatternMatchResult::Complete)
         } else {
             Ok(PatternMatchResult::Conflict)
@@ -147,11 +146,11 @@ impl Pattern {
         }
     }
 
-    fn matches(self, hint: &Table<Hint>, side_map: &mut SideMap)
+    fn matches(self, puzzle: &Puzzle, side_map: &mut SideMap)
                -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
         match self {
-            Pattern::Hint(h) => h.matches(hint),
-            Pattern::Edge(e) => e.matches(hint.size(), side_map)
+            Pattern::Hint(h) => h.matches(puzzle),
+            Pattern::Edge(e) => e.matches(puzzle.size(), side_map)
         }
     }
 }
@@ -236,7 +235,7 @@ impl Theorem {
     pub fn size(&self) -> Size { self.size }
     pub fn head(&self) -> Pattern { self.matcher[0] }
 
-    fn can_close(hint: &Table<Hint>,
+    fn can_close(puzzle: &Puzzle,
                  sum_of_hint: u32,
                  hpat: &[HintPattern],
                  sum_of_hpat: u32)
@@ -248,7 +247,7 @@ impl Theorem {
 
         let mut ava_sum = 0;
         for h in hpat {
-            if let Some(n) = hint[h.point] {
+            if let Some(n) = puzzle.hint(h.point) {
                 if n != h.hint {
                     return false;
                 }
@@ -264,7 +263,7 @@ impl Theorem {
     }
 
     pub fn matches(self,
-                   hint: &Table<Hint>,
+                   puzzle: &Puzzle,
                    sum_of_hint: u32,
                    side_map: &mut SideMap)
                    -> SolverResult<TheoremMatchResult>
@@ -273,7 +272,7 @@ impl Theorem {
         let mut new_matcher = Vec::with_capacity(cap);
 
         for matcher in self.matcher {
-            match try!(matcher.matches(hint, side_map)) {
+            match try!(matcher.matches(puzzle, side_map)) {
                 PatternMatchResult::Complete => {},
                 PatternMatchResult::Partial(m) => new_matcher.push(m),
                 PatternMatchResult::Conflict => {
@@ -283,14 +282,14 @@ impl Theorem {
         }
 
         if let Some((sum_of_hpat, ref hpat)) = self.closed_hint {
-            if Theorem::can_close(hint, sum_of_hint, hpat, sum_of_hpat) {
+            if Theorem::can_close(puzzle, sum_of_hint, hpat, sum_of_hpat) {
                 return Ok(TheoremMatchResult::Conflict)
             }
         }
 
         let result = self.result
             .into_iter()
-            .map(|pat| pat.to_cellid(hint.size()))
+            .map(|pat| pat.to_cellid(puzzle.size()))
             .collect();
 
         if new_matcher.is_empty() {

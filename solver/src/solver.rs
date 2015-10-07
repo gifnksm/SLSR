@@ -22,14 +22,14 @@ impl<'a> Solver<'a> {
     {
         let mut sum_of_hint = 0;
         for p in puzzle.points() {
-            if let Some(n) = puzzle.hint()[p] {
+            if let Some(n) = puzzle.hint(p) {
                 sum_of_hint += n as u32;
             }
         }
 
         let mut side_map = SideMap::from(puzzle);
         let pool = try!(TheoremPool::new(
-            theorem, puzzle.hint(), sum_of_hint, &mut side_map));
+            theorem, puzzle, sum_of_hint, &mut side_map));
 
         Ok(Solver {
             puzzle: puzzle,
@@ -93,8 +93,7 @@ impl<'a> Solver<'a> {
 
     fn create_connect_map(&mut self) {
         if self.connect_map.is_none() {
-            let conn_map = ConnectMap::new(self.puzzle.hint(),
-                                           &mut self.side_map);
+            let conn_map = ConnectMap::new(self.puzzle, &mut self.side_map);
             self.connect_map = Some(conn_map);
         }
     }

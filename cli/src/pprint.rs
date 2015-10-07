@@ -192,10 +192,10 @@ impl Corner {
     {
         let l = p + Move::LEFT;
         let u = p + Move::UP;
-        let eh_p = puzzle.edge_h()[p];
-        let eh_l = puzzle.edge_h()[l];
-        let ev_p = puzzle.edge_v()[p];
-        let ev_u = puzzle.edge_v()[u];
+        let eh_p = puzzle.edge_h(p);
+        let eh_l = puzzle.edge_h(l);
+        let ev_p = puzzle.edge_v(p);
+        let ev_u = puzzle.edge_v(u);
 
         let is_same_all =
             (eh_p == Some(Edge::Cross)) &&
@@ -204,7 +204,7 @@ impl Corner {
             (ev_u == Some((Edge::Cross)));
 
         let ty = if is_same_all {
-            puzzle.side()[p]
+            puzzle.side(p)
         } else {
             None
         };
@@ -231,8 +231,8 @@ impl EdgeH {
     fn pprint(printer: &mut Printer, conf: &Config, puzzle: &Puzzle, p: Point)
               -> io::Result<()>
     {
-        let (s, ty) = match puzzle.edge_h()[p] {
-            Some(Edge::Cross) => (" ", puzzle.side()[p]),
+        let (s, ty) = match puzzle.edge_h(p) {
+            Some(Edge::Cross) => (" ", puzzle.side(p)),
             Some(Edge::Line)  => ("-", None),
             None => ("~", None)
         };
@@ -265,8 +265,8 @@ impl EdgeV {
     fn pprint(printer: &mut Printer, _conf: &Config, puzzle: &Puzzle, p: Point)
               -> io::Result<()>
     {
-        let (s, ty) = match puzzle.edge_v()[p] {
-            Some(Edge::Cross) => (" ", puzzle.side()[p]),
+        let (s, ty) = match puzzle.edge_v(p) {
+            Some(Edge::Cross) => (" ", puzzle.side(p)),
             Some(Edge::Line)  => ("|", None),
             None => ("?", None)
         };
@@ -281,8 +281,8 @@ impl Cell {
               num_line: bool)
               -> io::Result<()>
     {
-        let ty = puzzle.side()[p];
-        match puzzle.hint()[p] {
+        let ty = puzzle.side(p);
+        match puzzle.hint(p) {
             Some(x) if num_line => {
                 try!(printer.write_pretty_fmt(
                     ty, format_args!("{:^1$}", x, conf.cell_width)));
