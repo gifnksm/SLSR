@@ -61,6 +61,15 @@ impl TheoremPool {
         }
 
         let mut pool = TheoremPool { data: data };
+        let mut rev = side_map.revision();
+        loop {
+            try!(pool.apply_all(side_map));
+            if side_map.revision() == rev {
+                break
+            }
+            rev = side_map.revision();
+        }
+
         pool.merge_dup();
 
         Ok(pool)
