@@ -1,4 +1,5 @@
 use std::fmt;
+use std::slice::Iter as SliceIter;
 use std::str::FromStr;
 use std::error::Error as ErrorTrait;
 
@@ -373,6 +374,30 @@ impl TheoremMatcher {
             TheoremMatchResult::Partial(self)
         };
         Ok(m)
+    }
+
+    pub fn num_matcher(&self) -> usize {
+        self.matcher.len()
+    }
+
+    pub fn matcher_edges<'a>(&'a self) -> Edges<'a> {
+        Edges { iter: self.matcher.iter() }
+    }
+
+    pub fn result_edges<'a>(&'a self) -> Edges<'a> {
+        Edges { iter: self.result.iter() }
+    }
+}
+
+pub struct Edges<'a> {
+    iter: SliceIter<'a, EdgePattern<CellId>>
+}
+
+impl<'a> Iterator for Edges<'a> {
+    type Item = (Edge, (CellId, CellId));
+
+    fn next(&mut self) -> Option<(Edge, (CellId, CellId))> {
+        self.iter.next().map(|pat| (pat.edge, pat.points))
     }
 }
 

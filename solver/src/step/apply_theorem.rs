@@ -1,14 +1,69 @@
+use std::collections::HashMap;
 use std::mem;
-use slsr_core::geom::{Geom, Move};
-use slsr_core::puzzle::Puzzle;
+use slsr_core::geom::{CellId, Geom, Move};
+use slsr_core::puzzle::{Edge, Puzzle};
 
-use ::SolverResult;
+use ::{Error, State, SolverResult};
 use ::model::side_map::SideMap;
 use ::model::theorem::{Pattern, Theorem, TheoremMatcher};
 
 #[derive(Clone, Debug)]
+struct TheoremCount {
+    rest_count: usize,
+    result: Vec<(Edge, (CellId, CellId))>
+}
+
+impl From<TheoremMatcher> for TheoremCount {
+    fn from(matcher: TheoremMatcher) -> TheoremCount {
+        TheoremCount {
+            rest_count: matcher.num_matcher(),
+            result: matcher.result_edges().collect()
+        }
+    }
+}
+
+impl TheoremCount {
+    fn invalidate(&mut self) {
+        self.rest_count = 0;
+    }
+
+    fn update(&mut self, side_map: &mut SideMap) {
+        match self.rest_count {
+            0 => { return }
+            1 => {
+                self.rest_count = 0;
+                for (edge, points) in mem::replace(&mut self.result, vec![]) {
+                    let _ = side_map.set_edge(points.0, points.1, edge);
+                }
+            }
+            _ => {
+                self.rest_count -= 1;
+            }
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct IndexByEdge {
+    points: (CellId, CellId),
+    expect_line: Vec<usize>,
+    expect_cross: Vec<usize>
+}
+
+impl IndexByEdge {
+    fn new(points: (CellId, CellId)) -> IndexByEdge {
+        IndexByEdge {
+            points: points,
+            expect_line: vec![],
+            expect_cross: vec![]
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct TheoremPool {
-    matchers: Vec<TheoremMatcher>
+    matchers: Vec<TheoremCount>,
+    index_by_edge: Vec<IndexByEdge>
 }
 
 impl TheoremPool {
@@ -37,11 +92,54 @@ impl TheoremPool {
 
         merge_duplicate_matchers(&mut matchers);
 
-        Ok(TheoremPool { matchers: matchers })
+        let mut map = HashMap::new();
+        for (i, m) in matchers.iter().enumerate() {
+            for (edge, points) in m.matcher_edges() {
+                let mut e = map.entry(points).or_insert(IndexByEdge::new(points));
+                match edge {
+                    Edge::Line => e.expect_line.push(i),
+                    Edge::Cross => e.expect_cross.push(i)
+                }
+            }
+        }
+
+        let matchers = matchers.into_iter().map(From::from).collect();
+        let edges = map.into_iter().map(|(_, v)| v).collect();
+
+        Ok(TheoremPool { matchers: matchers, index_by_edge: edges })
     }
 
     pub fn apply_all(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
-        apply_all_theorem(&mut self.matchers, side_map)
+        let cap = self.index_by_edge.len();
+
+        for ibe in mem::replace(&mut self.index_by_edge, Vec::with_capacity(cap)) {
+            match side_map.get_edge(ibe.points.0, ibe.points.1) {
+                State::Fixed(Edge::Cross) => {
+                    for i in ibe.expect_line {
+                        self.matchers[i].invalidate();
+                    }
+                    for i in ibe.expect_cross {
+                        self.matchers[i].update(side_map);
+                    }
+                }
+                State::Fixed(Edge::Line) => {
+                    for i in ibe.expect_line {
+                        self.matchers[i].update(side_map);
+                    }
+                    for i in ibe.expect_cross {
+                        self.matchers[i].invalidate();
+                    }
+                }
+                State::Unknown => {
+                    self.index_by_edge.push(ibe)
+                }
+                State::Conflict => {
+                    return Err(Error::invalid_board())
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
