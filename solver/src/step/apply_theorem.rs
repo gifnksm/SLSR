@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::mem;
 use slsr_core::geom::{CellId, Geom, Move};
 use slsr_core::puzzle::{Edge, Puzzle};
@@ -10,14 +11,14 @@ use ::model::theorem::{Pattern, Theorem, TheoremMatcher};
 #[derive(Clone, Debug)]
 struct TheoremCount {
     rest_count: usize,
-    result: Vec<(Edge, (CellId, CellId))>
+    result: Option<Rc<Vec<(Edge, (CellId, CellId))>>>
 }
 
 impl From<TheoremMatcher> for TheoremCount {
     fn from(matcher: TheoremMatcher) -> TheoremCount {
         TheoremCount {
             rest_count: matcher.num_matcher(),
-            result: matcher.result_edges().collect()
+            result: Some(Rc::new(matcher.result_edges().collect()))
         }
     }
 }
@@ -32,7 +33,7 @@ impl TheoremCount {
             0 => { return }
             1 => {
                 self.rest_count = 0;
-                for (edge, points) in mem::replace(&mut self.result, vec![]) {
+                for &(edge, points) in &*self.result.take().unwrap() {
                     let _ = side_map.set_edge(points.0, points.1, edge);
                 }
             }
