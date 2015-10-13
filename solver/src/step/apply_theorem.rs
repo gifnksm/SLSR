@@ -26,6 +26,7 @@ impl From<TheoremMatcher> for TheoremCount {
 impl TheoremCount {
     fn invalidate(&mut self) {
         self.rest_count = 0;
+        self.result = None;
     }
 
     fn update(&mut self, side_map: &mut SideMap) {
@@ -47,16 +48,20 @@ impl TheoremCount {
 #[derive(Clone, Debug)]
 struct IndexByEdge {
     points: (CellId, CellId),
-    expect_line: Vec<usize>,
-    expect_cross: Vec<usize>
+    expect_line: Rc<Vec<usize>>,
+    expect_cross: Rc<Vec<usize>>
 }
 
 impl IndexByEdge {
-    fn new(points: (CellId, CellId)) -> IndexByEdge {
+    fn new(points: (CellId, CellId),
+           expect_line: Vec<usize>,
+           expect_cross: Vec<usize>)
+           -> IndexByEdge
+    {
         IndexByEdge {
             points: points,
-            expect_line: vec![],
-            expect_cross: vec![]
+            expect_line: Rc::new(expect_line),
+            expect_cross: Rc::new(expect_cross)
         }
     }
 }
@@ -96,16 +101,18 @@ impl TheoremPool {
         let mut map = HashMap::new();
         for (i, m) in matchers.iter().enumerate() {
             for (edge, points) in m.matcher_edges() {
-                let mut e = map.entry(points).or_insert(IndexByEdge::new(points));
+                let e = map.entry(points).or_insert((vec![], vec![]));
                 match edge {
-                    Edge::Line => e.expect_line.push(i),
-                    Edge::Cross => e.expect_cross.push(i)
+                    Edge::Line => e.0.push(i),
+                    Edge::Cross => e.1.push(i)
                 }
             }
         }
 
         let matchers = matchers.into_iter().map(From::from).collect();
-        let edges = map.into_iter().map(|(_, v)| v).collect();
+        let edges = map.into_iter()
+            .map(|(points, ex)| IndexByEdge::new(points, ex.0, ex.1))
+            .collect();
 
         Ok(TheoremPool { matchers: matchers, index_by_edge: edges })
     }
@@ -116,18 +123,18 @@ impl TheoremPool {
         for ibe in mem::replace(&mut self.index_by_edge, Vec::with_capacity(cap)) {
             match side_map.get_edge(ibe.points.0, ibe.points.1) {
                 State::Fixed(Edge::Cross) => {
-                    for i in ibe.expect_line {
+                    for &i in &*ibe.expect_line {
                         self.matchers[i].invalidate();
                     }
-                    for i in ibe.expect_cross {
+                    for &i in &*ibe.expect_cross {
                         self.matchers[i].update(side_map);
                     }
                 }
                 State::Fixed(Edge::Line) => {
-                    for i in ibe.expect_line {
+                    for &i in &*ibe.expect_line {
                         self.matchers[i].update(side_map);
                     }
-                    for i in ibe.expect_cross {
+                    for &i in &*ibe.expect_cross {
                         self.matchers[i].invalidate();
                     }
                 }
