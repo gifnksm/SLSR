@@ -21,9 +21,14 @@ fn create_conn_graph(conn_map: &mut ConnectMap, exclude_side: Side)
         }).collect::<Vec<_>>();
     pts.sort();
 
+    let mut verts = vec![None; conn_map.cell_len()];
+    for (i, &p) in pts.iter().enumerate() {
+        verts[p.id()] = Some(i);
+    }
+
     let graph = pts.iter().map(|&p| {
         conn_map.get(p).unknown_edge().iter()
-            .filter_map(|&p2| pts.binary_search(&p2).ok())
+            .filter_map(|p2| verts[p2.id()])
             .collect::<Vec<_>>()
     }).collect();
 
