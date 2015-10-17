@@ -62,7 +62,7 @@ impl Area {
 }
 
 impl Union for Area {
-    fn union(lval: Area, rval: Area) -> UnionResult<Area> {
+    fn union(mut lval: Area, mut rval: Area) -> UnionResult<Area> {
         let coord = if lval.coord < rval.coord {
             lval.coord
         } else {
@@ -80,9 +80,12 @@ impl Union for Area {
             }
         };
         let unknown_edge = {
-            let mut v = Vec::from(lval.unknown_edge);
-            v.extend(&rval.unknown_edge);
-            v
+            if lval.unknown_edge.is_empty() {
+                rval.unknown_edge
+            } else {
+                lval.unknown_edge.append(&mut rval.unknown_edge);
+                lval.unknown_edge
+            }
         };
         let area = Area {
             coord: coord,
@@ -142,13 +145,20 @@ impl ConnectMap {
     pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
 
     pub fn sync(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
-        let mut updated = true;
-        while updated {
-            updated = false;
+        loop {
+            let mut updated = false;
             for i in 0..self.cell_len() {
                 let c = CellId::new(i);
-                updated |= try!(update_conn(side_map, self, c));
+                updated |= update_conn(side_map, self, c)
             }
+            if !updated {
+                break
+            }
+        }
+
+        for i in 0..self.cell_len() {
+            let c = CellId::new(i);
+            try!(update_area(side_map, self, c));
         }
 
         Ok(())
@@ -172,50 +182,70 @@ impl ConnectMap {
     }
 }
 
-fn filter_edge(side_map: &mut SideMap, p: CellId, edge: Vec<CellId>)
-               -> SolverResult<(Vec<CellId>, Vec<CellId>)>
+fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId)
+               -> bool
 {
-    let mut unknown = vec![];
-    let mut same = vec![];
+    let mut unknown_edge = {
+        let a = conn_map.get_mut(p);
+        if a.coord != p { return false }
+        mem::replace(&mut a.unknown_edge, vec![])
+    };
 
-    for p2 in edge {
-        match side_map.get_edge(p, p2) {
-            State::Fixed(Edge::Cross) => same.push(p2),
-            State::Fixed(Edge::Line) => {}
-            State::Unknown => unknown.push(p2),
-            State::Conflict => return Err(Error::invalid_board())
+    let mut updated = false;
+    for &p2 in &unknown_edge {
+        if side_map.get_edge(p, p2) == State::Fixed(Edge::Cross) {
+            updated |= conn_map.union(p, p2);
         }
     }
 
-    unknown.sort();
-    unknown.dedup();
-    same.sort();
-    same.dedup();
-    Ok((same, unknown))
+    let mut area = conn_map.get_mut(p);
+    if area.unknown_edge.is_empty() {
+        area.unknown_edge = unknown_edge;
+    } else {
+        area.unknown_edge.append(&mut unknown_edge);
+    }
+
+    updated
 }
 
-fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId)
-               -> SolverResult<bool>
+fn update_area(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId)
+               -> SolverResult<()>
 {
-    let mut edge = {
+    let mut unknown_edge = {
         let a = conn_map.get_mut(p);
-        if a.coord != p { return Ok(false) }
+        if a.coord != p { return Ok(())}
         mem::replace(&mut a.unknown_edge, vec![])
     };
-    for p in edge.iter_mut() {
-        *p = conn_map.get(*p).coord;
+
+    unsafe {
+        let ptr = unknown_edge.as_mut_ptr();
+        let mut w = 0;
+        for r in 0..unknown_edge.len() {
+            let read = ptr.offset(r as isize);
+            match side_map.get_edge(p, *read) {
+                State::Fixed(_) => {}
+                State::Unknown => {
+                    *read = conn_map.get(*read).coord();
+
+                    let write = ptr.offset(w as isize);
+                    mem::swap(&mut *read, &mut *write);
+                    w += 1;
+                }
+                State::Conflict => {
+                    return Err(Error::invalid_board())
+                }
+            }
+        }
+
+        unknown_edge.truncate(w);
     }
 
-    let (same, unknown) = try!(filter_edge(side_map, p, edge));
-    {
-        let a = conn_map.get_mut(p);
-        a.side = side_map.get_side(p);
-        a.unknown_edge = unknown;
-    }
+    unknown_edge.sort();
+    unknown_edge.dedup();
 
-    let mut ret = false;
-    for &p2 in &same {
-        ret |= conn_map.union(p, p2);
-    }
-    Ok(ret)
+    let mut area = conn_map.get_mut(p);
+    area.side = side_map.get_side(p);
+    area.unknown_edge = unknown_edge;
+
+    Ok(())
 }

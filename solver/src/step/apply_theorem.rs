@@ -119,11 +119,11 @@ impl TheoremPool {
 
     pub fn apply_all(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
         unsafe {
-            let p = self.index_by_edge.as_mut_ptr();
+            let ptr = self.index_by_edge.as_mut_ptr();
 
             let mut w = 0;
             for r in 0..self.index_by_edge.len() {
-                let read = p.offset(r as isize);
+                let read = ptr.offset(r as isize);
                 let ibe = &*read;
 
                 match side_map.get_edge(ibe.points.0, ibe.points.1) {
@@ -144,7 +144,7 @@ impl TheoremPool {
                         }
                     }
                     State::Unknown => {
-                        let write = p.offset(w as isize);
+                        let write = ptr.offset(w as isize);
                         mem::swap(&mut *write, &mut *read);
                         w += 1;
                     }
@@ -230,13 +230,12 @@ fn merge_duplicate_matchers(matchers: &mut Vec<TheoremMatcher>) {
 
     // Merge elements that have same matchers.
     unsafe {
-        let len = matchers.len();
-        let p = matchers.as_mut_ptr();
+        let ptr = matchers.as_mut_ptr();
 
         let mut w = 1;
-        for r in 1..len {
-            let read = p.offset(r as isize);
-            let cmp = p.offset((w - 1) as isize);
+        for r in 1..matchers.len() {
+            let read = ptr.offset(r as isize);
+            let cmp = ptr.offset((w - 1) as isize);
 
             match (*cmp).merge(&*read) {
                 Ok(()) => {}
