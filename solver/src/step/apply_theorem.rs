@@ -118,33 +118,43 @@ impl TheoremPool {
     }
 
     pub fn apply_all(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
-        let cap = self.index_by_edge.len();
+        unsafe {
+            let p = self.index_by_edge.as_mut_ptr();
 
-        for ibe in mem::replace(&mut self.index_by_edge, Vec::with_capacity(cap)) {
-            match side_map.get_edge(ibe.points.0, ibe.points.1) {
-                State::Fixed(Edge::Cross) => {
-                    for &i in &*ibe.expect_line {
-                        self.matchers[i].invalidate();
+            let mut w = 0;
+            for r in 0..self.index_by_edge.len() {
+                let read = p.offset(r as isize);
+                let ibe = &*read;
+
+                match side_map.get_edge(ibe.points.0, ibe.points.1) {
+                    State::Fixed(Edge::Cross) => {
+                        for &i in &*ibe.expect_line {
+                            self.matchers[i].invalidate();
+                        }
+                        for &i in &*ibe.expect_cross {
+                            self.matchers[i].update(side_map);
+                        }
                     }
-                    for &i in &*ibe.expect_cross {
-                        self.matchers[i].update(side_map);
+                    State::Fixed(Edge::Line) => {
+                        for &i in &*ibe.expect_line {
+                            self.matchers[i].update(side_map);
+                        }
+                        for &i in &*ibe.expect_cross {
+                            self.matchers[i].invalidate();
+                        }
                     }
-                }
-                State::Fixed(Edge::Line) => {
-                    for &i in &*ibe.expect_line {
-                        self.matchers[i].update(side_map);
+                    State::Unknown => {
+                        let write = p.offset(w as isize);
+                        mem::swap(&mut *write, &mut *read);
+                        w += 1;
                     }
-                    for &i in &*ibe.expect_cross {
-                        self.matchers[i].invalidate();
+                    State::Conflict => {
+                        return Err(Error::invalid_board())
                     }
-                }
-                State::Unknown => {
-                    self.index_by_edge.push(ibe)
-                }
-                State::Conflict => {
-                    return Err(Error::invalid_board())
                 }
             }
+
+            self.index_by_edge.truncate(w);
         }
 
         Ok(())
