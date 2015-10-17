@@ -7,19 +7,19 @@ use ::model::connect_map::ConnectMap;
 use ::model::side_map::SideMap;
 
 fn create_conn_graph(conn_map: &mut ConnectMap, exclude_side: Side)
-                     -> (Vec<CellId>, Vec<Vec<usize>>)
+                     -> (Vec<CellId>, Vec<State<Side>>, Vec<Vec<usize>>)
 {
-    let mut pts = (0..conn_map.cell_len())
-        .map(CellId::new)
-        .filter_map(|p| {
-            let a = conn_map.get(p);
-            if a.coord() == p && a.side() != State::Fixed(exclude_side) {
-                Some(p)
-            } else {
-                None
-            }
-        }).collect::<Vec<_>>();
-    pts.sort();
+    let mut pts = vec![];
+    let mut sides = vec![];
+    for i in 0..conn_map.cell_len() {
+        let p = CellId::new(i);
+        let a = conn_map.get(p);
+        if a.coord() != p || a.side() == State::Fixed(exclude_side) {
+            continue
+        }
+        pts.push(p);
+        sides.push(a.side());
+    }
 
     let mut verts = vec![None; conn_map.cell_len()];
     for (i, &p) in pts.iter().enumerate() {
@@ -32,23 +32,27 @@ fn create_conn_graph(conn_map: &mut ConnectMap, exclude_side: Side)
             .collect::<Vec<_>>()
     }).collect();
 
-    (pts, graph)
+    (pts, sides, graph)
 }
 
 fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
     if graph.is_empty() { return (vec![], vec![]) }
 
+    let mut arts = vec![];
     let mut visited = vec![false; graph.len()];
     let mut ord = vec![0; graph.len()];
     let mut low = vec![0; graph.len()];
-    let mut arts = vec![];
     let mut ord_cnt = 0;
-    dfs(graph, v, &mut visited, &mut ord, &mut low, &mut ord_cnt, &mut arts);
+    dfs(graph, v, &mut arts, &mut visited, &mut ord, &mut low, &mut ord_cnt);
     return (arts, visited);
 
     fn dfs(graph: &[Vec<usize>],
-           v: usize, visited: &mut [bool], ord: &mut [usize], low: &mut [usize], 
-           ord_cnt: &mut usize, arts: &mut Vec<usize>) {
+           v: usize,
+           arts: &mut Vec<usize>,
+           visited: &mut [bool],
+           ord: &mut [usize],
+           low: &mut [usize],
+           ord_cnt: &mut usize) {
         debug_assert!(!visited[v]);
 
         *ord_cnt += 1;
@@ -63,7 +67,7 @@ fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
             if u == v { continue }
 
             if !visited[u] {
-                dfs(graph, u, visited, ord, low, ord_cnt, arts);
+                dfs(graph, u, arts, visited, ord, low, ord_cnt);
 
                 num_child += 1;
                 low[v] = cmp::min(low[v], low[u]);
@@ -125,8 +129,12 @@ fn find_disconn_area(conn_map: &mut ConnectMap, pts: &[CellId], visited: &[bool]
     Ok(vec![])
 }
 
-fn splits(graph: &[Vec<usize>], v: usize,
-          conn_map: &mut ConnectMap, pts: &[CellId], set_side: Side) -> bool {
+fn splits(graph: &[Vec<usize>],
+          v: usize,
+          sides: &[State<Side>],
+          set_side: Side)
+          -> bool
+{
     if graph.is_empty() { return false }
 
     let mut contain_cnt = 0;
@@ -135,24 +143,31 @@ fn splits(graph: &[Vec<usize>], v: usize,
     visited[v] = true;
 
     for &u in &graph[v] {
-        if u == v || visited[u] { continue }
+        if visited[u] { continue }
 
-        if dfs(graph, u, &mut visited, conn_map, pts, set_side) {
+        if dfs(graph, u, &mut visited, sides, set_side) {
             contain_cnt += 1;
+            if contain_cnt > 1 {
+                return true
+            }
         }
     }
 
-    return contain_cnt > 1;
+    return false;
 
-
-    fn dfs(graph: &[Vec<usize>], v: usize, visited: &mut [bool],
-           conn_map: &mut ConnectMap, pts: &[CellId], set_side: Side) -> bool {
-        let mut contains = conn_map.get(pts[v]).side() == State::Fixed(set_side);
+    fn dfs(graph: &[Vec<usize>],
+           v: usize,
+           visited: &mut [bool],
+           sides: &[State<Side>],
+           set_side: Side)
+           -> bool
+    {
+        let mut contains = sides[v] == State::Fixed(set_side);
         visited[v] = true;
 
         for &u in &graph[v] {
-            if u == v || visited[u] { continue }
-            contains |= dfs(graph, u, visited, conn_map, pts, set_side);
+            if visited[u] { continue }
+            contains |= dfs(graph, u, visited, sides, set_side);
         }
         contains
     }
@@ -167,7 +182,7 @@ pub fn run(side_map: &mut SideMap, conn_map: &mut ConnectMap)
                   (Side::Out, Side::In)];
 
     for &(set_side, exclude_side) in sides {
-        let (pts, graph) = create_conn_graph(conn_map, exclude_side);
+        let (pts, sides, graph) = create_conn_graph(conn_map, exclude_side);
         let (arts, visited) = get_articulation(&graph, 0);
 
         if set_side == Side::Out || conn_map.sum_of_hint() != 0 {
@@ -180,12 +195,12 @@ pub fn run(side_map: &mut SideMap, conn_map: &mut ConnectMap)
         }
 
         for v in arts {
-            let p = pts[v];
-            if conn_map.get(p).side() == State::Fixed(set_side) {
+            if sides[v] == State::Fixed(set_side) {
                 continue
             }
-            if splits(&graph, v, conn_map, &pts, set_side) {
-                side_map.set_side(p, set_side);
+
+            if splits(&graph, v, &sides, set_side) {
+                side_map.set_side(pts[v], set_side);
             }
         }
     }
