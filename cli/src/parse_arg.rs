@@ -1,30 +1,28 @@
 use std::str::FromStr;
 use argparse::{ArgumentParser, Store, StoreTrue};
 
-use ::pprint::{self, Config as PpConfig, Mode as PpMode};
+use pprint::{self, Config as PpConfig, Mode as PpMode};
 
 #[derive(Copy, Clone, Debug)]
 struct Args {
     all: bool,
     pretty: Pretty,
     width: Size,
-    height: Size
+    height: Size,
 }
 
 impl Args {
     fn setup_parser<'parser>(&'parser mut self, ap: &mut ArgumentParser<'parser>) {
         let _ = ap.refer(&mut self.all)
-            .add_option(&["--all"], StoreTrue,
-                        "show all solutions (if any).");
-        let _ = ap.refer(&mut self.pretty)
-            .add_option(&["--pretty"], Store,
-                        "specify pretty-print mode (auto, color, ascii, none) [default: auto]");
+                  .add_option(&["--all"], StoreTrue, "show all solutions (if any).");
+        let _ = ap.refer(&mut self.pretty).add_option(&["--pretty"],
+                                                      Store,
+                                                      "specify pretty-print mode (auto, color, \
+                                                       ascii, none) [default: auto]");
         let _ = ap.refer(&mut self.width)
-            .add_option(&["--width"], Store,
-                        "specify cell width [default: 2]");
+                  .add_option(&["--width"], Store, "specify cell width [default: 2]");
         let _ = ap.refer(&mut self.height)
-            .add_option(&["--height"], Store,
-                        "specify cell width [default: 1]");
+                  .add_option(&["--height"], Store, "specify cell width [default: 1]");
     }
 }
 
@@ -34,7 +32,7 @@ impl Default for Args {
             all: false,
             pretty: Pretty::Auto,
             width: Size(2),
-            height: Size(1)
+            height: Size(1),
         }
     }
 }
@@ -51,21 +49,21 @@ impl Into<Config> for Args {
             }
             Pretty::Color => Some(PpMode::Color),
             Pretty::Ascii => Some(PpMode::Ascii),
-            Pretty::None => None
+            Pretty::None => None,
         };
 
         let output_type = match pretty {
             Some(m) => OutputType::Pretty(PpConfig {
                 mode: m,
                 cell_width: self.width.0,
-                cell_height: self.height.0
+                cell_height: self.height.0,
             }),
-            None => OutputType::Raw
+            None => OutputType::Raw,
         };
 
         Config {
             show_all: self.all,
-            output_type: output_type
+            output_type: output_type,
         }
     }
 }
@@ -79,7 +77,7 @@ impl FromStr for Size {
         let val = usize::from_str(src);
         if let Ok(v) = val {
             if v != 0 {
-                return Ok(Size(v))
+                return Ok(Size(v));
             }
         }
         Err(())
@@ -89,7 +87,10 @@ impl FromStr for Size {
 
 #[derive(Copy, Clone, Debug)]
 enum Pretty {
-    Auto, Color, Ascii, None
+    Auto,
+    Color,
+    Ascii,
+    None,
 }
 impl FromStr for Pretty {
     type Err = ();
@@ -100,7 +101,7 @@ impl FromStr for Pretty {
             "color" => Ok(Pretty::Color),
             "ascii" => Ok(Pretty::Ascii),
             "none" => Ok(Pretty::None),
-            _ => Err(())
+            _ => Err(()),
         }
     }
 }
@@ -108,13 +109,13 @@ impl FromStr for Pretty {
 #[derive(Copy, Clone, Debug)]
 pub struct Config {
     pub show_all: bool,
-    pub output_type: OutputType
+    pub output_type: OutputType,
 }
 
 #[derive(Copy, Clone, Debug)]
 pub enum OutputType {
     Pretty(PpConfig),
-    Raw
+    Raw,
 }
 
 impl Config {

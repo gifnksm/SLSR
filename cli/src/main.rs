@@ -75,7 +75,7 @@ impl fmt::Display for AppError {
         match *self {
             AppError::Io(ref e) => write!(f, "IO error: {}", e),
             AppError::ParsePuzzle(ref e) => write!(f, "parse puzzle error: {}", e),
-            AppError::Solver(ref e) => write!(f, "solver error: {}", e)
+            AppError::Solver(ref e) => write!(f, "solver error: {}", e),
         }
     }
 }

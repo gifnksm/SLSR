@@ -9,26 +9,27 @@ use term::color::{self, Color};
 
 #[derive(Copy, Clone, Debug)]
 pub enum Mode {
-    Color, Ascii
+    Color,
+    Ascii,
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct Config {
     pub mode: Mode,
     pub cell_width: usize,
-    pub cell_height: usize
+    pub cell_height: usize,
 }
 
 enum Output<T> {
-    Pretty(Box<Terminal<Output=T> + Send>),
-    Raw(T)
+    Pretty(Box<Terminal<Output = T> + Send>),
+    Raw(T),
 }
 
 fn side_to_color(ty: Option<Side>) -> (Color, Color) {
     match ty {
-        Some(Side::In)  => (color::BRIGHT_YELLOW, color::BLACK),
-        Some(Side::Out) => (color::BLACK,         color::BRIGHT_WHITE),
-        None            => (color::BRIGHT_WHITE,  color::BLACK),
+        Some(Side::In) => (color::BRIGHT_YELLOW, color::BLACK),
+        Some(Side::Out) => (color::BLACK, color::BRIGHT_WHITE),
+        None => (color::BRIGHT_WHITE, color::BLACK),
     }
 }
 
@@ -56,7 +57,7 @@ pub fn is_pprintable() -> bool {
 }
 
 struct Printer {
-    output: Output<Stdout>
+    output: Output<Stdout>,
 }
 
 impl Printer {
@@ -65,10 +66,10 @@ impl Printer {
             Mode::Color => {
                 match term::stdout() {
                     Some(t) => Output::Pretty(t),
-                    None    => Output::Raw(io::stdout())
+                    None => Output::Raw(io::stdout()),
                 }
             }
-            Mode::Ascii => Output::Raw(io::stdout())
+            Mode::Ascii => Output::Raw(io::stdout()),
         };
         Printer { output: output }
     }
@@ -83,7 +84,7 @@ impl Printer {
                 try!(term.reset());
                 Ok(())
             }
-            Output::Raw(ref mut stdout) => stdout.write_all(s.as_bytes())
+            Output::Raw(ref mut stdout) => stdout.write_all(s.as_bytes()),
         }
     }
     fn write_pretty_fmt(&mut self, ty: Option<Side>, fmt: fmt::Arguments) -> io::Result<()> {
@@ -96,29 +97,27 @@ impl Printer {
                 try!(term.reset());
                 Ok(())
             }
-            Output::Raw(ref mut stdout) => stdout.write_fmt(fmt)
+            Output::Raw(ref mut stdout) => stdout.write_fmt(fmt),
         }
     }
     fn write_plain(&mut self, s: &str) -> io::Result<()> {
         match self.output {
             Output::Pretty(ref mut term) => term.write_all(s.as_bytes()),
-            Output::Raw(ref mut stdout) => stdout.write_all(s.as_bytes())
+            Output::Raw(ref mut stdout) => stdout.write_all(s.as_bytes()),
         }
     }
 
     fn write_plain_fmt(&mut self, fmt: fmt::Arguments) -> io::Result<()> {
         match self.output {
             Output::Pretty(ref mut term) => term.write_fmt(fmt),
-            Output::Raw(ref mut stdout) => stdout.write_fmt(fmt)
+            Output::Raw(ref mut stdout) => stdout.write_fmt(fmt),
         }
     }
 }
 
 struct Table;
 impl Table {
-    fn pprint(printer: &mut Printer, conf: &Config, puzzle: &Puzzle)
-              -> io::Result<()>
-    {
+    fn pprint(printer: &mut Printer, conf: &Config, puzzle: &Puzzle) -> io::Result<()> {
         let row = puzzle.row();
         try!(LabelRow::pprint(printer, conf, puzzle));
         for y in 0..row {
@@ -133,29 +132,22 @@ impl Table {
 
 struct LabelRow;
 impl LabelRow {
-    fn pprint(printer: &mut Printer, conf: &Config, puzzle: &Puzzle)
-              -> io::Result<()>
-    {
-        try!(printer.write_plain_fmt(
-            format_args!("{:1$}", "", conf.cell_width)));
+    fn pprint(printer: &mut Printer, conf: &Config, puzzle: &Puzzle) -> io::Result<()> {
+        try!(printer.write_plain_fmt(format_args!("{:1$}", "", conf.cell_width)));
         for x in 0..puzzle.column() {
-            try!(printer.write_plain_fmt(
-                format_args!("{:1$}", "", 1)));
+            try!(printer.write_plain_fmt(format_args!("{:1$}", "", 1)));
             try!(Label::pprint(printer, conf, x, true));
         }
         try!(printer.write_plain("\n"));
         Ok(())
-   }
+    }
 }
 
 struct EdgeRow;
 impl EdgeRow {
-    fn pprint(printer: &mut Printer, conf: &Config, puzzle: &Puzzle, y: i32)
-              -> io::Result<()>
-    {
+    fn pprint(printer: &mut Printer, conf: &Config, puzzle: &Puzzle, y: i32) -> io::Result<()> {
         let col = puzzle.column();
-        try!(printer.write_plain_fmt(
-            format_args!("{:1$}", "", conf.cell_width)));
+        try!(printer.write_plain_fmt(format_args!("{:1$}", "", conf.cell_width)));
         for x in 0..col {
             try!(Corner::pprint(printer, conf, puzzle, Point(y, x)));
             try!(EdgeH::pprint(printer, conf, puzzle, Point(y, x)));
@@ -187,9 +179,7 @@ impl CellRow {
 
 struct Corner;
 impl Corner {
-    fn pprint(printer: &mut Printer, _conf: &Config, puzzle: &Puzzle, p: Point)
-              -> io::Result<()>
-    {
+    fn pprint(printer: &mut Printer, _conf: &Config, puzzle: &Puzzle, p: Point) -> io::Result<()> {
         let l = p + Move::LEFT;
         let u = p + Move::UP;
         let eh_p = puzzle.edge_h(p);
@@ -197,21 +187,17 @@ impl Corner {
         let ev_p = puzzle.edge_v(p);
         let ev_u = puzzle.edge_v(u);
 
-        let is_same_all =
-            (eh_p == Some(Edge::Cross)) &&
-            (eh_l == Some(Edge::Cross)) &&
-            (ev_p == Some((Edge::Cross))) &&
-            (ev_u == Some((Edge::Cross)));
+        let is_same_all = (eh_p == Some(Edge::Cross)) && (eh_l == Some(Edge::Cross)) &&
+                          (ev_p == Some((Edge::Cross))) &&
+                          (ev_u == Some((Edge::Cross)));
 
         let ty = if is_same_all {
             puzzle.side(p)
         } else {
             None
         };
-        let is_h = eh_p == Some(Edge::Line) &&
-            eh_l == Some(Edge::Line);
-        let is_v = ev_p == Some(Edge::Line) &&
-            ev_u == Some(Edge::Line);
+        let is_h = eh_p == Some(Edge::Line) && eh_l == Some(Edge::Line);
+        let is_v = ev_p == Some(Edge::Line) && ev_u == Some(Edge::Line);
 
         if is_same_all {
             try!(printer.write_pretty(ty, "."));
@@ -228,13 +214,11 @@ impl Corner {
 
 struct EdgeH;
 impl EdgeH {
-    fn pprint(printer: &mut Printer, conf: &Config, puzzle: &Puzzle, p: Point)
-              -> io::Result<()>
-    {
+    fn pprint(printer: &mut Printer, conf: &Config, puzzle: &Puzzle, p: Point) -> io::Result<()> {
         let (s, ty) = match puzzle.edge_h(p) {
             Some(Edge::Cross) => (" ", puzzle.side(p)),
-            Some(Edge::Line)  => ("-", None),
-            None => ("~", None)
+            Some(Edge::Line) => ("-", None),
+            None => ("~", None),
         };
         for _ in 0..conf.cell_width {
             try!(printer.write_pretty(ty, s));
@@ -245,16 +229,12 @@ impl EdgeH {
 
 struct Label;
 impl Label {
-    fn pprint(printer: &mut Printer, conf: &Config, n: i32, num_line: bool)
-              -> io::Result<()>
-    {
+    fn pprint(printer: &mut Printer, conf: &Config, n: i32, num_line: bool) -> io::Result<()> {
         if num_line {
             let order = 10i32.pow(conf.cell_width as u32);
-            try!(printer.write_plain_fmt(
-                format_args!("{:^1$}", n % order, conf.cell_width)));
+            try!(printer.write_plain_fmt(format_args!("{:^1$}", n % order, conf.cell_width)));
         } else {
-            try!(printer.write_plain_fmt(
-                format_args!("{:1$}", "", conf.cell_width)));
+            try!(printer.write_plain_fmt(format_args!("{:1$}", "", conf.cell_width)));
         }
         Ok(())
     }
@@ -262,13 +242,11 @@ impl Label {
 
 struct EdgeV;
 impl EdgeV {
-    fn pprint(printer: &mut Printer, _conf: &Config, puzzle: &Puzzle, p: Point)
-              -> io::Result<()>
-    {
+    fn pprint(printer: &mut Printer, _conf: &Config, puzzle: &Puzzle, p: Point) -> io::Result<()> {
         let (s, ty) = match puzzle.edge_v(p) {
             Some(Edge::Cross) => (" ", puzzle.side(p)),
-            Some(Edge::Line)  => ("|", None),
-            None => ("?", None)
+            Some(Edge::Line) => ("|", None),
+            None => ("?", None),
         };
         try!(printer.write_pretty(ty, s));
         Ok(())
@@ -277,21 +255,21 @@ impl EdgeV {
 
 struct Cell;
 impl Cell {
-    fn pprint(printer: &mut Printer, conf: &Config, puzzle: &Puzzle, p: Point,
+    fn pprint(printer: &mut Printer,
+              conf: &Config,
+              puzzle: &Puzzle,
+              p: Point,
               num_line: bool)
-              -> io::Result<()>
-    {
+              -> io::Result<()> {
         let ty = puzzle.side(p);
         match puzzle.hint(p) {
             Some(x) if num_line => {
-                try!(printer.write_pretty_fmt(
-                    ty, format_args!("{:^1$}", x, conf.cell_width)));
-            },
-            _ => {
-                try!(printer.write_pretty_fmt(
-                    ty, format_args!("{:^1$}", "", conf.cell_width)));
+                try!(printer.write_pretty_fmt(ty, format_args!("{:^1$}", x, conf.cell_width)));
             }
-        };
+            _ => {
+                try!(printer.write_pretty_fmt(ty, format_args!("{:^1$}", "", conf.cell_width)));
+            }
+        }
         Ok(())
     }
 }
