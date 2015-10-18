@@ -7,13 +7,33 @@ use model::theorem::Theorem;
 use step::apply_theorem::TheoremPool;
 use ::{Error, SolverResult, State};
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Solver<'a> {
     puzzle: &'a Puzzle,
     sum_of_hint: u32,
     theorem_pool: TheoremPool,
     side_map: SideMap,
     connect_map: Option<ConnectMap>
+}
+
+impl<'a> Clone for Solver<'a> {
+    fn clone(&self) -> Solver<'a> {
+        Solver {
+            puzzle: self.puzzle,
+            sum_of_hint: self.sum_of_hint,
+            theorem_pool: self.theorem_pool.clone(),
+            side_map: self.side_map.clone(),
+            connect_map: self.connect_map.clone()
+        }
+    }
+
+    fn clone_from(&mut self, other: &Solver<'a>) {
+        self.puzzle = other.puzzle;
+        self.sum_of_hint = other.sum_of_hint;
+        self.theorem_pool.clone_from(&other.theorem_pool);
+        self.side_map.clone_from(&other.side_map);
+        self.connect_map.clone_from(&other.connect_map);
+    }
 }
 
 impl<'a> Solver<'a> {

@@ -7,13 +7,33 @@ use slsr_core::geom::{CellId, Geom, Point, Move, OUTSIDE_CELL_ID};
 use ::{Error, State, SolverResult};
 use ::model::side_map::SideMap;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Area {
     coord: CellId,
     side: State<Side>,
     unknown_edge: Vec<CellId>,
     sum_of_hint: u32,
     size: usize
+}
+
+impl Clone for Area {
+    fn clone(&self) -> Area {
+        Area {
+            coord: self.coord,
+            side: self.side,
+            unknown_edge: self.unknown_edge.clone(),
+            sum_of_hint: self.sum_of_hint,
+            size: self.size
+        }
+    }
+
+    fn clone_from(&mut self, other: &Area) {
+        self.coord = other.coord;
+        self.side = other.side;
+        self.unknown_edge.clone_from(&other.unknown_edge);
+        self.sum_of_hint = other.sum_of_hint;
+        self.size = other.size;
+    }
 }
 
 impl Area {
@@ -102,10 +122,24 @@ impl Union for Area {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ConnectMap {
     sum_of_hint: u32,
     uf: Uf<Area>
+}
+
+impl Clone for ConnectMap {
+    fn clone(&self) -> ConnectMap {
+        ConnectMap {
+            sum_of_hint: self.sum_of_hint,
+            uf: self.uf.clone()
+        }
+    }
+
+    fn clone_from(&mut self, other: &ConnectMap) {
+        self.sum_of_hint = other.sum_of_hint;
+        self.uf.clone_from(&other.uf);
+    }
 }
 
 impl ConnectMap {

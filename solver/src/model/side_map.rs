@@ -14,11 +14,27 @@ impl Key for CellId {
     fn key1(self) -> usize { self.id() * 2 + 1 }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct SideMap {
     uf: Uf<Union>,
     revision: u32,
     max_revision: u32
+}
+
+impl Clone for SideMap {
+    fn clone(&self) -> SideMap {
+        SideMap {
+            uf: self.uf.clone(),
+            revision: self.revision,
+            max_revision: self.max_revision
+        }
+    }
+
+    fn clone_from(&mut self, other: &SideMap) {
+        self.uf.clone_from(&other.uf);
+        self.revision = other.revision;
+        self.max_revision = other.max_revision;
+    }
 }
 
 impl SideMap {

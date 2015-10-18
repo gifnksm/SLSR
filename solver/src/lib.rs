@@ -15,7 +15,7 @@
 extern crate union_find;
 extern crate slsr_core;
 
-use std::fmt;
+use std::{fmt, mem};
 use std::error::Error as ErrorTrait;
 
 use slsr_core::puzzle::Puzzle;
@@ -112,6 +112,8 @@ fn fill_by_shallow_backtracking(solver: &mut Solver, pts: &[CellId])
                                 -> SolverResult<bool>
 {
     let rev = solver.revision();
+    let mut solver_in = solver.clone();
+    let mut solver_out = solver.clone();
 
     for &p in pts {
         match solver.get_side(p) {
@@ -120,7 +122,7 @@ fn fill_by_shallow_backtracking(solver: &mut Solver, pts: &[CellId])
             State::Conflict => { return Err(Error::invalid_board()) }
         }
 
-        let mut solver_in = solver.clone();
+        solver_in.clone_from(&solver);
         solver_in.set_inside(p);
 
         if fill_absolutely_fixed(&mut solver_in).is_err() {
@@ -129,11 +131,11 @@ fn fill_by_shallow_backtracking(solver: &mut Solver, pts: &[CellId])
             continue
         }
 
-        let mut solver_out = solver.clone();
+        solver_out.clone_from(&solver);
         solver_out.set_outside(p);
 
         if fill_absolutely_fixed(&mut solver_out).is_err() {
-            *solver = solver_in;
+            mem::swap(solver, &mut solver_in);
         }
     }
 

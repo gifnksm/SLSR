@@ -66,10 +66,24 @@ impl IndexByEdge {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct TheoremPool {
     matchers: Vec<TheoremCount>,
     index_by_edge: Vec<IndexByEdge>
+}
+
+impl Clone for TheoremPool {
+    fn clone(&self) -> TheoremPool {
+        TheoremPool {
+            matchers: self.matchers.clone(),
+            index_by_edge: self.index_by_edge.clone()
+        }
+    }
+
+    fn clone_from(&mut self, other: &TheoremPool) {
+        self.matchers.clone_from(&other.matchers);
+        self.index_by_edge.clone_from(&other.index_by_edge);
+    }
 }
 
 impl TheoremPool {
