@@ -145,7 +145,10 @@ fn splits(graph: &[Vec<usize>],
     for &u in &graph[v] {
         if visited[u] { continue }
 
-        if dfs(graph, u, &mut visited, sides, set_side) {
+        let mut contains = false;
+        dfs(graph, u, &mut contains, &mut visited, sides, set_side);
+
+        if contains {
             contain_cnt += 1;
             if contain_cnt > 1 {
                 return true
@@ -157,19 +160,20 @@ fn splits(graph: &[Vec<usize>],
 
     fn dfs(graph: &[Vec<usize>],
            v: usize,
+           contains: &mut bool,
            visited: &mut [bool],
            sides: &[State<Side>],
            set_side: Side)
-           -> bool
     {
-        let mut contains = sides[v] == State::Fixed(set_side);
+        if sides[v] == State::Fixed(set_side) {
+            *contains = true;
+        }
         visited[v] = true;
 
         for &u in &graph[v] {
             if visited[u] { continue }
-            contains |= dfs(graph, u, visited, sides, set_side);
+            dfs(graph, u, contains, visited, sides, set_side);
         }
-        contains
     }
 }
 
