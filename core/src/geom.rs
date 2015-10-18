@@ -15,9 +15,7 @@ impl Move {
     pub const DOWN:  Move = Move(1, 0);
     pub const LEFT:  Move = Move(0, -1);
 
-    pub const ALL_DIRECTIONS: [Move; 4] = [
-        Move::UP, Move::RIGHT, Move::DOWN, Move::LEFT
-    ];
+    pub const ALL_DIRECTIONS: [Move; 4] = [Move::UP, Move::RIGHT, Move::DOWN, Move::LEFT];
 }
 
 
@@ -76,12 +74,12 @@ impl Mul<i32> for Move {
 }
 
 impl Rotation {
-    pub const UCW0:   Rotation = Rotation( 1,  0,  0,  1);
-    pub const UCW90:  Rotation = Rotation( 0, -1,  1,  0);
-    pub const UCW180: Rotation = Rotation(-1,  0,  0, -1);
-    pub const UCW270: Rotation = Rotation( 0,  1, -1,  0);
-    pub const H_FLIP: Rotation = Rotation( 1,  0,  0, -1);
-    pub const V_FLIP: Rotation = Rotation(-1,  0,  0,  1);
+    pub const UCW0:   Rotation = Rotation(1, 0, 0, 1);
+    pub const UCW90:  Rotation = Rotation(0, -1, 1, 0);
+    pub const UCW180: Rotation = Rotation(-1, 0, 0, -1);
+    pub const UCW270: Rotation = Rotation(0, 1, -1, 0);
+    pub const H_FLIP: Rotation = Rotation(1, 0, 0, -1);
+    pub const V_FLIP: Rotation = Rotation(-1, 0, 0, 1);
 }
 
 impl Mul<Rotation> for Rotation {
@@ -109,8 +107,12 @@ impl Mul<Move> for Rotation {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct CellId(usize);
 impl CellId {
-    pub fn new(id: usize) -> CellId { CellId(id) }
-    pub fn id(self) -> usize { self.0 }
+    pub fn new(id: usize) -> CellId {
+        CellId(id)
+    }
+    pub fn id(self) -> usize {
+        self.0
+    }
 }
 pub const OUTSIDE_CELL_ID: CellId = CellId(0);
 pub const OUTSIDE_POINT: Point = Point(-1, -1);
@@ -119,9 +121,13 @@ pub trait Geom {
     #[inline]
     fn size(&self) -> Size;
     #[inline]
-    fn row(&self) -> i32 { self.size().0 }
+    fn row(&self) -> i32 {
+        self.size().0
+    }
     #[inline]
-    fn column(&self) -> i32 { self.size().1 }
+    fn column(&self) -> i32 {
+        self.size().1
+    }
     #[inline]
     fn cell_len(&self) -> usize {
         (self.row() * self.column() + 1) as usize
@@ -130,8 +136,7 @@ pub trait Geom {
     #[inline]
     fn contains(&self, p: Point) -> bool {
         let size = self.size();
-        0 <= p.0 && p.0 < size.0 &&
-            0 <= p.1 && p.1 < size.1
+        0 <= p.0 && p.0 < size.0 && 0 <= p.1 && p.1 < size.1
     }
 
     #[inline]
@@ -148,35 +153,46 @@ pub trait Geom {
             OUTSIDE_POINT
         } else {
             let idx = id.id() - 1;
-            Point((idx as i32) / self.column(),
-                  (idx as i32) % self.column())
+            Point((idx as i32) / self.column(), (idx as i32) % self.column())
         }
     }
 
     #[inline]
     fn points(&self) -> Points {
         if self.row() > 0 && self.column() > 0 {
-            Points { point: Some(Point(0, 0)), size: self.size() }
+            Points {
+                point: Some(Point(0, 0)),
+                size: self.size(),
+            }
         } else {
-            Points { point: None, size: self.size() }
+            Points {
+                point: None,
+                size: self.size(),
+            }
         }
     }
 
     #[inline]
     fn points_in_row(&self, row: i32) -> PointsInRow {
-        PointsInRow { row: row, columns: 0..self.column() }
+        PointsInRow {
+            row: row,
+            columns: 0..self.column(),
+        }
     }
 
     #[inline]
     fn points_in_column(&self, column: i32) -> PointsInColumn {
-        PointsInColumn { column: column, rows: 0..self.row() }
+        PointsInColumn {
+            column: column,
+            rows: 0..self.row(),
+        }
     }
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct Points {
     point: Option<Point>,
-    size: Size
+    size: Size,
 }
 
 impl Iterator for Points {
@@ -200,7 +216,7 @@ impl Iterator for Points {
             } else {
                 self.point = None;
             }
-            return Some(cur)
+            return Some(cur);
         }
         None
     }
@@ -209,7 +225,7 @@ impl Iterator for Points {
 #[derive(Clone, Debug)]
 pub struct PointsInRow {
     row: i32,
-    columns: Range<i32>
+    columns: Range<i32>,
 }
 
 impl Iterator for PointsInRow {
@@ -228,7 +244,7 @@ impl Iterator for PointsInRow {
 #[derive(Clone, Debug)]
 pub struct PointsInColumn {
     rows: Range<i32>,
-    column: i32
+    column: i32,
 }
 
 impl Iterator for PointsInColumn {
@@ -246,13 +262,15 @@ impl Iterator for PointsInColumn {
 
 impl Geom for Size {
     #[inline]
-    fn size(&self) -> Size { *self }
+    fn size(&self) -> Size {
+        *self
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Table<T> {
     size: Size,
-    data: Vec<T>
+    data: Vec<T>,
 }
 
 impl<T> Table<T> {
@@ -260,7 +278,10 @@ impl<T> Table<T> {
     pub fn new(size: Size, outside: T, mut data: Vec<T>) -> Table<T> {
         assert_eq!((size.0 * size.1) as usize, data.len());
         data.insert(0, outside);
-        Table { size: size, data: data }
+        Table {
+            size: size,
+            data: data,
+        }
     }
 
     #[inline]
@@ -274,7 +295,9 @@ impl<T> Table<T> {
 
 impl<T> Geom for Table<T> {
     #[inline]
-    fn size(&self) -> Size { self.size }
+    fn size(&self) -> Size {
+        self.size
+    }
 }
 
 impl<T> Index<Point> for Table<T> {
@@ -302,10 +325,18 @@ mod tests {
 
     #[test]
     fn points() {
-        let pts = [Point(0, 0), Point(0, 1), Point(0, 2),
-                   Point(1, 0), Point(1, 1), Point(1, 2),
-                   Point(2, 0), Point(2, 1), Point(2, 2),
-                   Point(3, 0), Point(3, 1), Point(3, 2)];
+        let pts = [Point(0, 0),
+                   Point(0, 1),
+                   Point(0, 2),
+                   Point(1, 0),
+                   Point(1, 1),
+                   Point(1, 2),
+                   Point(2, 0),
+                   Point(2, 1),
+                   Point(2, 2),
+                   Point(3, 0),
+                   Point(3, 1),
+                   Point(3, 2)];
         let size = Size(4, 3);
         assert_eq!(&pts[..], &size.points().collect::<Vec<_>>()[..]);
     }
@@ -324,7 +355,10 @@ mod tests {
     fn rotate_point() {
         let mat = [Rotation::UCW0, Rotation::UCW90, Rotation::UCW180, Rotation::UCW270];
         let vec = [[Move::UP, Move::LEFT, Move::DOWN, Move::RIGHT],
-                   [Move::UP + Move::RIGHT, Move::LEFT + Move::UP, Move::DOWN + Move::LEFT, Move::RIGHT + Move::DOWN]];
+                   [Move::UP + Move::RIGHT,
+                    Move::LEFT + Move::UP,
+                    Move::DOWN + Move::LEFT,
+                    Move::RIGHT + Move::DOWN]];
         for i in 0..mat.len() {
             for v in &vec {
                 for j in 0..v.len() {

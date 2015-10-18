@@ -1,14 +1,20 @@
 use std::error::Error;
 use std::fmt;
 
-use ::geom::{Geom, Point, Size, Table};
-use ::lattice_parser::ParseLatticeError;
+use geom::{Geom, Point, Size, Table};
+use lattice_parser::ParseLatticeError;
 
 pub type Hint = Option<u8>;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub enum Side { In, Out }
+pub enum Side {
+    In,
+    Out,
+}
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub enum Edge { Line, Cross }
+pub enum Edge {
+    Line,
+    Cross,
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Puzzle {
@@ -17,7 +23,7 @@ pub struct Puzzle {
     side: Table<Option<Side>>,
     edge_v: Table<Option<Edge>>,
     edge_h: Table<Option<Edge>>,
-    sum_of_hint: u32
+    sum_of_hint: u32,
 }
 
 impl Puzzle {
@@ -32,8 +38,12 @@ impl Puzzle {
     }
 
     #[inline]
-    fn with_data(size: Size, hint: Vec<Hint>, side: Vec<Option<Side>>,
-                 edge_v: Vec<Option<Edge>>, edge_h: Vec<Option<Edge>>) -> Puzzle {
+    fn with_data(size: Size,
+                 hint: Vec<Hint>,
+                 side: Vec<Option<Side>>,
+                 edge_v: Vec<Option<Edge>>,
+                 edge_h: Vec<Option<Edge>>)
+                 -> Puzzle {
         assert!(size.0 > 0 && size.1 > 0);
         let mut sum_of_hint = 0;
         for &h in &hint {
@@ -46,8 +56,12 @@ impl Puzzle {
         let edge_v = Table::new(Size(size.0, size.1 + 1), Some(Edge::Cross), edge_v);
         let edge_h = Table::new(Size(size.0 + 1, size.1), Some(Edge::Cross), edge_h);
         Puzzle {
-            size: size, hint: hint, side: side, edge_v: edge_v, edge_h: edge_h,
-            sum_of_hint: sum_of_hint
+            size: size,
+            hint: hint,
+            side: side,
+            edge_v: edge_v,
+            edge_h: edge_h,
+            sum_of_hint: sum_of_hint,
         }
     }
 
@@ -76,14 +90,18 @@ impl Puzzle {
     }
 
     #[inline]
-    pub fn edge_h(&self, p: Point) -> Option<Edge> { self.edge_h[p] }
+    pub fn edge_h(&self, p: Point) -> Option<Edge> {
+        self.edge_h[p]
+    }
     #[inline]
     pub fn set_edge_h(&mut self, p: Point, edge: Option<Edge>) {
         self.edge_h[p] = edge;
     }
 
     #[inline]
-    pub fn edge_v(&self, p: Point) -> Option<Edge> { self.edge_v[p] }
+    pub fn edge_v(&self, p: Point) -> Option<Edge> {
+        self.edge_v[p]
+    }
     #[inline]
     pub fn set_edge_v(&mut self, p: Point, edge: Option<Edge>) {
         self.edge_v[p] = edge;
@@ -92,12 +110,14 @@ impl Puzzle {
 
 impl Geom for Puzzle {
     #[inline]
-    fn size(&self) -> Size { self.size }
+    fn size(&self) -> Size {
+        self.size
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct ParsePuzzleError {
-    kind: PuzzleErrorKind
+    kind: PuzzleErrorKind,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -107,14 +127,12 @@ enum PuzzleErrorKind {
     TooSmallColumns,
     LengthMismatch,
     InvalidHint,
-    Lattice(ParseLatticeError)
+    Lattice(ParseLatticeError),
 }
 
 impl From<ParseLatticeError> for ParsePuzzleError {
     fn from(err: ParseLatticeError) -> ParsePuzzleError {
-        ParsePuzzleError {
-            kind: PuzzleErrorKind::Lattice(err)
-        }
+        ParsePuzzleError { kind: PuzzleErrorKind::Lattice(err) }
     }
 }
 
@@ -127,15 +145,14 @@ impl Error for ParsePuzzleError {
             TooSmallColumns => "the number of columns is too small to parse puzzle",
             LengthMismatch => "the length of lines are not same",
             InvalidHint => "invalid hint found in string",
-            Lattice(ref e) => e.description()
+            Lattice(ref e) => e.description(),
         }
     }
     fn cause(&self) -> Option<&Error> {
         use self::PuzzleErrorKind::*;
         match self.kind {
-            Empty | TooSmallRows | TooSmallColumns | LengthMismatch | InvalidHint
-                => None,
-            Lattice(ref e) => Some(e)
+            Empty | TooSmallRows | TooSmallColumns | LengthMismatch | InvalidHint => None,
+            Lattice(ref e) => Some(e),
         }
     }
 }
@@ -175,17 +192,19 @@ mod from_str_impl {
 
         fn from_str(s: &str) -> Result<Puzzle, Error> {
             let mut mat = s.lines()
-                .map(|l| l.trim_matches('\n'))
-                .map(|l| l.chars().collect::<Vec<_>>())
-                .skip_while(|l| l.is_empty())
-                .collect::<Vec<_>>();
+                           .map(|l| l.trim_matches('\n'))
+                           .map(|l| l.chars().collect::<Vec<_>>())
+                           .skip_while(|l| l.is_empty())
+                           .collect::<Vec<_>>();
 
             // Drop trailing empty lines
             while mat.last().map(|l| l.len()) == Some(0) {
                 let _ = mat.pop();
             }
 
-            if mat.len() == 0 { return Err(Error::empty()) }
+            if mat.len() == 0 {
+                return Err(Error::empty());
+            }
 
             if mat[0].iter().any(|&c| c == '+') {
                 parse_pat1(mat)
@@ -201,49 +220,56 @@ mod from_str_impl {
         let rows = parser.num_rows();
         let cols = parser.num_cols();
 
-        if rows <= 1 { return Err(Error::too_small_rows()) }
-        if cols <= 1 { return Err(Error::too_small_columns()) }
+        if rows <= 1 {
+            return Err(Error::too_small_rows());
+        }
+        if cols <= 1 {
+            return Err(Error::too_small_columns());
+        }
 
         let edge_v = parser.v_edges()
-            .map(|(_, s)| {
-                if s.is_empty() {
-                    None
-                } else if s.chars().all(|c| c == 'x') {
-                    Some(Edge::Cross)
-                } else if s.chars().all(|c| c == '|') {
-                    Some(Edge::Line)
-                } else {
-                    None
-                }
-            }).collect();
+                           .map(|(_, s)| {
+                               if s.is_empty() {
+                                   None
+                               } else if s.chars().all(|c| c == 'x') {
+                                   Some(Edge::Cross)
+                               } else if s.chars().all(|c| c == '|') {
+                                   Some(Edge::Line)
+                               } else {
+                                   None
+                               }
+                           })
+                           .collect();
 
         let edge_h = parser.h_edges()
-            .map(|(_, s)| {
-                if s.is_empty() {
-                    None
-                } else if s.chars().all(|c| c == 'x') {
-                    Some(Edge::Cross)
-                } else if s.chars().all(|c| c == '-') {
-                    Some(Edge::Line)
-                } else {
-                    None
-                }
-            }).collect();
+                           .map(|(_, s)| {
+                               if s.is_empty() {
+                                   None
+                               } else if s.chars().all(|c| c == 'x') {
+                                   Some(Edge::Cross)
+                               } else if s.chars().all(|c| c == '-') {
+                                   Some(Edge::Line)
+                               } else {
+                                   None
+                               }
+                           })
+                           .collect();
 
         let hint = parser.cells()
-            .filter_map(|(_, s)| {
-                match s.trim_matches(' ') {
-                    "0" => Some(Some(0)),
-                    "1" => Some(Some(1)),
-                    "2" => Some(Some(2)),
-                    "3" => Some(Some(3)),
-                    "4" => Some(Some(4)),
-                    "" | "_" | "-" => Some(None),
-                    _ => None
-                }
-            }).collect::<Vec<_>>();
+                         .filter_map(|(_, s)| {
+                             match s.trim_matches(' ') {
+                                 "0" => Some(Some(0)),
+                                 "1" => Some(Some(1)),
+                                 "2" => Some(Some(2)),
+                                 "3" => Some(Some(3)),
+                                 "4" => Some(Some(4)),
+                                 "" | "_" | "-" => Some(None),
+                                 _ => None,
+                             }
+                         })
+                         .collect::<Vec<_>>();
         if hint.len() != (rows - 1) * (cols - 1) {
-            return Err(Error::invalid_hint())
+            return Err(Error::invalid_hint());
         }
 
         let size = Size((rows - 1) as i32, (cols - 1) as i32);
@@ -253,28 +279,34 @@ mod from_str_impl {
 
     fn parse_pat2(mat: Vec<Vec<char>>) -> Result<Puzzle, Error> {
         let row = mat.len();
-        if row < 1 { return Err(Error::too_small_rows()) }
+        if row < 1 {
+            return Err(Error::too_small_rows());
+        }
         let col = mat[0].len();
-        if col < 1 { return Err(Error::too_small_columns()) }
+        if col < 1 {
+            return Err(Error::too_small_columns());
+        }
         if mat[1..].iter().any(|r| r.len() != col) {
-            return Err(Error::length_mismatch())
+            return Err(Error::length_mismatch());
         }
 
-        let hint = mat.iter().flat_map(|line| {
-            line.iter().filter_map(|&c| {
-                match c {
-                    '0' => Some(Some(0)),
-                    '1' => Some(Some(1)),
-                    '2' => Some(Some(2)),
-                    '3' => Some(Some(3)),
-                    '4' => Some(Some(4)),
-                    '_' | '-' => Some(None),
-                    _ => None
-                }
-            })
-        }).collect::<Vec<_>>();
+        let hint = mat.iter()
+                      .flat_map(|line| {
+                          line.iter().filter_map(|&c| {
+                              match c {
+                                  '0' => Some(Some(0)),
+                                  '1' => Some(Some(1)),
+                                  '2' => Some(Some(2)),
+                                  '3' => Some(Some(3)),
+                                  '4' => Some(Some(4)),
+                                  '_' | '-' => Some(None),
+                                  _ => None,
+                              }
+                          })
+                      })
+                      .collect::<Vec<_>>();
         if hint.len() != row * col {
-            return Err(Error::invalid_hint())
+            return Err(Error::invalid_hint());
         }
 
         let size = Size(row as i32, col as i32);
@@ -304,7 +336,7 @@ mod display_impl {
             match puzzle.edge_h[p] {
                 Some(Edge::Cross) => try!(write!(f, "x")),
                 Some(Edge::Line) => try!(write!(f, "-")),
-                None => try!(write!(f, " "))
+                None => try!(write!(f, " ")),
             }
             Ok(())
         }
@@ -317,7 +349,7 @@ mod display_impl {
             match puzzle.edge_v[p] {
                 Some(Edge::Cross) => try!(write!(f, "x")),
                 Some(Edge::Line) => try!(write!(f, "|")),
-                None => try!(write!(f, " "))
+                None => try!(write!(f, " ")),
             }
             Ok(())
         }
@@ -346,7 +378,7 @@ mod display_impl {
                 try!(write!(f, "{}", VEdge(puzzle, p)));
                 match puzzle.hint[p] {
                     Some(n) => try!(write!(f, "{}", n)),
-                    None => try!(write!(f, " "))
+                    None => try!(write!(f, " ")),
                 }
             }
             try!(write!(f, "{}", VEdge(puzzle, Point(r, puzzle.column()))));
