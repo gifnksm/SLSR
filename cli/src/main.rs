@@ -10,9 +10,8 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 
-extern crate docopt;
+extern crate argparse;
 extern crate libc;
-extern crate rustc_serialize;
 extern crate term;
 extern crate slsr_core;
 extern crate slsr_solver;
