@@ -179,17 +179,10 @@ impl ConnectMap {
     pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
 
     pub fn sync(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
-        loop {
-            let mut updated = false;
-            for i in 0..self.cell_len() {
-                let c = CellId::new(i);
-                updated |= update_conn(side_map, self, c)
-            }
-            if !updated {
-                break
-            }
+        for i in 0..self.cell_len() {
+            let c = CellId::new(i);
+            update_conn(side_map, self, c);
         }
-
         for i in 0..self.cell_len() {
             let c = CellId::new(i);
             try!(update_area(side_map, self, c));
@@ -216,30 +209,35 @@ impl ConnectMap {
     }
 }
 
-fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId)
-               -> bool
-{
+fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId) {
     let mut unknown_edge = {
         let a = conn_map.get_mut(p);
-        if a.coord != p { return false }
+        if a.coord != p { return }
         mem::replace(&mut a.unknown_edge, vec![])
     };
 
-    let mut updated = false;
     for &p2 in &unknown_edge {
         if side_map.get_edge(p, p2) == State::Fixed(Edge::Cross) {
-            updated |= conn_map.union(p, p2);
+            conn_map.union(p, p2);
         }
     }
 
-    let mut area = conn_map.get_mut(p);
-    if area.unknown_edge.is_empty() {
-        area.unknown_edge = unknown_edge;
-    } else {
-        area.unknown_edge.append(&mut unknown_edge);
+    let mut need_update = None;
+    {
+        let mut area = conn_map.get_mut(p);
+        if area.unknown_edge.is_empty() {
+            area.unknown_edge = unknown_edge;
+        } else {
+            area.unknown_edge.append(&mut unknown_edge);
+            if area.coord <= p {
+                need_update = Some(area.coord);
+            }
+        }
     }
 
-    updated
+    if let Some(coord) = need_update {
+        update_conn(side_map, conn_map, coord);
+    }
 }
 
 fn update_area(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId)
@@ -252,6 +250,7 @@ fn update_area(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId)
     };
 
     unsafe {
+        // Assume the elements of unknown_edge is copyable.
         let ptr = unknown_edge.as_mut_ptr();
         let mut w = 0;
         for r in 0..unknown_edge.len() {
@@ -259,10 +258,8 @@ fn update_area(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId)
             match side_map.get_edge(p, *read) {
                 State::Fixed(_) => {}
                 State::Unknown => {
-                    *read = conn_map.get(*read).coord();
-
                     let write = ptr.offset(w as isize);
-                    mem::swap(&mut *read, &mut *write);
+                    *write = conn_map.get(*read).coord();
                     w += 1;
                 }
                 State::Conflict => {
@@ -270,7 +267,6 @@ fn update_area(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId)
                 }
             }
         }
-
         unknown_edge.truncate(w);
     }
 
