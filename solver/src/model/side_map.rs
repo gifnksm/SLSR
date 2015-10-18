@@ -2,7 +2,7 @@ use union_find::{UnionFind, UnionBySizeRank as Union, QuickFindUf as Uf};
 use slsr_core::puzzle::{Puzzle, Edge, Side};
 use slsr_core::geom::{CellId, Geom, Move, OUTSIDE_CELL_ID};
 
-use ::{SolverResult, State};
+use {SolverResult, State};
 
 trait Key {
     fn key0(self) -> usize;
@@ -10,15 +10,19 @@ trait Key {
 }
 
 impl Key for CellId {
-    fn key0(self) -> usize { self.id() * 2 }
-    fn key1(self) -> usize { self.id() * 2 + 1 }
+    fn key0(self) -> usize {
+        self.id() * 2
+    }
+    fn key1(self) -> usize {
+        self.id() * 2 + 1
+    }
 }
 
 #[derive(Debug)]
 pub struct SideMap {
     uf: Uf<Union>,
     revision: u32,
-    max_revision: u32
+    max_revision: u32,
 }
 
 impl Clone for SideMap {
@@ -26,7 +30,7 @@ impl Clone for SideMap {
         SideMap {
             uf: self.uf.clone(),
             revision: self.revision,
-            max_revision: self.max_revision
+            max_revision: self.max_revision,
         }
     }
 
@@ -44,11 +48,13 @@ impl SideMap {
         SideMap {
             uf: UnionFind::new(num_cell * 2),
             revision: 0,
-            max_revision: max_revision
+            max_revision: max_revision,
         }
     }
 
-    pub fn revision(&self) -> u32 { self.revision }
+    pub fn revision(&self) -> u32 {
+        self.revision
+    }
     pub fn all_filled(&self) -> bool {
         self.revision() == self.max_revision
     }
@@ -63,8 +69,8 @@ impl SideMap {
         match (a == b, a == c) {
             (false, false) => State::Unknown,
             (true,  false) => State::Fixed(Side::Out),
-            (false, true)  => State::Fixed(Side::In),
-            (true,  true)  => State::Conflict
+            (false, true) => State::Fixed(Side::In),
+            (true,  true) => State::Conflict,
         }
     }
 
@@ -76,8 +82,8 @@ impl SideMap {
         match (a == b, a == c) {
             (false, false) => State::Unknown,
             (true,  false) => State::Fixed(Edge::Cross),
-            (false, true)  => State::Fixed(Edge::Line),
-            (true,  true)  => State::Conflict
+            (false, true) => State::Fixed(Edge::Line),
+            (true,  true) => State::Conflict,
         }
     }
 
@@ -90,26 +96,30 @@ impl SideMap {
     pub fn set_side(&mut self, p: CellId, ty: Side) -> bool {
         match ty {
             Side::In => self.set_inside(p),
-            Side::Out => self.set_outside(p)
+            Side::Out => self.set_outside(p),
         }
     }
 
     pub fn set_same(&mut self, p0: CellId, p1: CellId) -> bool {
         let c1 = self.uf.union(p0.key0(), p1.key0());
         let c2 = self.uf.union(p0.key1(), p1.key1());
-        if c1 || c2 { self.revision += 1; }
+        if c1 || c2 {
+            self.revision += 1;
+        }
         c1 || c2
     }
     pub fn set_different(&mut self, p0: CellId, p1: CellId) -> bool {
         let c1 = self.uf.union(p0.key0(), p1.key1());
         let c2 = self.uf.union(p0.key1(), p1.key0());
-        if c1 || c2 { self.revision += 1 }
+        if c1 || c2 {
+            self.revision += 1
+        }
         c1 || c2
     }
     pub fn set_edge(&mut self, p0: CellId, p1: CellId, edge: Edge) -> bool {
         match edge {
             Edge::Cross => self.set_same(p0, p1),
-            Edge::Line => self.set_different(p0, p1)
+            Edge::Line => self.set_different(p0, p1),
         }
     }
 

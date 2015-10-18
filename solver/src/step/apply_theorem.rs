@@ -4,21 +4,21 @@ use std::mem;
 use slsr_core::geom::{CellId, Geom, Move};
 use slsr_core::puzzle::{Edge, Puzzle};
 
-use ::{Error, State, SolverResult};
-use ::model::side_map::SideMap;
-use ::model::theorem::{Pattern, Theorem, TheoremMatcher};
+use {Error, State, SolverResult};
+use model::side_map::SideMap;
+use model::theorem::{Pattern, Theorem, TheoremMatcher};
 
 #[derive(Clone, Debug)]
 struct TheoremCount {
     rest_count: usize,
-    result: Option<Rc<Vec<(Edge, (CellId, CellId))>>>
+    result: Option<Rc<Vec<(Edge, (CellId, CellId))>>>,
 }
 
 impl From<TheoremMatcher> for TheoremCount {
     fn from(matcher: TheoremMatcher) -> TheoremCount {
         TheoremCount {
             rest_count: matcher.num_matcher(),
-            result: Some(Rc::new(matcher.result_edges().collect()))
+            result: Some(Rc::new(matcher.result_edges().collect())),
         }
     }
 }
@@ -31,7 +31,9 @@ impl TheoremCount {
 
     fn update(&mut self, side_map: &mut SideMap) {
         match self.rest_count {
-            0 => { return }
+            0 => {
+                return;
+            }
             1 => {
                 self.rest_count = 0;
                 for &(edge, points) in &*self.result.take().unwrap() {
@@ -49,19 +51,18 @@ impl TheoremCount {
 struct IndexByEdge {
     points: (CellId, CellId),
     expect_line: Rc<Vec<usize>>,
-    expect_cross: Rc<Vec<usize>>
+    expect_cross: Rc<Vec<usize>>,
 }
 
 impl IndexByEdge {
     fn new(points: (CellId, CellId),
            expect_line: Vec<usize>,
            expect_cross: Vec<usize>)
-           -> IndexByEdge
-    {
+           -> IndexByEdge {
         IndexByEdge {
             points: points,
             expect_line: Rc::new(expect_line),
-            expect_cross: Rc::new(expect_cross)
+            expect_cross: Rc::new(expect_cross),
         }
     }
 }
@@ -69,14 +70,14 @@ impl IndexByEdge {
 #[derive(Debug)]
 pub struct TheoremPool {
     matchers: Vec<TheoremCount>,
-    index_by_edge: Vec<IndexByEdge>
+    index_by_edge: Vec<IndexByEdge>,
 }
 
 impl Clone for TheoremPool {
     fn clone(&self) -> TheoremPool {
         TheoremPool {
             matchers: self.matchers.clone(),
-            index_by_edge: self.index_by_edge.clone()
+            index_by_edge: self.index_by_edge.clone(),
         }
     }
 
@@ -92,22 +93,19 @@ impl TheoremPool {
                       sum_of_hint: u32,
                       side_map: &mut SideMap)
                       -> SolverResult<TheoremPool>
-        where T: IntoIterator<Item=Theorem>
+        where T: IntoIterator<Item = Theorem>
     {
-        let mut matchers = try!(create_matcher_list(theo_defs,
-                                                    puzzle,
-                                                    sum_of_hint,
-                                                    side_map));
+        let mut matchers = try!(create_matcher_list(theo_defs, puzzle, sum_of_hint, side_map));
 
         loop {
             let rev = side_map.revision();
 
             try!(apply_all_theorem(&mut matchers, side_map));
             if side_map.revision() != rev {
-                continue
+                continue;
             }
 
-            break
+            break;
         }
 
         merge_duplicate_matchers(&mut matchers);
@@ -118,17 +116,20 @@ impl TheoremPool {
                 let e = map.entry(points).or_insert((vec![], vec![]));
                 match edge {
                     Edge::Line => e.0.push(i),
-                    Edge::Cross => e.1.push(i)
+                    Edge::Cross => e.1.push(i),
                 }
             }
         }
 
         let matchers = matchers.into_iter().map(From::from).collect();
         let edges = map.into_iter()
-            .map(|(points, ex)| IndexByEdge::new(points, ex.0, ex.1))
-            .collect();
+                       .map(|(points, ex)| IndexByEdge::new(points, ex.0, ex.1))
+                       .collect();
 
-        Ok(TheoremPool { matchers: matchers, index_by_edge: edges })
+        Ok(TheoremPool {
+            matchers: matchers,
+            index_by_edge: edges,
+        })
     }
 
     pub fn apply_all(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
@@ -163,7 +164,7 @@ impl TheoremPool {
                         w += 1;
                     }
                     State::Conflict => {
-                        return Err(Error::invalid_board())
+                        return Err(Error::invalid_board());
                     }
                 }
             }
@@ -180,11 +181,9 @@ fn create_matcher_list<'a, T>(theo_defs: T,
                               sum_of_hint: u32,
                               side_map: &mut SideMap)
                               -> SolverResult<Vec<TheoremMatcher>>
-    where T: IntoIterator<Item=Theorem>
+    where T: IntoIterator<Item = Theorem>
 {
-    let it = theo_defs
-        .into_iter()
-        .flat_map(|theo| theo.all_rotations());
+    let it = theo_defs.into_iter().flat_map(|theo| theo.all_rotations());
 
     let mut hint_theorem = [vec![], vec![], vec![], vec![], vec![]];
     let mut nonhint_theorem = vec![];
@@ -192,7 +191,7 @@ fn create_matcher_list<'a, T>(theo_defs: T,
     for theo in it {
         match theo.head() {
             Pattern::Hint(h) => hint_theorem[h.hint() as usize].push(theo),
-            _ => nonhint_theorem.push(theo)
+            _ => nonhint_theorem.push(theo),
         }
     }
 
@@ -203,11 +202,10 @@ fn create_matcher_list<'a, T>(theo_defs: T,
             for theo in &hint_theorem[x as usize] {
                 let o = match theo.head() {
                     Pattern::Hint(hint) => hint.point(),
-                    _ => panic!()
+                    _ => panic!(),
                 };
                 let matcher = theo.clone().shift(p - o);
-                try!(matcher.matches(puzzle, sum_of_hint, side_map))
-                    .update(side_map, &mut data);
+                try!(matcher.matches(puzzle, sum_of_hint, side_map)).update(side_map, &mut data);
             }
         }
     }
@@ -217,8 +215,7 @@ fn create_matcher_list<'a, T>(theo_defs: T,
         for r in (1 - sz.0)..(puzzle.row() + sz.0 - 1) {
             for c in (1 - sz.1)..(puzzle.column() + sz.1 - 1) {
                 let matcher = theo.clone().shift(Move(r, c));
-                try!(matcher.matches(puzzle, sum_of_hint, side_map))
-                    .update(side_map, &mut data);
+                try!(matcher.matches(puzzle, sum_of_hint, side_map)).update(side_map, &mut data);
             }
         }
     }
@@ -228,8 +225,7 @@ fn create_matcher_list<'a, T>(theo_defs: T,
 
 fn apply_all_theorem(matchers: &mut Vec<TheoremMatcher>,
                      side_map: &mut SideMap)
-                     -> SolverResult<()>
-{
+                     -> SolverResult<()> {
     let cap = matchers.len();
 
     for m in mem::replace(matchers, Vec::with_capacity(cap)) {

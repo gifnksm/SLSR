@@ -4,8 +4,8 @@ use union_find::{Union, UnionFind, UnionResult, QuickFindUf as Uf};
 use slsr_core::puzzle::{Edge, Puzzle, Side};
 use slsr_core::geom::{CellId, Geom, Point, Move, OUTSIDE_CELL_ID};
 
-use ::{Error, State, SolverResult};
-use ::model::side_map::SideMap;
+use {Error, State, SolverResult};
+use model::side_map::SideMap;
 
 #[derive(Debug)]
 pub struct Area {
@@ -13,7 +13,7 @@ pub struct Area {
     side: State<Side>,
     unknown_edge: Vec<CellId>,
     sum_of_hint: u32,
-    size: usize
+    size: usize,
 }
 
 impl Clone for Area {
@@ -23,7 +23,7 @@ impl Clone for Area {
             side: self.side,
             unknown_edge: self.unknown_edge.clone(),
             sum_of_hint: self.sum_of_hint,
-            size: self.size
+            size: self.size,
         }
     }
 
@@ -37,10 +37,18 @@ impl Clone for Area {
 }
 
 impl Area {
-    pub fn coord(&self) -> CellId { self.coord }
-    pub fn side(&self) -> State<Side> { self.side }
-    pub fn unknown_edge(&self) -> &[CellId] { &self.unknown_edge }
-    pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
+    pub fn coord(&self) -> CellId {
+        self.coord
+    }
+    pub fn side(&self) -> State<Side> {
+        self.side
+    }
+    pub fn unknown_edge(&self) -> &[CellId] {
+        &self.unknown_edge
+    }
+    pub fn sum_of_hint(&self) -> u32 {
+        self.sum_of_hint
+    }
 }
 
 impl Area {
@@ -58,9 +66,9 @@ impl Area {
             }
         } else {
             let points = puzzle.points_in_column(0)
-                .chain(puzzle.points_in_column(puzzle.column() - 1))
-                .chain(puzzle.points_in_row(0))
-                .chain(puzzle.points_in_row(puzzle.row() - 1));
+                               .chain(puzzle.points_in_column(puzzle.column() - 1))
+                               .chain(puzzle.points_in_row(0))
+                               .chain(puzzle.points_in_row(puzzle.row() - 1));
             for p2 in points {
                 let cp2 = puzzle.point_to_cellid(p2);
                 if side_map.get_edge(cp, cp2) == State::Unknown {
@@ -76,7 +84,7 @@ impl Area {
             side: side_map.get_side(cp),
             unknown_edge: edge,
             sum_of_hint: sum,
-            size: 1
+            size: 1,
         }
     }
 }
@@ -112,7 +120,7 @@ impl Union for Area {
             side: side,
             unknown_edge: unknown_edge,
             sum_of_hint: lval.sum_of_hint + rval.sum_of_hint,
-            size: lval.size + rval.size
+            size: lval.size + rval.size,
         };
         if lval.size >= rval.size {
             UnionResult::Left(area)
@@ -125,14 +133,14 @@ impl Union for Area {
 #[derive(Debug)]
 pub struct ConnectMap {
     sum_of_hint: u32,
-    uf: Uf<Area>
+    uf: Uf<Area>,
 }
 
 impl Clone for ConnectMap {
     fn clone(&self) -> ConnectMap {
         ConnectMap {
             sum_of_hint: self.sum_of_hint,
-            uf: self.uf.clone()
+            uf: self.uf.clone(),
         }
     }
 
@@ -147,10 +155,9 @@ impl ConnectMap {
         let size = puzzle.size();
         let cell_len = size.cell_len();
 
-        let mut uf = Uf::from_iter(
-            (0..cell_len)
-                .map(|id| size.cellid_to_point(CellId::new(id)))
-                .map(|p| Area::new(p, puzzle, side_map)));
+        let mut uf = Uf::from_iter((0..cell_len)
+                                       .map(|id| size.cellid_to_point(CellId::new(id)))
+                                       .map(|p| Area::new(p, puzzle, side_map)));
 
         let mut sum_of_hint = 0;
         for i in 0..cell_len {
@@ -159,7 +166,7 @@ impl ConnectMap {
 
         let mut conn_map = ConnectMap {
             sum_of_hint: sum_of_hint,
-            uf: uf
+            uf: uf,
         };
 
         for p in size.points() {
@@ -175,8 +182,12 @@ impl ConnectMap {
         conn_map
     }
 
-    pub fn cell_len(&self) -> usize { self.uf.size() }
-    pub fn sum_of_hint(&self) -> u32 { self.sum_of_hint }
+    pub fn cell_len(&self) -> usize {
+        self.uf.size()
+    }
+    pub fn sum_of_hint(&self) -> u32 {
+        self.sum_of_hint
+    }
 
     pub fn sync(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
         for i in 0..self.cell_len() {
@@ -212,7 +223,9 @@ impl ConnectMap {
 fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId) {
     let mut unknown_edge = {
         let a = conn_map.get_mut(p);
-        if a.coord != p { return }
+        if a.coord != p {
+            return;
+        }
         mem::replace(&mut a.unknown_edge, vec![])
     };
 
@@ -240,12 +253,12 @@ fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId) {
     }
 }
 
-fn update_area(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId)
-               -> SolverResult<()>
-{
+fn update_area(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId) -> SolverResult<()> {
     let mut unknown_edge = {
         let a = conn_map.get_mut(p);
-        if a.coord != p { return Ok(())}
+        if a.coord != p {
+            return Ok(());
+        }
         mem::replace(&mut a.unknown_edge, vec![])
     };
 
@@ -263,7 +276,7 @@ fn update_area(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId)
                     w += 1;
                 }
                 State::Conflict => {
-                    return Err(Error::invalid_board())
+                    return Err(Error::invalid_board());
                 }
             }
         }

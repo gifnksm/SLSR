@@ -38,18 +38,18 @@ mod solver;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Error {
-    kind: ErrorKind
+    kind: ErrorKind,
 }
 
 #[derive(Copy, Clone, Debug)]
 enum ErrorKind {
-    InvalidBoard
+    InvalidBoard,
 }
 
 impl ErrorTrait for Error {
     fn description(&self) -> &str {
         match self.kind {
-            ErrorKind::InvalidBoard => "invalid board data"
+            ErrorKind::InvalidBoard => "invalid board data",
         }
     }
 }
@@ -70,12 +70,14 @@ pub type SolverResult<T> = Result<T, Error>;
 
 enum FillResult<'a> {
     Completed(Solver<'a>),
-    Partial(Solver<'a>, Vec<CellId>)
+    Partial(Solver<'a>, Vec<CellId>),
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum State<T> {
-    Fixed(T), Unknown, Conflict
+    Fixed(T),
+    Unknown,
+    Conflict,
 }
 
 impl<T> Into<SolverResult<Option<T>>> for State<T> {
@@ -83,7 +85,7 @@ impl<T> Into<SolverResult<Option<T>>> for State<T> {
         match self {
             State::Fixed(st) => Ok(Some(st)),
             State::Unknown => Ok(None),
-            State::Conflict => Err(Error::invalid_board())
+            State::Conflict => Err(Error::invalid_board()),
         }
     }
 }
@@ -94,32 +96,34 @@ fn fill_absolutely_fixed(solver: &mut Solver) -> SolverResult<()> {
 
         try!(solver.apply_all_theorem());
         if solver.revision() != rev {
-            continue
+            continue;
         }
 
         try!(solver.connect_analysis());
         if solver.revision() != rev {
-            continue
+            continue;
         }
 
-        break
+        break;
     }
 
     Ok(())
 }
 
-fn fill_by_shallow_backtracking(solver: &mut Solver, pts: &[CellId])
-                                -> SolverResult<bool>
-{
+fn fill_by_shallow_backtracking(solver: &mut Solver, pts: &[CellId]) -> SolverResult<bool> {
     let rev = solver.revision();
     let mut solver_in = solver.clone();
     let mut solver_out = solver.clone();
 
     for &p in pts {
         match solver.get_side(p) {
-            State::Fixed(_) => { continue }
+            State::Fixed(_) => {
+                continue;
+            }
             State::Unknown => {}
-            State::Conflict => { return Err(Error::invalid_board()) }
+            State::Conflict => {
+                return Err(Error::invalid_board());
+            }
         }
 
         solver_in.clone_from(&solver);
@@ -128,7 +132,7 @@ fn fill_by_shallow_backtracking(solver: &mut Solver, pts: &[CellId])
         if fill_absolutely_fixed(&mut solver_in).is_err() {
             solver.set_outside(p);
             try!(fill_absolutely_fixed(solver));
-            continue
+            continue;
         }
 
         solver_out.clone_from(&solver);
@@ -146,13 +150,13 @@ fn fill(mut solver: Solver) -> SolverResult<FillResult> {
     try!(fill_absolutely_fixed(&mut solver));
 
     if solver.all_filled() {
-        return Ok(FillResult::Completed(solver))
+        return Ok(FillResult::Completed(solver));
     }
 
     let mut pts = solver.get_unknown_points();
     while try!(fill_by_shallow_backtracking(&mut solver, &pts)) {
         if solver.all_filled() {
-            return Ok(FillResult::Completed(solver))
+            return Ok(FillResult::Completed(solver));
         }
         pts = solver.get_unknown_points();
     }
@@ -162,15 +166,13 @@ fn fill(mut solver: Solver) -> SolverResult<FillResult> {
 
 #[derive(Clone, Debug)]
 pub struct Solutions<'a> {
-    queue: Vec<Solver<'a>>
+    queue: Vec<Solver<'a>>,
 }
 
 impl<'a> Solutions<'a> {
     pub fn new(puzzle: &'a Puzzle) -> SolverResult<Solutions<'a>> {
         let theorem = THEOREM_DEFINE.iter().map(|theo| theo.parse().unwrap());
-        Ok(Solutions {
-            queue: vec![try!(Solver::new(puzzle, theorem))]
-        })
+        Ok(Solutions { queue: vec![try!(Solver::new(puzzle, theorem))] })
     }
 }
 
@@ -182,15 +184,15 @@ impl<'a> Iterator for Solutions<'a> {
             let (solver,pts) = match fill(solver) {
                 Ok(FillResult::Completed(mut solver)) => {
                     if solver.validate_result().is_err() {
-                        continue
+                        continue;
                     }
                     match solver.into() {
                         Ok(result) => return Some(result),
-                        Err(_) => continue
+                        Err(_) => continue,
                     }
                 }
                 Ok(FillResult::Partial(solver, pts)) => (solver, pts),
-                Err(_) => continue
+                Err(_) => continue,
             };
 
             let p = *pts.last().unwrap();
@@ -209,7 +211,7 @@ impl<'a> Iterator for Solutions<'a> {
 pub fn solve(puzzle: &Puzzle) -> SolverResult<Puzzle> {
     let mut it = try!(Solutions::new(puzzle));
     if let Some(solution) = it.next() {
-        return Ok(solution)
+        return Ok(solution);
     }
 
     Err(Error::invalid_board())

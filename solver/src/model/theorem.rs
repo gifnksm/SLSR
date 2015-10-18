@@ -7,23 +7,32 @@ use slsr_core::puzzle::{Edge, Puzzle};
 use slsr_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
 use slsr_core::lattice_parser::{LatticeParser, ParseLatticeError};
 
-use ::{Error, State, SolverResult};
-use ::model::side_map::SideMap;
+use {Error, State, SolverResult};
+use model::side_map::SideMap;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct HintPattern {
     hint: u8,
-    point: Point
+    point: Point,
 }
 
 impl HintPattern {
     fn new(h: u8, p: Point) -> HintPattern {
-        HintPattern { hint: h, point: p }.normalized()
+        HintPattern {
+            hint: h,
+            point: p,
+        }.normalized()
     }
-    pub fn hint(&self) -> u8 { self.hint }
-    pub fn point(&self) -> Point { self.point }
+    pub fn hint(&self) -> u8 {
+        self.hint
+    }
+    pub fn point(&self) -> Point {
+        self.point
+    }
 
-    fn normalized(self) -> HintPattern { self }
+    fn normalized(self) -> HintPattern {
+        self
+    }
     fn rotate(mut self, rot: Rotation) -> HintPattern {
         let o = Point(0, 0);
         let p = self.point;
@@ -48,15 +57,23 @@ impl HintPattern {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct EdgePattern<P> {
     edge: Edge,
-    points: (P, P)
+    points: (P, P),
 }
 
 impl EdgePattern<Point> {
     fn cross(p0: Point, p1: Point) -> EdgePattern<Point> {
-        EdgePattern { edge: Edge::Cross, points: (p0, p1) }.normalized()
+        EdgePattern {
+            edge: Edge::Cross,
+            points: (p0, p1),
+        }
+            .normalized()
     }
     fn line(p0: Point, p1: Point) -> EdgePattern<Point> {
-        EdgePattern { edge: Edge::Line, points: (p0, p1) }.normalized()
+        EdgePattern {
+            edge: Edge::Line,
+            points: (p0, p1),
+        }
+            .normalized()
     }
 
     fn normalized(self) -> EdgePattern<Point> {
@@ -64,7 +81,10 @@ impl EdgePattern<Point> {
         if self.points.1 < self.points.0 {
             points = (self.points.1, self.points.0);
         }
-        EdgePattern { edge: self.edge, points: points }
+        EdgePattern {
+            edge: self.edge,
+            points: points,
+        }
     }
     fn rotate(mut self, rot: Rotation) -> EdgePattern<Point> {
         let o = Point(0, 0);
@@ -81,17 +101,23 @@ impl EdgePattern<Point> {
     fn to_cellid(self, size: Size) -> EdgePattern<CellId> {
         let p0 = size.point_to_cellid(self.points.0);
         let p1 = size.point_to_cellid(self.points.1);
-        EdgePattern { edge: self.edge, points: (p0, p1) }
+        EdgePattern {
+            edge: self.edge,
+            points: (p0, p1),
+        }
     }
 
-    fn matches(self, size: Size, side_map: &mut SideMap)
+    fn matches(self,
+               size: Size,
+               side_map: &mut SideMap)
                -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
         self.to_cellid(size).matches(side_map)
     }
 }
 
 impl EdgePattern<CellId> {
-    fn matches(self, side_map: &mut SideMap)
+    fn matches(self,
+               side_map: &mut SideMap)
                -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
         let ps = self.points;
         match side_map.get_edge(ps.0, ps.1) {
@@ -103,7 +129,7 @@ impl EdgePattern<CellId> {
                 }
             }
             State::Unknown => Ok(PatternMatchResult::Partial(self)),
-            State::Conflict => Err(Error::invalid_board())
+            State::Conflict => Err(Error::invalid_board()),
         }
     }
 
@@ -116,11 +142,13 @@ impl EdgePattern<CellId> {
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Pattern {
     Hint(HintPattern),
-    Edge(EdgePattern<Point>)
+    Edge(EdgePattern<Point>),
 }
 
 enum PatternMatchResult<T> {
-    Complete, Partial(T), Conflict
+    Complete,
+    Partial(T),
+    Conflict,
 }
 
 impl Pattern {
@@ -137,21 +165,23 @@ impl Pattern {
     fn rotate(self, rot: Rotation) -> Pattern {
         match self {
             Pattern::Hint(h) => Pattern::Hint(h.rotate(rot)),
-            Pattern::Edge(e) => Pattern::Edge(e.rotate(rot))
+            Pattern::Edge(e) => Pattern::Edge(e.rotate(rot)),
         }
     }
     fn shift(self, d: Move) -> Pattern {
         match self {
             Pattern::Hint(h) => Pattern::Hint(h.shift(d)),
-            Pattern::Edge(e) => Pattern::Edge(e.shift(d))
+            Pattern::Edge(e) => Pattern::Edge(e.shift(d)),
         }
     }
 
-    fn matches(self, puzzle: &Puzzle, side_map: &mut SideMap)
+    fn matches(self,
+               puzzle: &Puzzle,
+               side_map: &mut SideMap)
                -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
         match self {
             Pattern::Hint(h) => h.matches(puzzle),
-            Pattern::Edge(e) => e.matches(puzzle.size(), side_map)
+            Pattern::Edge(e) => e.matches(puzzle.size(), side_map),
         }
     }
 }
@@ -161,7 +191,7 @@ pub struct Theorem {
     size: Size,
     matcher: Vec<Pattern>,
     result: Vec<EdgePattern<Point>>,
-    closed_hint: Option<(u32, Vec<HintPattern>)>
+    closed_hint: Option<(u32, Vec<HintPattern>)>,
 }
 
 impl Theorem {
@@ -181,8 +211,12 @@ impl Theorem {
         let size = rot * Move(self.size.0, self.size.1);
 
         let mut d = Move(0, 0);
-        if size.0 < 0 { d = d + Move(- size.0 - 1, 0); }
-        if size.1 < 0 { d = d + Move(0, - size.1 - 1); }
+        if size.0 < 0 {
+            d = d + Move(-size.0 - 1, 0);
+        }
+        if size.1 < 0 {
+            d = d + Move(0, -size.1 - 1);
+        }
 
         self.size = Size(size.0.abs(), size.1.abs());
         for x in self.matcher.iter_mut() {
@@ -217,15 +251,21 @@ impl Theorem {
     }
 
     pub fn all_rotations(self) -> Vec<Theorem> {
-        let deg90  = self.clone().rotate(Rotation::UCW90);
+        let deg90 = self.clone().rotate(Rotation::UCW90);
         let deg180 = self.clone().rotate(Rotation::UCW180);
         let deg270 = self.clone().rotate(Rotation::UCW270);
-        let h_deg0   = self.clone().rotate(Rotation::H_FLIP);
-        let h_deg90  = h_deg0.clone().rotate(Rotation::UCW90);
+        let h_deg0 = self.clone().rotate(Rotation::H_FLIP);
+        let h_deg90 = h_deg0.clone().rotate(Rotation::UCW90);
         let h_deg180 = h_deg0.clone().rotate(Rotation::UCW180);
         let h_deg270 = h_deg0.clone().rotate(Rotation::UCW270);
-        let mut rots = vec![self.clone(), deg90, deg180, deg270,
-                            h_deg0, h_deg90, h_deg180, h_deg270];
+        let mut rots = vec![self.clone(),
+                            deg90,
+                            deg180,
+                            deg270,
+                            h_deg0,
+                            h_deg90,
+                            h_deg180,
+                            h_deg270];
 
         rots.sort();
         rots.dedup();
@@ -233,15 +273,18 @@ impl Theorem {
         rots
     }
 
-    pub fn size(&self) -> Size { self.size }
-    pub fn head(&self) -> Pattern { self.matcher[0] }
+    pub fn size(&self) -> Size {
+        self.size
+    }
+    pub fn head(&self) -> Pattern {
+        self.matcher[0]
+    }
 
     fn can_close(puzzle: &Puzzle,
                  sum_of_hint: u32,
                  hpat: &[HintPattern],
                  sum_of_hpat: u32)
-                 -> bool
-    {
+                 -> bool {
         if sum_of_hint > sum_of_hpat {
             return false;
         }
@@ -267,38 +310,37 @@ impl Theorem {
                    puzzle: &Puzzle,
                    sum_of_hint: u32,
                    side_map: &mut SideMap)
-                   -> SolverResult<TheoremMatchResult>
-    {
+                   -> SolverResult<TheoremMatchResult> {
         let cap = self.matcher.len();
         let mut new_matcher = Vec::with_capacity(cap);
 
         for matcher in self.matcher {
             match try!(matcher.matches(puzzle, side_map)) {
-                PatternMatchResult::Complete => {},
+                PatternMatchResult::Complete => {}
                 PatternMatchResult::Partial(m) => new_matcher.push(m),
                 PatternMatchResult::Conflict => {
-                    return Ok(TheoremMatchResult::Conflict)
+                    return Ok(TheoremMatchResult::Conflict);
                 }
             }
         }
 
         if let Some((sum_of_hpat, ref hpat)) = self.closed_hint {
             if Theorem::can_close(puzzle, sum_of_hint, hpat, sum_of_hpat) {
-                return Ok(TheoremMatchResult::Conflict)
+                return Ok(TheoremMatchResult::Conflict);
             }
         }
 
         let result = self.result
-            .into_iter()
-            .map(|pat| pat.to_cellid(puzzle.size()))
-            .collect();
+                         .into_iter()
+                         .map(|pat| pat.to_cellid(puzzle.size()))
+                         .collect();
 
         if new_matcher.is_empty() {
             Ok(TheoremMatchResult::Complete(result))
         } else {
             Ok(TheoremMatchResult::Partial(TheoremMatcher {
                 matcher: new_matcher,
-                result: result
+                result: result,
             }))
         }
     }
@@ -307,14 +349,14 @@ impl Theorem {
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct TheoremMatcher {
     matcher: Vec<EdgePattern<CellId>>,
-    result: Vec<EdgePattern<CellId>>
+    result: Vec<EdgePattern<CellId>>,
 }
 
 #[derive(Clone, Debug)]
 pub enum TheoremMatchResult {
     Complete(Vec<EdgePattern<CellId>>),
     Partial(TheoremMatcher),
-    Conflict
+    Conflict,
 }
 
 impl TheoremMatchResult {
@@ -355,13 +397,13 @@ impl TheoremMatcher {
                 let read = *p.offset(r as isize);
 
                 match try!(read.matches(side_map)) {
-                    PatternMatchResult::Complete => {},
+                    PatternMatchResult::Complete => {}
                     PatternMatchResult::Partial(e) => {
                         *p.offset(w as isize) = e;
                         w += 1;
                     }
                     PatternMatchResult::Conflict => {
-                        return Ok(TheoremMatchResult::Conflict)
+                        return Ok(TheoremMatchResult::Conflict);
                     }
                 }
             }
@@ -390,7 +432,7 @@ impl TheoremMatcher {
 }
 
 pub struct Edges<'a> {
-    iter: SliceIter<'a, EdgePattern<CellId>>
+    iter: SliceIter<'a, EdgePattern<CellId>>,
 }
 
 impl<'a> Iterator for Edges<'a> {
@@ -403,7 +445,7 @@ impl<'a> Iterator for Edges<'a> {
 
 #[derive(Copy, Clone, Debug)]
 pub struct ParseTheoremError {
-    kind: TheoremErrorKind
+    kind: TheoremErrorKind,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -413,14 +455,12 @@ enum TheoremErrorKind {
     TooSmallColumns,
     SizeMismatch,
     MatcherDisappear,
-    Lattice(ParseLatticeError)
+    Lattice(ParseLatticeError),
 }
 
 impl From<ParseLatticeError> for ParseTheoremError {
     fn from(err: ParseLatticeError) -> ParseTheoremError {
-        ParseTheoremError {
-            kind: TheoremErrorKind::Lattice(err)
-        }
+        ParseTheoremError { kind: TheoremErrorKind::Lattice(err) }
     }
 }
 
@@ -433,15 +473,14 @@ impl ErrorTrait for ParseTheoremError {
             TooSmallColumns => "the number of columns is too small to parse puzzle",
             SizeMismatch => "size of the matcher does not match size of the pattern",
             MatcherDisappear => "some elements in the matcher disappear in the pattern",
-            Lattice(ref e) => e.description()
+            Lattice(ref e) => e.description(),
         }
     }
     fn cause(&self) -> Option<&ErrorTrait> {
         use self::TheoremErrorKind::*;
         match self.kind {
-            NoSeparator | TooSmallRows | TooSmallColumns | SizeMismatch | MatcherDisappear
-                => None,
-            Lattice(ref e) => Some(e)
+            NoSeparator | TooSmallRows | TooSmallColumns | SizeMismatch | MatcherDisappear => None,
+            Lattice(ref e) => Some(e),
         }
     }
 }
@@ -481,8 +520,8 @@ impl FromStr for Theorem {
         let mut closed_lines = vec![];
 
         let lines = s.lines()
-            .map(|l| l.trim_matches('\n'))
-            .filter(|s| !s.is_empty());
+                     .map(|l| l.trim_matches('\n'))
+                     .filter(|s| !s.is_empty());
 
         for line in lines {
             let mut it = line.splitn(3, '!');
@@ -492,7 +531,7 @@ impl FromStr for Theorem {
             if let Some(l) = it.next() {
                 result_lines.push(l.chars().collect());
             } else {
-                return Err(Error::no_separator())
+                return Err(Error::no_separator());
             }
 
             if let Some(l) = it.next() {
@@ -502,13 +541,17 @@ impl FromStr for Theorem {
 
         let (m_size, m_pat) = try!(parse_lines(&matcher_lines));
         let (r_size, mut r_pat) = try!(parse_lines(&result_lines));
-        if m_size != r_size { return Err(Error::size_mismatch()) }
+        if m_size != r_size {
+            return Err(Error::size_mismatch());
+        }
 
         let c_pat = if closed_lines.is_empty() {
             None
         } else {
             let (c_size, c_pat) = try!(parse_lines(&closed_lines));
-            if m_size != c_size { return Err(Error::size_mismatch()) }
+            if m_size != c_size {
+                return Err(Error::size_mismatch());
+            }
             Some(c_pat)
         };
 
@@ -519,27 +562,40 @@ impl FromStr for Theorem {
                     idx += i;
                     let _ = r_pat.remove(idx);
                 }
-                None => { return Err(Error::matcher_disappear()) }
+                None => {
+                    return Err(Error::matcher_disappear());
+                }
             }
         }
 
-        let r_pat = r_pat.into_iter().map(|pat| match pat {
-            Pattern::Edge(e) => e,
-            _ => panic!()
-        }).collect();
+        let r_pat = r_pat.into_iter()
+                         .map(|pat| {
+                             match pat {
+                                 Pattern::Edge(e) => e,
+                                 _ => panic!(),
+                             }
+                         })
+                         .collect();
 
         let c_pat = c_pat.map(|pats| {
             use std::ops::Add;
-            let hints = pats.into_iter().filter_map(|pat| match pat {
-                Pattern::Hint(h) => Some(h),
-                _ => None
-            }).collect::<Vec<_>>();
+            let hints = pats.into_iter()
+                            .filter_map(|pat| {
+                                match pat {
+                                    Pattern::Hint(h) => Some(h),
+                                    _ => None,
+                                }
+                            })
+                            .collect::<Vec<_>>();
             let sum = hints.iter().map(|h| h.hint as u32).fold(0, Add::add);
             (sum, hints)
         });
 
         return Ok(Theorem {
-            size: m_size, matcher: m_pat, result: r_pat, closed_hint: c_pat
+            size: m_size,
+            matcher: m_pat,
+            result: r_pat,
+            closed_hint: c_pat,
         });
 
         fn parse_lines(lines: &[Vec<char>]) -> Result<(Size, Vec<Pattern>), ParseTheoremError> {
@@ -548,8 +604,12 @@ impl FromStr for Theorem {
             let rows = parser.num_rows();
             let cols = parser.num_cols();
 
-            if rows <= 1 { return Err(Error::too_small_rows()) }
-            if cols <= 1 { return Err(Error::too_small_columns()) }
+            if rows <= 1 {
+                return Err(Error::too_small_rows());
+            }
+            if cols <= 1 {
+                return Err(Error::too_small_columns());
+            }
 
             let size = Size((rows - 1) as i32, (cols - 1) as i32);
 
@@ -557,29 +617,29 @@ impl FromStr for Theorem {
 
             for (p, s) in parser.v_edges() {
                 if s.is_empty() {
-                    continue
+                    continue;
                 }
                 if s.chars().all(|c| c == 'x') {
                     pat.push(Pattern::cross(p + Move::LEFT, p));
-                    continue
+                    continue;
                 }
                 if s.chars().all(|c| c == '|') {
                     pat.push(Pattern::line(p + Move::LEFT, p));
-                    continue
+                    continue;
                 }
             }
 
             for (p, s) in parser.h_edges() {
                 if s.is_empty() {
-                    continue
+                    continue;
                 }
                 if s.chars().all(|c| c == 'x') {
                     pat.push(Pattern::cross(p + Move::UP, p));
-                    continue
+                    continue;
                 }
                 if s.chars().all(|c| c == '-') {
                     pat.push(Pattern::line(p + Move::UP, p));
-                    continue
+                    continue;
                 }
             }
 
@@ -588,11 +648,21 @@ impl FromStr for Theorem {
             for (p, s) in parser.cells() {
                 for c in s.trim_matches(' ').chars() {
                     match c {
-                        '0' => { pat.push(Pattern::hint(0, p)); }
-                        '1' => { pat.push(Pattern::hint(1, p)); }
-                        '2' => { pat.push(Pattern::hint(2, p)); }
-                        '3' => { pat.push(Pattern::hint(3, p)); }
-                        '4' => { pat.push(Pattern::hint(4, p)); }
+                        '0' => {
+                            pat.push(Pattern::hint(0, p));
+                        }
+                        '1' => {
+                            pat.push(Pattern::hint(1, p));
+                        }
+                        '2' => {
+                            pat.push(Pattern::hint(2, p));
+                        }
+                        '3' => {
+                            pat.push(Pattern::hint(3, p));
+                        }
+                        '4' => {
+                            pat.push(Pattern::hint(4, p));
+                        }
                         _ if c.is_alphabetic() => {
                             let key = c.to_lowercase().next().unwrap();
                             match pairs.iter().position(|&(k, _, _)| k == key) {
@@ -649,9 +719,10 @@ mod tests {
 
     #[test]
     fn parse() {
-        fn check(size: Size, mut matcher: Vec<Pattern>, mut result: Vec<EdgePattern<Point>>,
-                 input: &str)
-        {
+        fn check(size: Size,
+                 mut matcher: Vec<Pattern>,
+                 mut result: Vec<EdgePattern<Point>>,
+                 input: &str) {
             matcher.sort();
             matcher.dedup();
             result.sort();
@@ -660,10 +731,9 @@ mod tests {
                 size: size,
                 matcher: matcher,
                 result: result,
-                closed_hint: None
+                closed_hint: None,
             };
-            assert_eq!(theo,
-                       input.parse::<Theorem>().unwrap())
+            assert_eq!(theo, input.parse::<Theorem>().unwrap())
         }
 
         check(Size(1, 1),
@@ -671,14 +741,14 @@ mod tests {
               vec![EdgePattern::cross(Point(0, 0), Point(0, -1)),
                    EdgePattern::cross(Point(0, 0), Point(0, 1)),
                    EdgePattern::cross(Point(0, 0), Point(-1, 0)),
-                   EdgePattern::cross(Point(0, 0), Point(1, 0))],"
+                   EdgePattern::cross(Point(0, 0), Point(1, 0))],
+              r"
 + + ! +x+
  0  ! x0x
 + + ! +x+
 ");
         check(Size(3, 3),
-              vec![Pattern::hint(0, Point(1, 0)),
-                   Pattern::hint(3, Point(1, 1))],
+              vec![Pattern::hint(0, Point(1, 0)), Pattern::hint(3, Point(1, 1))],
               vec![EdgePattern::cross(Point(1, 0), Point(1, -1)),
                    EdgePattern::cross(Point(1, 0), Point(1, 1)),
                    EdgePattern::cross(Point(1, 0), Point(0, 0)),
@@ -691,7 +761,8 @@ mod tests {
                    EdgePattern::line(Point(0, 1), Point(1, 1)),
                    EdgePattern::line(Point(1, 1), Point(1, 2)),
                    EdgePattern::line(Point(1, 1), Point(2, 1)),
-                   EdgePattern::line(Point(2, 0), Point(2, 1))], "
+                   EdgePattern::line(Point(2, 0), Point(2, 1))],
+              r"
 + + + + ! + + + +
         !   | x
 + + + + ! +x+-+x+
@@ -701,10 +772,10 @@ mod tests {
 + + + + ! + + + +
 ");
         check(Size(2, 2),
-              vec![Pattern::hint(1, Point(1, 1)),
-                   Pattern::line(Point(1, 0), Point(0, 1))],
+              vec![Pattern::hint(1, Point(1, 1)), Pattern::line(Point(1, 0), Point(0, 1))],
               vec![EdgePattern::cross(Point(1, 1), Point(1, 2)),
-                   EdgePattern::cross(Point(1, 1), Point(2, 1))], "
+                   EdgePattern::cross(Point(1, 1), Point(2, 1))],
+              r"
 + + + ! + + +
    a  !    a
 + + + ! + + +
@@ -712,13 +783,13 @@ mod tests {
 + + + ! + +x+
 ");
         check(Size(3, 3),
-              vec![Pattern::hint(3, Point(1, 1)),
-                   Pattern::cross(Point(1, 0), Point(0, 1))],
+              vec![Pattern::hint(3, Point(1, 1)), Pattern::cross(Point(1, 0), Point(0, 1))],
               vec![EdgePattern::cross(Point(0, 0), Point(0, 1)),
                    EdgePattern::cross(Point(0, 0), Point(1, 0)),
                    EdgePattern::line(Point(0, 1), Point(1, 1)),
                    EdgePattern::line(Point(1, 0), Point(1, 1)),
-                   EdgePattern::line(Point(1, 2), Point(2, 1))], "
+                   EdgePattern::line(Point(1, 2), Point(2, 1))],
+              r"
 + + + + ! + + + +
    a    !   xa
 + + + + ! +x+-+ +
@@ -731,7 +802,7 @@ mod tests {
 
     #[test]
     fn rotate() {
-        let deg0 = "
+        let deg0 = r"
 + + + ! + + +
    a  !  bxa
 + + + ! +x+-+
@@ -739,17 +810,21 @@ mod tests {
 + + + ! + + +
       !    B
 + + + ! + + +
-".parse::<Theorem>().unwrap();
+"
+                       .parse::<Theorem>()
+                       .unwrap();
 
-        let deg90 = "
+        let deg90 = r"
 + + + + ! + + + +
  a 3    !  a|3 B
 + + + + ! +x+-+ +
    a    !  bxa
 + + + + ! + + + +
-".parse::<Theorem>().unwrap();
+"
+                        .parse::<Theorem>()
+                        .unwrap();
 
-        let deg180 = "
+        let deg180 = r"
 + + + ! + + +
       !  B
 + + + ! + + +
@@ -757,17 +832,21 @@ mod tests {
 + + + ! +-+x+
  a    !  axb
 + + + ! + + +
-".parse::<Theorem>().unwrap();
+"
+                         .parse::<Theorem>()
+                         .unwrap();
 
-        let deg270 = "
+        let deg270 = r"
 + + + + ! + + + +
    a    !    axb
 + + + + ! + +-+x+
    3 a  !  B 3|a
 + + + + ! + + + +
-".parse::<Theorem>().unwrap();
+"
+                         .parse::<Theorem>()
+                         .unwrap();
 
-        let h_flip = "
+        let h_flip = r"
 + + + ! + + +
  a    !  axb
 + + + ! +-+x+
@@ -775,9 +854,11 @@ mod tests {
 + + + ! + + +
       !  B
 + + + ! + + +
-".parse::<Theorem>().unwrap();
+"
+                         .parse::<Theorem>()
+                         .unwrap();
 
-        let v_flip = "
+        let v_flip = r"
 + + + ! + + +
       !    B
 + + + ! + + +
@@ -785,7 +866,9 @@ mod tests {
 + + + ! +x+-+
    a  !  bxa
 + + + ! + + +
-".parse::<Theorem>().unwrap();
+"
+                         .parse::<Theorem>()
+                         .unwrap();
 
         assert_eq!(deg0.clone(), deg0.clone().rotate(Rotation::UCW0));
         assert_eq!(deg90.clone(), deg0.clone().rotate(Rotation::UCW90));
@@ -795,7 +878,10 @@ mod tests {
         assert_eq!(v_flip.clone(), deg0.clone().rotate(Rotation::V_FLIP));
         assert_eq!(v_flip.clone(), h_flip.clone().rotate(Rotation::UCW180));
 
-        let mut rots = &mut [deg0.clone(), deg90, deg180, deg270,
+        let mut rots = &mut [deg0.clone(),
+                             deg90,
+                             deg180,
+                             deg270,
                              h_flip.clone(),
                              h_flip.clone().rotate(Rotation::UCW90),
                              h_flip.clone().rotate(Rotation::UCW180),
@@ -806,11 +892,13 @@ mod tests {
 
     #[test]
     fn all_rotations() {
-        let theo = "
+        let theo = r"
 + + ! +x+
  0  ! x0x
 + + ! +x+
-".parse::<Theorem>().unwrap();
+"
+                       .parse::<Theorem>()
+                       .unwrap();
         let rots = theo.clone().all_rotations();
         assert_eq!(&[theo], &rots[..]);
     }

@@ -5,7 +5,7 @@ use model::connect_map::ConnectMap;
 use model::side_map::SideMap;
 use model::theorem::Theorem;
 use step::apply_theorem::TheoremPool;
-use ::{Error, SolverResult, State};
+use {Error, SolverResult, State};
 
 #[derive(Debug)]
 pub struct Solver<'a> {
@@ -13,7 +13,7 @@ pub struct Solver<'a> {
     sum_of_hint: u32,
     theorem_pool: TheoremPool,
     side_map: SideMap,
-    connect_map: Option<ConnectMap>
+    connect_map: Option<ConnectMap>,
 }
 
 impl<'a> Clone for Solver<'a> {
@@ -23,7 +23,7 @@ impl<'a> Clone for Solver<'a> {
             sum_of_hint: self.sum_of_hint,
             theorem_pool: self.theorem_pool.clone(),
             side_map: self.side_map.clone(),
-            connect_map: self.connect_map.clone()
+            connect_map: self.connect_map.clone(),
         }
     }
 
@@ -38,7 +38,7 @@ impl<'a> Clone for Solver<'a> {
 
 impl<'a> Solver<'a> {
     pub fn new<I>(puzzle: &'a Puzzle, theorem: I) -> SolverResult<Solver<'a>>
-        where I: Iterator<Item=Theorem>
+        where I: Iterator<Item = Theorem>
     {
         let mut sum_of_hint = 0;
         for p in puzzle.points() {
@@ -48,15 +48,14 @@ impl<'a> Solver<'a> {
         }
 
         let mut side_map = SideMap::from(puzzle);
-        let pool = try!(TheoremPool::new(
-            theorem, puzzle, sum_of_hint, &mut side_map));
+        let pool = try!(TheoremPool::new(theorem, puzzle, sum_of_hint, &mut side_map));
 
         Ok(Solver {
             puzzle: puzzle,
             sum_of_hint: sum_of_hint,
             theorem_pool: pool,
             side_map: side_map,
-            connect_map: None
+            connect_map: None,
         })
     }
 
@@ -80,7 +79,7 @@ impl<'a> Solver<'a> {
     pub fn validate_result(&mut self) -> SolverResult<()> {
         try!(self.sync_connection());
         if self.connect_map().count_area() != 2 {
-            return Err(Error::invalid_board())
+            return Err(Error::invalid_board());
         }
         Ok(())
     }
@@ -107,8 +106,7 @@ impl<'a> Solver<'a> {
     }
     pub fn connect_analysis(&mut self) -> SolverResult<()> {
         self.create_connect_map();
-        ::step::connect_analysis::run(&mut self.side_map,
-                                      self.connect_map.as_mut().unwrap())
+        ::step::connect_analysis::run(&mut self.side_map, self.connect_map.as_mut().unwrap())
     }
 
     fn create_connect_map(&mut self) {
