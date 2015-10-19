@@ -49,51 +49,53 @@ fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
     let mut ord = vec![0; graph.len()];
     let mut low = vec![0; graph.len()];
     let mut ord_cnt = 0;
-    dfs(graph,
-        v,
-        &mut arts,
-        &mut visited,
-        &mut ord,
-        &mut low,
-        &mut ord_cnt);
+    unsafe {
+        dfs(graph,
+            v,
+            &mut arts,
+            &mut visited,
+            &mut ord,
+            &mut low,
+            &mut ord_cnt);
+    }
     return (arts, visited);
 
-    fn dfs(graph: &[Vec<usize>],
-           v: usize,
-           arts: &mut Vec<usize>,
-           visited: &mut [bool],
-           ord: &mut [usize],
-           low: &mut [usize],
-           ord_cnt: &mut usize) {
+    unsafe fn dfs(graph: &[Vec<usize>],
+                  v: usize,
+                  arts: &mut Vec<usize>,
+                  visited: &mut [bool],
+                  ord: &mut [usize],
+                  low: &mut [usize],
+                  ord_cnt: &mut usize) {
         debug_assert!(!visited[v]);
 
         *ord_cnt += 1;
-        visited[v] = true;
-        ord[v] = *ord_cnt;
-        low[v] = ord[v];
+        *visited.get_unchecked_mut(v) = true;
+        *ord.get_unchecked_mut(v) = *ord_cnt;
+        *low.get_unchecked_mut(v) = *ord_cnt;
 
         let mut is_articulation = false;
         let mut num_child = 0;
 
-        for &u in &graph[v] {
+        for &u in graph.get_unchecked(v) {
             if u == v {
                 continue;
             }
 
-            if !visited[u] {
+            if !*visited.get_unchecked(u) {
                 dfs(graph, u, arts, visited, ord, low, ord_cnt);
 
                 num_child += 1;
-                low[v] = cmp::min(low[v], low[u]);
-                if ord[v] != 1 && ord[v] <= low[u] {
+                *low.get_unchecked_mut(v) = cmp::min(*low.get_unchecked(v), *low.get_unchecked(u));
+                if *ord.get_unchecked(v) != 1 && *ord.get_unchecked(v) <= *low.get_unchecked(u) {
                     is_articulation = true;
                 }
             } else {
-                low[v] = cmp::min(low[v], ord[u]);
+                *low.get_unchecked_mut(v) = cmp::min(*low.get_unchecked(v), *ord.get_unchecked(u));
             }
         }
 
-        if ord[v] == 1 && num_child > 1 {
+        if *ord.get_unchecked(v) == 1 && num_child > 1 {
             is_articulation = true;
         }
 
@@ -152,39 +154,41 @@ fn splits(graph: &[Vec<usize>], v: usize, sides: &[State<Side>], set_side: Side)
     let mut contain_cnt = 0;
     let mut visited = vec![false; graph.len()];
 
-    visited[v] = true;
+    unsafe {
+        *visited.get_unchecked_mut(v) = true;
 
-    for &u in &graph[v] {
-        if visited[u] {
-            continue;
-        }
+        for &u in graph.get_unchecked(v) {
+            if *visited.get_unchecked(u) {
+                continue;
+            }
 
-        let mut contains = false;
-        dfs(graph, u, &mut contains, &mut visited, sides, set_side);
+            let mut contains = false;
+            dfs(graph, u, &mut contains, &mut visited, sides, set_side);
 
-        if contains {
-            contain_cnt += 1;
-            if contain_cnt > 1 {
-                return true;
+            if contains {
+                contain_cnt += 1;
+                if contain_cnt > 1 {
+                    return true;
+                }
             }
         }
     }
 
     return false;
 
-    fn dfs(graph: &[Vec<usize>],
-           v: usize,
-           contains: &mut bool,
-           visited: &mut [bool],
-           sides: &[State<Side>],
-           set_side: Side) {
-        if sides[v] == State::Fixed(set_side) {
+    unsafe fn dfs(graph: &[Vec<usize>],
+                  v: usize,
+                  contains: &mut bool,
+                  visited: &mut [bool],
+                  sides: &[State<Side>],
+                  set_side: Side) {
+        if *sides.get_unchecked(v) == State::Fixed(set_side) {
             *contains = true;
         }
-        visited[v] = true;
+        *visited.get_unchecked_mut(v) = true;
 
-        for &u in &graph[v] {
-            if visited[u] {
+        for &u in graph.get_unchecked(v) {
+            if *visited.get_unchecked_mut(u) {
                 continue;
             }
             dfs(graph, u, contains, visited, sides, set_side);
