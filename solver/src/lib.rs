@@ -194,7 +194,6 @@ impl<'a> Iterator for Solutions<'a> {
                 Ok(FillResult::Partial(solver, pts)) => (solver, pts),
                 Err(_) => continue,
             };
-
             let p = *pts.last().unwrap();
             let mut solver_in = solver.clone();
             let mut solver_out = solver;

@@ -1,4 +1,4 @@
-use std::cmp;
+use std::{cmp, usize};
 use slsr_core::puzzle::Side;
 use slsr_core::geom::{CellId, Geom};
 
@@ -39,7 +39,7 @@ fn create_conn_graph(conn_map: &mut ConnectMap,
     (pts, sides, graph)
 }
 
-fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
+fn get_articulation(graph: &[Vec<usize>]) -> (Vec<usize>, Vec<bool>) {
     if graph.is_empty() {
         return (vec![], vec![]);
     }
@@ -50,18 +50,26 @@ fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
     let mut low = vec![0; graph.len()];
     let mut ord_cnt = 0;
     unsafe {
-        dfs(graph,
-            v,
-            &mut arts,
-            &mut visited,
-            &mut ord,
-            &mut low,
-            &mut ord_cnt);
+        for v in 0..graph.len() {
+            if *visited.get_unchecked(v) {
+                continue;
+            }
+
+            dfs(graph,
+                v,
+                usize::MAX,
+                &mut arts,
+                &mut visited,
+                &mut ord,
+                &mut low,
+                &mut ord_cnt);
+        }
     }
     return (arts, visited);
 
     unsafe fn dfs(graph: &[Vec<usize>],
                   v: usize,
+                  prev: usize,
                   arts: &mut Vec<usize>,
                   visited: &mut [bool],
                   ord: &mut [usize],
@@ -69,10 +77,10 @@ fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
                   ord_cnt: &mut usize) {
         debug_assert!(!visited[v]);
 
-        *ord_cnt += 1;
         *visited.get_unchecked_mut(v) = true;
         *ord.get_unchecked_mut(v) = *ord_cnt;
         *low.get_unchecked_mut(v) = *ord_cnt;
+        *ord_cnt += 1;
 
         let mut is_articulation = false;
         let mut num_child = 0;
@@ -83,19 +91,19 @@ fn get_articulation(graph: &[Vec<usize>], v: usize) -> (Vec<usize>, Vec<bool>) {
             }
 
             if !*visited.get_unchecked(u) {
-                dfs(graph, u, arts, visited, ord, low, ord_cnt);
+                dfs(graph, u, v, arts, visited, ord, low, ord_cnt);
 
                 num_child += 1;
                 *low.get_unchecked_mut(v) = cmp::min(*low.get_unchecked(v), *low.get_unchecked(u));
                 if *ord.get_unchecked(v) != 1 && *ord.get_unchecked(v) <= *low.get_unchecked(u) {
                     is_articulation = true;
                 }
-            } else {
+            } else if u != prev {
                 *low.get_unchecked_mut(v) = cmp::min(*low.get_unchecked(v), *ord.get_unchecked(u));
             }
         }
 
-        if *ord.get_unchecked(v) == 1 && num_child > 1 {
+        if prev == usize::MAX && num_child > 1 {
             is_articulation = true;
         }
 
@@ -203,7 +211,7 @@ pub fn run(side_map: &mut SideMap, conn_map: &mut ConnectMap) -> SolverResult<()
 
     for &(set_side, exclude_side) in sides {
         let (pts, sides, graph) = create_conn_graph(conn_map, exclude_side);
-        let (arts, visited) = get_articulation(&graph, 0);
+        let (arts, visited) = get_articulation(&graph);
 
         if set_side == Side::Out || conn_map.sum_of_hint() != 0 {
             // If there is no edge in puzzle (sum_of_hint == 0) and set_side ==
