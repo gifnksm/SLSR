@@ -68,9 +68,9 @@ impl SideMap {
 
         match (a == b, a == c) {
             (false, false) => State::Unknown,
-            (true,  false) => State::Fixed(Side::Out),
+            (true, false) => State::Fixed(Side::Out),
             (false, true) => State::Fixed(Side::In),
-            (true,  true) => State::Conflict,
+            (true, true) => State::Conflict,
         }
     }
 
@@ -81,9 +81,9 @@ impl SideMap {
 
         match (a == b, a == c) {
             (false, false) => State::Unknown,
-            (true,  false) => State::Fixed(Edge::Cross),
+            (true, false) => State::Fixed(Edge::Cross),
             (false, true) => State::Fixed(Edge::Line),
-            (true,  true) => State::Conflict,
+            (true, true) => State::Conflict,
         }
     }
 

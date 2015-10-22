@@ -181,7 +181,7 @@ impl<'a> Iterator for Solutions<'a> {
 
     fn next(&mut self) -> Option<Puzzle> {
         while let Some(solver) = self.queue.pop() {
-            let (solver,pts) = match fill(solver) {
+            let (solver, pts) = match fill(solver) {
                 Ok(FillResult::Completed(mut solver)) => {
                     if solver.validate_result().is_err() {
                         continue;

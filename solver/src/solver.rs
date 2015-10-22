@@ -124,14 +124,14 @@ impl<'a> Solver<'a> {
         self.connect_map.as_mut().unwrap().sync(&mut self.side_map)
     }
 
-    // Utility function for debug.
-    // pub fn dump(&self) -> String {
-    //     if let Ok(result) = self.side_map.clone().into() {
-    //         format!("{}", result)
-    //     } else {
-    //         format!("Error!")
-    //     }
-    // }
+// Utility function for debug.
+// pub fn dump(&self) -> String {
+//     if let Ok(result) = self.side_map.clone().into() {
+//         format!("{}", result)
+//     } else {
+//         format!("Error!")
+//     }
+// }
 }
 
 impl<'a> Into<SolverResult<Puzzle>> for Solver<'a> {

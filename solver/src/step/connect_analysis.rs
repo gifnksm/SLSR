@@ -123,7 +123,7 @@ fn find_disconn_area(conn_map: &mut ConnectMap,
         }
     }
     if disconn.is_empty() {
-        //  All area is connected
+        // All area is connected
         return Ok(vec![]);
     }
     if disconn_sum == 0 {
