@@ -75,8 +75,10 @@ fn get_articulation(graph: &[Vec<usize>],
 
         *visited.get_unchecked_mut(v) = true;
         *gvisited.get_unchecked_mut(v) = true;
-        *ord.get_unchecked_mut(v) = *ord_cnt;
-        *low.get_unchecked_mut(v) = *ord_cnt;
+
+        let ord_v = *ord_cnt;
+        *ord.get_unchecked_mut(v) = ord_v;
+        *low.get_unchecked_mut(v) = ord_v;
         *ord_cnt += 1;
 
         let mut is_articulation = false;
@@ -90,20 +92,21 @@ fn get_articulation(graph: &[Vec<usize>],
             if !*visited.get_unchecked(u) {
                 dfs(graph, u, v, arts, gvisited, visited, ord, low, ord_cnt);
 
+                let low_u = *low.get_unchecked(u);
                 num_child += 1;
-                *low.get_unchecked_mut(v) = cmp::min(*low.get_unchecked(v), *low.get_unchecked(u));
-                if *ord.get_unchecked(v) != 1 && *ord.get_unchecked(v) <= *low.get_unchecked(u) {
+                *low.get_unchecked_mut(v) = cmp::min(*low.get_unchecked(v), low_u);
+                if ord_v <= low_u {
                     is_articulation = true;
                 }
             } else if u != prev {
                 *low.get_unchecked_mut(v) = cmp::min(*low.get_unchecked(v), *ord.get_unchecked(u));
+            } else {
             }
         }
 
-        if prev == usize::MAX && num_child > 1 {
-            is_articulation = true;
+        if ord_v == 0 {
+            is_articulation = num_child > 1;
         }
-
         if is_articulation {
             arts.push(v);
         }
