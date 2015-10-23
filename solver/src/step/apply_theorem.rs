@@ -50,8 +50,8 @@ impl TheoremCount {
 #[derive(Clone, Debug)]
 struct IndexByEdge {
     points: (CellId, CellId),
-    expect_line: Rc<Vec<usize>>,
-    expect_cross: Rc<Vec<usize>>,
+    expect_line: Vec<usize>,
+    expect_cross: Vec<usize>,
 }
 
 impl IndexByEdge {
@@ -61,8 +61,8 @@ impl IndexByEdge {
            -> IndexByEdge {
         IndexByEdge {
             points: points,
-            expect_line: Rc::new(expect_line),
-            expect_cross: Rc::new(expect_cross),
+            expect_line: expect_line,
+            expect_cross: expect_cross,
         }
     }
 }
@@ -70,7 +70,7 @@ impl IndexByEdge {
 #[derive(Debug)]
 pub struct TheoremPool {
     matchers: Vec<TheoremCount>,
-    index_by_edge: Vec<IndexByEdge>,
+    index_by_edge: Vec<Rc<IndexByEdge>>,
 }
 
 impl Clone for TheoremPool {
@@ -124,6 +124,7 @@ impl TheoremPool {
         let matchers = matchers.into_iter().map(From::from).collect();
         let edges = map.into_iter()
                        .map(|(points, ex)| IndexByEdge::new(points, ex.0, ex.1))
+                       .map(Rc::new)
                        .collect();
 
         Ok(TheoremPool {
@@ -139,22 +140,22 @@ impl TheoremPool {
             let mut w = 0;
             for r in 0..self.index_by_edge.len() {
                 let read = ptr.offset(r as isize);
-                let ibe = &*read;
+                let ibe: &IndexByEdge = &*read;
 
                 match side_map.get_edge(ibe.points.0, ibe.points.1) {
                     State::Fixed(Edge::Cross) => {
-                        for &i in &*ibe.expect_line {
+                        for &i in &ibe.expect_line {
                             self.matchers[i].invalidate();
                         }
-                        for &i in &*ibe.expect_cross {
+                        for &i in &ibe.expect_cross {
                             self.matchers[i].update(side_map);
                         }
                     }
                     State::Fixed(Edge::Line) => {
-                        for &i in &*ibe.expect_line {
+                        for &i in &ibe.expect_line {
                             self.matchers[i].update(side_map);
                         }
-                        for &i in &*ibe.expect_cross {
+                        for &i in &ibe.expect_cross {
                             self.matchers[i].invalidate();
                         }
                     }
