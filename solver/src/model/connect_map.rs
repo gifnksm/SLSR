@@ -194,9 +194,17 @@ impl ConnectMap {
             let c = CellId::new(i);
             update_conn(side_map, self, c);
         }
+
+        let mut closed_cnt = 0;
         for i in 0..self.cell_len() {
             let c = CellId::new(i);
-            try!(update_area(side_map, self, c));
+            if try!(update_area(side_map, self, c)) {
+                closed_cnt += 1;
+            }
+        }
+
+        if closed_cnt > 2 {
+            return Err(Error::invalid_board());
         }
 
         Ok(())
@@ -253,11 +261,11 @@ fn update_conn(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId) {
     }
 }
 
-fn update_area(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId) -> SolverResult<()> {
+fn update_area(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId) -> SolverResult<bool> {
     let mut unknown_edge = {
         let a = conn_map.get_mut(p);
         if a.coord != p {
-            return Ok(());
+            return Ok(false);
         }
         mem::replace(&mut a.unknown_edge, vec![])
     };
@@ -286,9 +294,11 @@ fn update_area(side_map: &mut SideMap, conn_map: &mut ConnectMap, p: CellId) -> 
     unknown_edge.sort();
     unknown_edge.dedup();
 
+    let is_closed = unknown_edge.is_empty();
+
     let mut area = conn_map.get_mut(p);
     area.side = side_map.get_side(p);
     area.unknown_edge = unknown_edge;
 
-    Ok(())
+    Ok(is_closed)
 }
