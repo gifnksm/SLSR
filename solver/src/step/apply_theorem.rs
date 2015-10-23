@@ -9,79 +9,30 @@ use model::side_map::SideMap;
 use model::theorem::{Pattern, Theorem, TheoremMatcher};
 
 #[derive(Clone, Debug)]
-struct TheoremCount {
-    rest_count: usize,
-    result: Option<Rc<Vec<(Edge, (CellId, CellId))>>>,
-}
-
-impl From<TheoremMatcher> for TheoremCount {
-    fn from(matcher: TheoremMatcher) -> TheoremCount {
-        TheoremCount {
-            rest_count: matcher.num_matcher(),
-            result: Some(Rc::new(matcher.result_edges().collect())),
-        }
-    }
-}
-
-impl TheoremCount {
-    fn invalidate(&mut self) {
-        self.rest_count = 0;
-        self.result = None;
-    }
-
-    fn update(&mut self, side_map: &mut SideMap) {
-        match self.rest_count {
-            0 => {
-                return;
-            }
-            1 => {
-                self.rest_count = 0;
-                for &(edge, points) in &*self.result.take().unwrap() {
-                    let _ = side_map.set_edge(points.0, points.1, edge);
-                }
-            }
-            _ => {
-                self.rest_count -= 1;
-            }
-        }
-    }
-}
-
-#[derive(Clone, Debug)]
 struct IndexByEdge {
     points: (CellId, CellId),
     expect_line: Vec<usize>,
     expect_cross: Vec<usize>,
 }
 
-impl IndexByEdge {
-    fn new(points: (CellId, CellId),
-           expect_line: Vec<usize>,
-           expect_cross: Vec<usize>)
-           -> IndexByEdge {
-        IndexByEdge {
-            points: points,
-            expect_line: expect_line,
-            expect_cross: expect_cross,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct TheoremPool {
-    matchers: Vec<TheoremCount>,
+    counts: Vec<usize>,
+    matchers: Rc<Vec<Vec<(Edge, (CellId, CellId))>>>,
     index_by_edge: Vec<Rc<IndexByEdge>>,
 }
 
 impl Clone for TheoremPool {
     fn clone(&self) -> TheoremPool {
         TheoremPool {
+            counts: self.counts.clone(),
             matchers: self.matchers.clone(),
             index_by_edge: self.index_by_edge.clone(),
         }
     }
 
     fn clone_from(&mut self, other: &TheoremPool) {
+        self.counts.clone_from(&other.counts);
         self.matchers.clone_from(&other.matchers);
         self.index_by_edge.clone_from(&other.index_by_edge);
     }
@@ -121,16 +72,47 @@ impl TheoremPool {
             }
         }
 
-        let matchers = matchers.into_iter().map(From::from).collect();
+        let counts = matchers.iter().map(|matcher| matcher.num_matcher()).collect();
+        let matchers = matchers.into_iter()
+                               .map(|matcher| matcher.result_edges().collect())
+                               .collect();
         let edges = map.into_iter()
-                       .map(|(points, ex)| IndexByEdge::new(points, ex.0, ex.1))
+                       .map(|(points, ex)| {
+                           IndexByEdge {
+                               points: points,
+                               expect_line: ex.0,
+                               expect_cross: ex.1,
+                           }
+                       })
                        .map(Rc::new)
                        .collect();
 
         Ok(TheoremPool {
-            matchers: matchers,
+            counts: counts,
+            matchers: Rc::new(matchers),
             index_by_edge: edges,
         })
+    }
+
+    fn invalidate(&mut self, i: usize) {
+        self.counts[i] = 0;
+    }
+
+    fn update(&mut self, i: usize, side_map: &mut SideMap) {
+        match self.counts[i] {
+            0 => {
+                return;
+            }
+            1 => {
+                self.counts[i] = 0;
+                for &(edge, points) in &self.matchers[i] {
+                    let _ = side_map.set_edge(points.0, points.1, edge);
+                }
+            }
+            _ => {
+                self.counts[i] -= 1;
+            }
+        }
     }
 
     pub fn apply_all(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
@@ -145,18 +127,18 @@ impl TheoremPool {
                 match side_map.get_edge(ibe.points.0, ibe.points.1) {
                     State::Fixed(Edge::Cross) => {
                         for &i in &ibe.expect_line {
-                            self.matchers[i].invalidate();
+                            self.invalidate(i);
                         }
                         for &i in &ibe.expect_cross {
-                            self.matchers[i].update(side_map);
+                            self.update(i, side_map);
                         }
                     }
                     State::Fixed(Edge::Line) => {
                         for &i in &ibe.expect_line {
-                            self.matchers[i].update(side_map);
+                            self.update(i, side_map);
                         }
                         for &i in &ibe.expect_cross {
-                            self.matchers[i].invalidate();
+                            self.invalidate(i);
                         }
                     }
                     State::Unknown => {
