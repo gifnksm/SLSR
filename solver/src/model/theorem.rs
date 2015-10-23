@@ -21,7 +21,8 @@ impl HintPattern {
         HintPattern {
             hint: h,
             point: p,
-        }.normalized()
+        }
+        .normalized()
     }
     pub fn hint(&self) -> u8 {
         self.hint
@@ -66,14 +67,14 @@ impl EdgePattern<Point> {
             edge: Edge::Cross,
             points: (p0, p1),
         }
-            .normalized()
+        .normalized()
     }
     fn line(p0: Point, p1: Point) -> EdgePattern<Point> {
         EdgePattern {
             edge: Edge::Line,
             points: (p0, p1),
         }
-            .normalized()
+        .normalized()
     }
 
     fn normalized(self) -> EdgePattern<Point> {
