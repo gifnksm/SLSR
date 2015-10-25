@@ -427,8 +427,8 @@ impl TheoremMatcher {
         Edges { iter: self.matcher.iter() }
     }
 
-    pub fn result_edges<'a>(&'a self) -> Edges<'a> {
-        Edges { iter: self.result.iter() }
+    pub fn result_edges(self) -> Vec<EdgePattern<CellId>> {
+        self.result
     }
 }
 

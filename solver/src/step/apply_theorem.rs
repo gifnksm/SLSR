@@ -6,7 +6,7 @@ use slsr_core::puzzle::{Edge, Puzzle};
 
 use {Error, State, SolverResult};
 use model::side_map::SideMap;
-use model::theorem::{Pattern, Theorem, TheoremMatcher};
+use model::theorem::{EdgePattern, Pattern, Theorem, TheoremMatcher};
 
 #[derive(Clone, Debug)]
 struct IndexByEdge {
@@ -18,7 +18,7 @@ struct IndexByEdge {
 #[derive(Debug)]
 pub struct TheoremPool {
     counts: Vec<usize>,
-    matchers: Rc<Vec<Vec<(Edge, (CellId, CellId))>>>,
+    results: Rc<Vec<Vec<EdgePattern<CellId>>>>,
     index_by_edge: Vec<Rc<IndexByEdge>>,
 }
 
@@ -26,14 +26,14 @@ impl Clone for TheoremPool {
     fn clone(&self) -> TheoremPool {
         TheoremPool {
             counts: self.counts.clone(),
-            matchers: self.matchers.clone(),
+            results: self.results.clone(),
             index_by_edge: self.index_by_edge.clone(),
         }
     }
 
     fn clone_from(&mut self, other: &TheoremPool) {
         self.counts.clone_from(&other.counts);
-        self.matchers.clone_from(&other.matchers);
+        self.results.clone_from(&other.results);
         self.index_by_edge.clone_from(&other.index_by_edge);
     }
 }
@@ -73,9 +73,9 @@ impl TheoremPool {
         }
 
         let counts = matchers.iter().map(|matcher| matcher.num_matcher()).collect();
-        let matchers = matchers.into_iter()
-                               .map(|matcher| matcher.result_edges().collect())
-                               .collect();
+        let results = matchers.into_iter()
+                              .map(|matcher| matcher.result_edges())
+                              .collect();
         let edges = map.into_iter()
                        .map(|(points, ex)| {
                            IndexByEdge {
@@ -89,7 +89,7 @@ impl TheoremPool {
 
         Ok(TheoremPool {
             counts: counts,
-            matchers: Rc::new(matchers),
+            results: Rc::new(results),
             index_by_edge: edges,
         })
     }
@@ -105,8 +105,8 @@ impl TheoremPool {
             }
             1 => {
                 self.counts[i] = 0;
-                for &(edge, points) in &self.matchers[i] {
-                    let _ = side_map.set_edge(points.0, points.1, edge);
+                for &pat in &self.results[i] {
+                    pat.apply(side_map)
                 }
             }
             _ => {
