@@ -109,6 +109,37 @@ impl<'a> Solver<'a> {
         ::step::connect_analysis::run(&mut self.side_map, self.connect_map.as_mut().unwrap())
     }
 
+    pub fn mark_common(&mut self, s0: &mut Solver, s1: &mut Solver) {
+        for i in 0..self.puzzle.cell_len() {
+            let p = CellId::new(i);
+            if let State::Fixed(side) = s0.side_map.get_side(p) {
+                if s1.side_map.get_side(p) == State::Fixed(side) {
+                    self.side_map.set_side(p, side);
+                }
+            }
+        }
+
+        for i in 0..(self.puzzle.cell_len() - 1) {
+            let p0 = CellId::new(i);
+            let p1 = CellId::new(i + 1);
+            if let State::Fixed(side) = s0.side_map.get_edge(p0, p1) {
+                if s1.side_map.get_edge(p0, p1) == State::Fixed(side) {
+                    self.side_map.set_edge(p0, p1, side);
+                }
+            }
+        }
+
+        for i in 0..(self.puzzle.cell_len() - (self.puzzle.column() as usize)) {
+            let p0 = CellId::new(i);
+            let p1 = CellId::new(i + (self.puzzle.column() as usize));
+            if let State::Fixed(side) = s0.side_map.get_edge(p0, p1) {
+                if s1.side_map.get_edge(p0, p1) == State::Fixed(side) {
+                    self.side_map.set_edge(p0, p1, side);
+                }
+            }
+        }
+    }
+
     fn create_connect_map(&mut self) {
         if self.connect_map.is_none() {
             let conn_map = ConnectMap::new(self.puzzle, &mut self.side_map);

@@ -140,7 +140,10 @@ fn fill_by_shallow_backtracking(solver: &mut Solver, pts: &[CellId]) -> SolverRe
 
         if fill_absolutely_fixed(&mut solver_out).is_err() {
             mem::swap(solver, &mut solver_in);
+            continue;
         }
+
+        solver.mark_common(&mut solver_in, &mut solver_out);
     }
 
     Ok(solver.revision() != rev)
