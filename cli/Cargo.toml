@@ -11,10 +11,10 @@ description = "Slither Link Solver written in Rust."
 name = "slsr-cli"
 
 [dependencies]
+ansi_term = "*"
 argparse = "*"
 kernel32-sys = "*"
 libc = "*"
-term = "*"
 winapi = "*"
 slsr_core = { path = "../core" }
 slsr_solver = { path = "../solver" }

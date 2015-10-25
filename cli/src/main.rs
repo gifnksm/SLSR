@@ -10,9 +10,9 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 
+extern crate ansi_term;
 extern crate argparse;
 extern crate libc;
-extern crate term;
 extern crate slsr_core;
 extern crate slsr_solver;
 
