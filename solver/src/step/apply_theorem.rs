@@ -187,8 +187,8 @@ fn create_matcher_list<'a, T>(theo_defs: T,
                     Pattern::Hint(hint) => hint.point(),
                     _ => panic!(),
                 };
-                let matcher = theo.clone().shift(p - o);
-                try!(matcher.matches(puzzle, sum_of_hint, side_map)).update(side_map, &mut data);
+                try!(theo.shift_matches(p - o, puzzle, sum_of_hint, side_map))
+                    .update(side_map, &mut data);
             }
         }
     }
@@ -197,8 +197,8 @@ fn create_matcher_list<'a, T>(theo_defs: T,
         let sz = theo.size();
         for r in (1 - sz.0)..(puzzle.row() + sz.0 - 1) {
             for c in (1 - sz.1)..(puzzle.column() + sz.1 - 1) {
-                let matcher = theo.clone().shift(Move(r, c));
-                try!(matcher.matches(puzzle, sum_of_hint, side_map)).update(side_map, &mut data);
+                try!(theo.shift_matches(Move(r, c), puzzle, sum_of_hint, side_map))
+                    .update(side_map, &mut data);
             }
         }
     }

@@ -235,22 +235,6 @@ impl Theorem {
         self.normalized()
     }
 
-    pub fn shift(mut self, d: Move) -> Theorem {
-        for x in self.matcher.iter_mut() {
-            *x = x.shift(d);
-        }
-        for x in self.result.iter_mut() {
-            *x = x.shift(d);
-        }
-        if let Some((_, ref mut closed)) = self.closed_hint {
-            for x in closed.iter_mut() {
-                *x = x.shift(d);
-            }
-        }
-
-        self
-    }
-
     pub fn all_rotations(self) -> Vec<Theorem> {
         let deg90 = self.clone().rotate(Rotation::UCW90);
         let deg180 = self.clone().rotate(Rotation::UCW180);
@@ -281,7 +265,8 @@ impl Theorem {
         self.matcher[0]
     }
 
-    fn can_close(puzzle: &Puzzle,
+    fn can_close(shift: Move,
+                 puzzle: &Puzzle,
                  sum_of_hint: u32,
                  hpat: &[HintPattern],
                  sum_of_hpat: u32)
@@ -292,7 +277,7 @@ impl Theorem {
 
         let mut ava_sum = 0;
         for h in hpat {
-            if let Some(n) = puzzle.hint(h.point) {
+            if let Some(n) = puzzle.hint(h.point + shift) {
                 if n != h.hint {
                     return false;
                 }
@@ -307,18 +292,19 @@ impl Theorem {
         return true;
     }
 
-    pub fn matches(self,
-                   puzzle: &Puzzle,
-                   sum_of_hint: u32,
-                   side_map: &mut SideMap)
-                   -> SolverResult<TheoremMatchResult> {
-        let cap = self.matcher.len();
-        let mut new_matcher = Vec::with_capacity(cap);
-
-        for matcher in self.matcher {
-            match try!(matcher.matches(puzzle, side_map)) {
+    pub fn shift_matches(&self,
+                         shift: Move,
+                         puzzle: &Puzzle,
+                         sum_of_hint: u32,
+                         side_map: &mut SideMap)
+                         -> SolverResult<TheoremMatchResult> {
+        let mut num_matcher = 0;
+        for matcher in &self.matcher {
+            match try!(matcher.shift(shift).matches(puzzle, side_map)) {
                 PatternMatchResult::Complete => {}
-                PatternMatchResult::Partial(m) => new_matcher.push(m),
+                PatternMatchResult::Partial(_) => {
+                    num_matcher += 1;
+                }
                 PatternMatchResult::Conflict => {
                     return Ok(TheoremMatchResult::Conflict);
                 }
@@ -326,24 +312,37 @@ impl Theorem {
         }
 
         if let Some((sum_of_hpat, ref hpat)) = self.closed_hint {
-            if Theorem::can_close(puzzle, sum_of_hint, hpat, sum_of_hpat) {
+            if Theorem::can_close(shift, puzzle, sum_of_hint, hpat, sum_of_hpat) {
                 return Ok(TheoremMatchResult::Conflict);
             }
         }
 
         let result = self.result
-                         .into_iter()
-                         .map(|pat| pat.to_cellid(puzzle.size()))
+                         .iter()
+                         .map(|pat| pat.shift(shift).to_cellid(puzzle.size()))
                          .collect();
 
-        if new_matcher.is_empty() {
-            Ok(TheoremMatchResult::Complete(result))
-        } else {
-            Ok(TheoremMatchResult::Partial(TheoremMatcher {
-                matcher: new_matcher,
-                result: result,
-            }))
+        if num_matcher == 0 {
+            return Ok(TheoremMatchResult::Complete(result));
         }
+
+        let mut new_matcher = Vec::with_capacity(num_matcher);
+        for matcher in &self.matcher {
+            match try!(matcher.shift(shift).matches(puzzle, side_map)) {
+                PatternMatchResult::Complete => {}
+                PatternMatchResult::Partial(m) => {
+                    new_matcher.push(m);
+                }
+                PatternMatchResult::Conflict => {
+                    panic!()
+                }
+            }
+        }
+
+        Ok(TheoremMatchResult::Partial(TheoremMatcher {
+            matcher: new_matcher,
+            result: result,
+        }))
     }
 }
 
