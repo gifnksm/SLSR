@@ -192,7 +192,18 @@ fn splits(graph: &[Vec<usize>], v: usize, sides: &[State<Side>], set_side: Side)
                   set_side: Side) {
         if *sides.get_unchecked(v) == State::Fixed(set_side) {
             *contains = true;
+
+            *visited.get_unchecked_mut(v) = true;
+
+            for &u in graph.get_unchecked(v) {
+                if *visited.get_unchecked_mut(u) {
+                    continue;
+                }
+                dfs_mark(graph, u, visited);
+            }
+            return;
         }
+
         *visited.get_unchecked_mut(v) = true;
 
         for &u in graph.get_unchecked(v) {
@@ -200,6 +211,17 @@ fn splits(graph: &[Vec<usize>], v: usize, sides: &[State<Side>], set_side: Side)
                 continue;
             }
             dfs(graph, u, contains, visited, sides, set_side);
+        }
+    }
+
+    unsafe fn dfs_mark(graph: &[Vec<usize>], v: usize, visited: &mut [bool]) {
+        *visited.get_unchecked_mut(v) = true;
+
+        for &u in graph.get_unchecked(v) {
+            if *visited.get_unchecked_mut(u) {
+                continue;
+            }
+            dfs_mark(graph, u, visited);
         }
     }
 }
