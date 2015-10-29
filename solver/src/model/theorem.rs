@@ -376,6 +376,13 @@ impl TheoremMatchResult {
 }
 
 impl TheoremMatcher {
+    pub fn dummy() -> TheoremMatcher {
+        TheoremMatcher {
+            matcher: vec![],
+            result: vec![],
+        }
+    }
+
     pub fn merge(&mut self, other: &TheoremMatcher) -> Result<(), ()> {
         if self.matcher != other.matcher {
             return Err(());

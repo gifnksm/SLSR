@@ -6,7 +6,7 @@ use slsr_core::puzzle::{Edge, Puzzle};
 
 use {Error, State, SolverResult};
 use model::side_map::SideMap;
-use model::theorem::{EdgePattern, Pattern, Theorem, TheoremMatcher};
+use model::theorem::{EdgePattern, Pattern, Theorem, TheoremMatcher, TheoremMatchResult};
 
 #[derive(Clone, Debug)]
 struct IndexByEdge {
@@ -209,10 +209,29 @@ fn create_matcher_list<'a, T>(theo_defs: T,
 fn apply_all_theorem(matchers: &mut Vec<TheoremMatcher>,
                      side_map: &mut SideMap)
                      -> SolverResult<()> {
-    let cap = matchers.len();
+    unsafe {
+        let ptr = matchers.as_mut_ptr();
 
-    for m in mem::replace(matchers, Vec::with_capacity(cap)) {
-        try!(m.matches(side_map)).update(side_map, matchers);
+        let mut w = 0;
+        for r in 0..matchers.len() {
+            let read = ptr.offset(r as isize);
+            let m = mem::replace(&mut *read, TheoremMatcher::dummy());
+            match try!(m.matches(side_map)) {
+                TheoremMatchResult::Complete(result) => {
+                    for pat in &result {
+                        pat.apply(side_map);
+                    }
+                }
+                TheoremMatchResult::Partial(theo) => {
+                    let write = ptr.offset(w as isize);
+                    *write = theo;
+                    w += 1;
+                }
+                TheoremMatchResult::Conflict => {}
+            }
+        }
+
+        matchers.truncate(w);
     }
 
     Ok(())
