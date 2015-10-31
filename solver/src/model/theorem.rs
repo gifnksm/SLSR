@@ -1,7 +1,8 @@
 use std::fmt;
+use std::error::Error as ErrorTrait;
+use std::iter::FromIterator;
 use std::slice::Iter as SliceIter;
 use std::str::FromStr;
-use std::error::Error as ErrorTrait;
 
 use slsr_core::puzzle::{Edge, Puzzle};
 use slsr_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
@@ -196,61 +197,49 @@ pub struct Theorem {
 }
 
 impl Theorem {
-    fn normalized(mut self) -> Theorem {
-        self.matcher.sort();
-        self.matcher.dedup();
-        self.result.sort();
-        self.result.dedup();
-        if let Some((_, ref mut closed)) = self.closed_hint {
-            closed.sort();
-            closed.dedup();
-        }
-        self
-    }
-
-    fn rotate(mut self, rot: Rotation) -> Theorem {
-        let size = rot * Move(self.size.0, self.size.1);
-
+    fn rotate(&self, rot: Rotation) -> Theorem {
+        let mv = rot * Move(self.size.0, self.size.1);
         let mut d = Move(0, 0);
-        if size.0 < 0 {
-            d = d + Move(-size.0 - 1, 0);
+        if mv.0 < 0 {
+            d = d + Move(-mv.0 - 1, 0);
         }
-        if size.1 < 0 {
-            d = d + Move(0, -size.1 - 1);
+        if mv.1 < 0 {
+            d = d + Move(0, -mv.1 - 1);
         }
+        let size = Size(mv.0.abs(), mv.1.abs());
 
-        self.size = Size(size.0.abs(), size.1.abs());
-        for x in self.matcher.iter_mut() {
-            *x = x.rotate(rot).shift(d);
-        }
-        for x in self.result.iter_mut() {
-            *x = x.rotate(rot).shift(d)
-        }
-        if let Some((_, ref mut closed)) = self.closed_hint {
-            for x in closed.iter_mut() {
-                *x = x.rotate(rot).shift(d);
-            }
-        }
+        let mut matcher = Vec::from_iter(self.matcher.iter().map(|x| x.rotate(rot).shift(d)));
+        matcher.sort();
+        matcher.dedup();
 
-        self.normalized()
+        let mut result = Vec::from_iter(self.result.iter().map(|x| x.rotate(rot).shift(d)));
+        result.sort();
+        result.dedup();
+
+        let closed_hint = self.closed_hint.as_ref().map(|&(sum, ref pat)| {
+            let mut pat = Vec::from_iter(pat.iter().map(|x| x.rotate(rot).shift(d)));
+            pat.sort();
+            pat.dedup();
+            (sum, pat)
+        });
+
+        Theorem {
+            size: size,
+            matcher: matcher,
+            result: result,
+            closed_hint: closed_hint,
+        }
     }
 
     pub fn all_rotations(self) -> Vec<Theorem> {
-        let deg90 = self.clone().rotate(Rotation::UCW90);
-        let deg180 = self.clone().rotate(Rotation::UCW180);
-        let deg270 = self.clone().rotate(Rotation::UCW270);
-        let h_deg0 = self.clone().rotate(Rotation::H_FLIP);
-        let h_deg90 = h_deg0.clone().rotate(Rotation::UCW90);
-        let h_deg180 = h_deg0.clone().rotate(Rotation::UCW180);
-        let h_deg270 = h_deg0.clone().rotate(Rotation::UCW270);
-        let mut rots = vec![self.clone(),
-                            deg90,
-                            deg180,
-                            deg270,
-                            h_deg0,
-                            h_deg90,
-                            h_deg180,
-                            h_deg270];
+        let deg90 = self.rotate(Rotation::UCW90);
+        let deg180 = self.rotate(Rotation::UCW180);
+        let deg270 = self.rotate(Rotation::UCW270);
+        let h_deg0 = self.rotate(Rotation::H_FLIP);
+        let h_deg90 = h_deg0.rotate(Rotation::UCW90);
+        let h_deg180 = h_deg0.rotate(Rotation::UCW180);
+        let h_deg270 = h_deg0.rotate(Rotation::UCW270);
+        let mut rots = vec![self, deg90, deg180, deg270, h_deg0, h_deg90, h_deg180, h_deg270];
 
         rots.sort();
         rots.dedup();
