@@ -155,73 +155,40 @@ fn find_disconn_area(conn_map: &mut ConnectMap,
 }
 
 fn splits(graph: &[Vec<usize>], v: usize, sides: &[State<Side>], set_side: Side) -> bool {
-    if graph.is_empty() {
-        return false;
-    }
-
-    let mut contain_cnt = 0;
     let mut visited = vec![false; graph.len()];
 
     unsafe {
+        *visited.get_unchecked_mut(v) = true;
+
+        let mut hit = false;
+        for u in 0..graph.len() {
+            let side = *sides.get_unchecked(u);
+            if side != State::Fixed(set_side) {
+                continue;
+            }
+            if *visited.get_unchecked(u) {
+                continue;
+            }
+
+            if hit {
+                return true;
+            }
+
+            hit = true;
+            visit(graph, u, &mut visited);
+        }
+    }
+
+    return false;
+
+    unsafe fn visit(graph: &[Vec<usize>], v: usize, visited: &mut [bool]) {
         *visited.get_unchecked_mut(v) = true;
 
         for &u in graph.get_unchecked(v) {
             if *visited.get_unchecked(u) {
                 continue;
             }
-
-            let mut contains = false;
-            dfs(graph, u, &mut contains, &mut visited, sides, set_side);
-
-            if contains {
-                contain_cnt += 1;
-                if contain_cnt > 1 {
-                    return true;
-                }
-            }
-        }
-    }
-
-    return false;
-
-    unsafe fn dfs(graph: &[Vec<usize>],
-                  v: usize,
-                  contains: &mut bool,
-                  visited: &mut [bool],
-                  sides: &[State<Side>],
-                  set_side: Side) {
-        if *sides.get_unchecked(v) == State::Fixed(set_side) {
-            *contains = true;
-
-            *visited.get_unchecked_mut(v) = true;
-
-            for &u in graph.get_unchecked(v) {
-                if *visited.get_unchecked_mut(u) {
-                    continue;
-                }
-                dfs_mark(graph, u, visited);
-            }
-            return;
-        }
-
-        *visited.get_unchecked_mut(v) = true;
-
-        for &u in graph.get_unchecked(v) {
-            if *visited.get_unchecked_mut(u) {
-                continue;
-            }
-            dfs(graph, u, contains, visited, sides, set_side);
-        }
-    }
-
-    unsafe fn dfs_mark(graph: &[Vec<usize>], v: usize, visited: &mut [bool]) {
-        *visited.get_unchecked_mut(v) = true;
-
-        for &u in graph.get_unchecked(v) {
-            if *visited.get_unchecked_mut(u) {
-                continue;
-            }
-            dfs_mark(graph, u, visited);
+            visit(graph, u, visited);
         }
     }
 }
