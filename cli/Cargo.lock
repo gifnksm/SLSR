@@ -4,9 +4,11 @@ version = "0.0.1"
 dependencies = [
  "ansi_term 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "kernel32-sys 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "slsr_core 0.0.1",
  "slsr_solver 0.0.1",
+ "winapi 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -18,6 +20,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "argparse"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "kernel32-sys"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "winapi 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winapi-build 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "libc"
@@ -39,5 +50,15 @@ dependencies = [
 [[package]]
 name = "union-find"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "winapi"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "winapi-build"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
