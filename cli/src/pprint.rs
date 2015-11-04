@@ -1,7 +1,6 @@
 use std::{io, iter};
 use std::io::prelude::*;
 use ansi_term::{Colour, Style};
-use libc;
 use slsr_core::puzzle::{Puzzle, Edge, Side};
 use slsr_core::geom::{Geom, Point, Move};
 
@@ -27,26 +26,23 @@ fn side_to_style(ty: Option<Side>) -> Style {
 }
 
 #[cfg(unix)]
-fn isatty(fd: libc::c_int) -> bool {
-    unsafe { libc::isatty(fd) != 0 }
+fn isatty_stdout() -> bool {
+    extern crate libc;
+    unsafe { libc::isatty(libc::STDOUT_FILENO) != 0 }
 }
 #[cfg(windows)]
-fn isatty(fd: libc::c_int) -> bool {
+fn isatty_stdout() -> bool {
     extern crate kernel32;
     extern crate winapi;
     unsafe {
-        let handle = kernel32::GetStdHandle(if fd == libc::STDOUT_FILENO {
-            winapi::winbase::STD_OUTPUT_HANDLE
-        } else {
-            winapi::winbase::STD_ERROR_HANDLE
-        });
+        let handle = winapi::winbase::STD_OUTPUT_HANDLE as *mut winapi::c_void;
         let mut out = 0;
         kernel32::GetConsoleMode(handle, &mut out) != 0
     }
 }
 
 pub fn is_pprintable() -> bool {
-    isatty(libc::STDOUT_FILENO)
+    isatty_stdout()
 }
 
 struct Printer<T> {

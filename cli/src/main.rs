@@ -12,7 +12,6 @@
 
 extern crate ansi_term;
 extern crate argparse;
-extern crate libc;
 extern crate slsr_core;
 extern crate slsr_solver;
 
