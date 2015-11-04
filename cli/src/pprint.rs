@@ -26,27 +26,8 @@ fn side_to_style(ty: Option<Side>) -> Style {
     }
 }
 
-#[cfg(unix)]
-fn isatty(fd: libc::c_int) -> bool {
-    unsafe { libc::isatty(fd) != 0 }
-}
-#[cfg(windows)]
-fn isatty(fd: libc::c_int) -> bool {
-    extern crate kernel32;
-    extern crate winapi;
-    unsafe {
-        let handle = kernel32::GetStdHandle(if fd == libc::STDOUT_FILENO {
-            winapi::winbase::STD_OUTPUT_HANDLE
-        } else {
-            winapi::winbase::STD_ERROR_HANDLE
-        });
-        let mut out = 0;
-        kernel32::GetConsoleMode(handle, &mut out) != 0
-    }
-}
-
 pub fn is_pprintable() -> bool {
-    isatty(libc::STDOUT_FILENO)
+    unsafe { libc::isatty(libc::STDOUT_FILENO) == 1 }
 }
 
 struct Printer<T> {
