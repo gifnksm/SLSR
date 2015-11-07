@@ -1,10 +1,51 @@
+use std::{io, process};
 use std::str::FromStr;
 use argparse::{ArgumentParser, List, Store, StoreTrue};
 
 use pprint::{self, Config as PpConfig, Mode as PpMode};
 
+#[derive(Copy, Clone, Debug)]
+enum CommandType {
+    Solve,
+    Test,
+    Bench,
+}
+
+impl CommandType {
+    fn setup_parser<'parser>(&'parser mut self,
+                             ap: &mut ArgumentParser<'parser>,
+                             args: &'parser mut Vec<String>) {
+        ap.set_description("Slither link solver - Command line interface");
+        let _ = ap.refer(self)
+                  .required()
+                  .add_argument("command", Store, "command to run (solve, test)");
+        let _ = ap.refer(args)
+                  .add_argument("arguments", List, "arguments for command");
+        ap.stop_on_first_argument(true);
+    }
+}
+
+impl Default for CommandType {
+    fn default() -> CommandType {
+        CommandType::Solve
+    }
+}
+
+impl FromStr for CommandType {
+    type Err = ();
+
+    fn from_str(src: &str) -> Result<CommandType, ()> {
+        match src {
+            "solve" => Ok(CommandType::Solve),
+            "test" => Ok(CommandType::Test),
+            "bench" => Ok(CommandType::Bench),
+            _ => Err(()),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
-struct Args {
+struct SolveArgs {
     derive_all: bool,
     output_mode: OutputModeArg,
     width: Size,
@@ -12,8 +53,9 @@ struct Args {
     input_files: Vec<String>,
 }
 
-impl Args {
+impl SolveArgs {
     fn setup_parser<'parser>(&'parser mut self, ap: &mut ArgumentParser<'parser>) {
+        ap.set_description("Solve the given problem(s)");
         let _ = ap.refer(&mut self.derive_all)
                   .add_option(&["--all"], StoreTrue, "derive all solutions (if any).");
         let _ = ap.refer(&mut self.output_mode)
@@ -28,31 +70,7 @@ impl Args {
         let _ = ap.refer(&mut self.input_files)
                   .add_argument("input_files", List, "puzzle files to solve.");
     }
-}
 
-impl Default for Args {
-    fn default() -> Args {
-        Args {
-            derive_all: false,
-            output_mode: OutputModeArg::Auto,
-            width: Size(2),
-            height: Size(1),
-            input_files: vec![],
-        }
-    }
-}
-
-impl Into<Config> for Args {
-    fn into(self) -> Config {
-        Config {
-            derive_all: self.derive_all,
-            output_mode: self.output_mode(),
-            input_files: self.input_files,
-        }
-    }
-}
-
-impl Args {
     fn output_mode(&self) -> OutputMode {
         let ppmode = match self.output_mode {
             OutputModeArg::Auto => {
@@ -72,6 +90,28 @@ impl Args {
             cell_width: self.width.0,
             cell_height: self.height.0,
         })
+    }
+}
+
+impl Default for SolveArgs {
+    fn default() -> SolveArgs {
+        SolveArgs {
+            derive_all: false,
+            output_mode: OutputModeArg::Auto,
+            width: Size(2),
+            height: Size(1),
+            input_files: vec![],
+        }
+    }
+}
+
+impl Into<SolveConfig> for SolveArgs {
+    fn into(self) -> SolveConfig {
+        SolveConfig {
+            derive_all: self.derive_all,
+            output_mode: self.output_mode(),
+            input_files: self.input_files,
+        }
     }
 }
 
@@ -100,6 +140,7 @@ enum OutputModeArg {
     Raw,
     None,
 }
+
 impl FromStr for OutputModeArg {
     type Err = ();
 
@@ -116,9 +157,96 @@ impl FromStr for OutputModeArg {
 }
 
 #[derive(Clone, Debug)]
-pub struct Config {
+struct TestArgs {
+    derive_all: bool,
+    input_files: Vec<String>,
+}
+
+impl TestArgs {
+    fn setup_parser<'parser>(&'parser mut self, ap: &mut ArgumentParser<'parser>) {
+        ap.set_description("Test the given problem(s)");
+        let _ = ap.refer(&mut self.derive_all)
+                  .add_option(&["--all"], StoreTrue, "derive all solutions (if any).");
+        let _ = ap.refer(&mut self.input_files)
+                  .add_argument("input_files", List, "puzzle files to solve.");
+    }
+}
+
+impl Default for TestArgs {
+    fn default() -> TestArgs {
+        TestArgs {
+            derive_all: false,
+            input_files: vec![],
+        }
+    }
+}
+
+impl Into<TestConfig> for TestArgs {
+    fn into(self) -> TestConfig {
+        TestConfig {
+            derive_all: self.derive_all,
+            input_files: self.input_files,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+struct BenchArgs {
+    derive_all: bool,
+    input_files: Vec<String>,
+}
+
+impl BenchArgs {
+    fn setup_parser<'parser>(&'parser mut self, ap: &mut ArgumentParser<'parser>) {
+        ap.set_description("Bench the given problem(s)");
+        let _ = ap.refer(&mut self.derive_all)
+                  .add_option(&["--all"], StoreTrue, "derive all solutions (if any).");
+        let _ = ap.refer(&mut self.input_files)
+                  .add_argument("input_files", List, "puzzle files to solve.");
+    }
+}
+
+impl Default for BenchArgs {
+    fn default() -> BenchArgs {
+        BenchArgs {
+            derive_all: false,
+            input_files: vec![],
+        }
+    }
+}
+
+impl Into<BenchConfig> for BenchArgs {
+    fn into(self) -> BenchConfig {
+        BenchConfig {
+            derive_all: self.derive_all,
+            input_files: self.input_files,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum Config {
+    Solve(SolveConfig),
+    Test(TestConfig),
+    Bench(BenchConfig),
+}
+
+#[derive(Clone, Debug)]
+pub struct SolveConfig {
     pub derive_all: bool,
     pub output_mode: OutputMode,
+    pub input_files: Vec<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TestConfig {
+    pub derive_all: bool,
+    pub input_files: Vec<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct BenchConfig {
+    pub derive_all: bool,
     pub input_files: Vec<String>,
 }
 
@@ -131,12 +259,50 @@ pub enum OutputMode {
 
 impl Config {
     pub fn parse() -> Config {
-        let mut args = Args::default();
+        let mut command = CommandType::default();
+        let mut args = vec![];
         {
             let mut ap = ArgumentParser::new();
-            args.setup_parser(&mut ap);
+            command.setup_parser(&mut ap, &mut args);
             ap.parse_args_or_exit();
         }
-        args.into()
+
+        args.insert(0, format!("{:?}", command));
+
+        match command {
+            CommandType::Solve => {
+                let mut sub_args = SolveArgs::default();
+                {
+                    let mut ap = ArgumentParser::new();
+                    sub_args.setup_parser(&mut ap);
+                    if let Err(x) = ap.parse(args, &mut io::stdout(), &mut io::stderr()) {
+                        process::exit(x);
+                    }
+                }
+                Config::Solve(sub_args.into())
+            }
+            CommandType::Test => {
+                let mut sub_args = TestArgs::default();
+                {
+                    let mut ap = ArgumentParser::new();
+                    sub_args.setup_parser(&mut ap);
+                    if let Err(x) = ap.parse(args, &mut io::stdout(), &mut io::stderr()) {
+                        process::exit(x);
+                    }
+                }
+                Config::Test(sub_args.into())
+            }
+            CommandType::Bench => {
+                let mut sub_args = BenchArgs::default();
+                {
+                    let mut ap = ArgumentParser::new();
+                    sub_args.setup_parser(&mut ap);
+                    if let Err(x) = ap.parse(args, &mut io::stdout(), &mut io::stderr()) {
+                        process::exit(x);
+                    }
+                }
+                Config::Bench(sub_args.into())
+            }
+        }
     }
 }

@@ -22,16 +22,24 @@ script:
   - travis-cargo build -- --release
   - |
       if [ "${PKGDIR}" = "cli" ]; then
-        travis-cargo run -- --release -- ../puzzle/example.txt
+        travis-cargo run -- --release -- solve ../puzzle/example.txt
         # FIXME: huonw/travis-cargo#22
         # cannot pass arguments to slsr-cli
-        # travis-cargo run -- --release -- --all ../puzzle/empty_2x1.txt
-        # travis-cargo run -- --release -- --all ../puzzle/empty_2x2.txt
-        ./target/release/slsr-cli --all ../puzzle/empty_2x1.txt
-        ./target/release/slsr-cli --all ../puzzle/empty_2x2.txt
+        # travis-cargo run -- --release -- solve --all ../puzzle/empty_2x1.txt
+        # travis-cargo run -- --release -- solve --all ../puzzle/empty_2x2.txt
+        ./target/release/slsr-cli solve --all ../puzzle/empty_2x1.txt
+        ./target/release/slsr-cli solve --all ../puzzle/empty_2x2.txt
       fi
   - travis-cargo test
+  - |
+      if [ "${PKGDIR}" = "cli" ]; then
+        travis-cargo run -- --release -- test ../puzzle/*.txt
+      fi
   - travis-cargo bench
+  - |
+      if [ "${PKGDIR}" = "cli" ]; then
+        travis-cargo run -- --release -- bench ../puzzle/*.txt
+      fi
   - |
       if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
         travis-cargo --only ${DOC_UPLOAD_VERSION} doc
