@@ -157,9 +157,7 @@ mod bench {
                                       should_panic: ShouldPanic::No,
                                   },
                                   testfn: DynBenchFn(Box::new(move |bencher| {
-                                      bencher.iter(|| {
-                                          solve(&input, derive_all)
-                                      })
+                                      bencher.iter(|| solve(&input, derive_all))
                                   })),
                               }
                           })
