@@ -37,6 +37,10 @@ script:
       fi
   - travis-cargo bench
   - |
+      if [ "${PKGDIR}" = "cli" ]; then
+        travis-cargo run -- --release -- bench ../puzzle/*.txt
+      fi
+  - |
       if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
         travis-cargo --only ${DOC_UPLOAD_VERSION} doc
       fi

@@ -8,6 +8,7 @@ use pprint::{self, Config as PpConfig, Mode as PpMode};
 enum CommandType {
     Solve,
     Test,
+    Bench,
 }
 
 impl CommandType {
@@ -37,6 +38,7 @@ impl FromStr for CommandType {
         match src {
             "solve" => Ok(CommandType::Solve),
             "test" => Ok(CommandType::Test),
+            "bench" => Ok(CommandType::Bench),
             _ => Err(()),
         }
     }
@@ -189,9 +191,44 @@ impl Into<TestConfig> for TestArgs {
 }
 
 #[derive(Clone, Debug)]
+struct BenchArgs {
+    derive_all: bool,
+    input_files: Vec<String>,
+}
+
+impl BenchArgs {
+    fn setup_parser<'parser>(&'parser mut self, ap: &mut ArgumentParser<'parser>) {
+        ap.set_description("Bench the given problem(s)");
+        let _ = ap.refer(&mut self.derive_all)
+                  .add_option(&["--all"], StoreTrue, "derive all solutions (if any).");
+        let _ = ap.refer(&mut self.input_files)
+                  .add_argument("input_files", List, "puzzle files to solve.");
+    }
+}
+
+impl Default for BenchArgs {
+    fn default() -> BenchArgs {
+        BenchArgs {
+            derive_all: false,
+            input_files: vec![],
+        }
+    }
+}
+
+impl Into<BenchConfig> for BenchArgs {
+    fn into(self) -> BenchConfig {
+        BenchConfig {
+            derive_all: self.derive_all,
+            input_files: self.input_files,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum Config {
     Solve(SolveConfig),
     Test(TestConfig),
+    Bench(BenchConfig),
 }
 
 #[derive(Clone, Debug)]
@@ -203,6 +240,12 @@ pub struct SolveConfig {
 
 #[derive(Clone, Debug)]
 pub struct TestConfig {
+    pub derive_all: bool,
+    pub input_files: Vec<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct BenchConfig {
     pub derive_all: bool,
     pub input_files: Vec<String>,
 }
@@ -248,6 +291,17 @@ impl Config {
                     }
                 }
                 Config::Test(sub_args.into())
+            }
+            CommandType::Bench => {
+                let mut sub_args = BenchArgs::default();
+                {
+                    let mut ap = ArgumentParser::new();
+                    sub_args.setup_parser(&mut ap);
+                    if let Err(x) = ap.parse(args, &mut io::stdout(), &mut io::stderr()) {
+                        process::exit(x);
+                    }
+                }
+                Config::Bench(sub_args.into())
             }
         }
     }
