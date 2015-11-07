@@ -13,6 +13,7 @@ impl CommandType {
     fn setup_parser<'parser>(&'parser mut self,
                              ap: &mut ArgumentParser<'parser>,
                              args: &'parser mut Vec<String>) {
+        ap.set_description("Slither link solver - Command line interface");
         let _ = ap.refer(self)
                   .required()
                   .add_argument("command", Store, "command to run (solve)");
@@ -50,6 +51,7 @@ struct SolveArgs {
 
 impl SolveArgs {
     fn setup_parser<'parser>(&'parser mut self, ap: &mut ArgumentParser<'parser>) {
+        ap.set_description("Solve the given problem(s)");
         let _ = ap.refer(&mut self.derive_all)
                   .add_option(&["--all"], StoreTrue, "derive all solutions (if any).");
         let _ = ap.refer(&mut self.output_mode)
