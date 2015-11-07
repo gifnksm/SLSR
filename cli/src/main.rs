@@ -23,13 +23,13 @@ use slsr_core::puzzle::Puzzle;
 use slsr_solver::{self as solver, Solutions};
 
 use error::AppResult;
-use parse_arg::{Config, OutputMode};
+use parse_arg::{Config, OutputMode, SolveConfig};
 
 mod error;
 mod parse_arg;
 mod pprint;
 
-fn output(config: &Config, solution: Puzzle) -> io::Result<()> {
+fn output(config: &SolveConfig, solution: Puzzle) -> io::Result<()> {
     match config.output_mode {
         OutputMode::Pretty(conf) => {
             try!(pprint::print(&conf, &solution));
@@ -43,7 +43,7 @@ fn output(config: &Config, solution: Puzzle) -> io::Result<()> {
     Ok(())
 }
 
-fn solve<T: Read>(config: &Config, input: &mut T) -> AppResult<()> {
+fn solve<T: Read>(config: &SolveConfig, input: &mut T) -> AppResult<()> {
     let mut buf = String::new();
     let _ = try!(input.read_to_string(&mut buf));
     let puzzle = try!(buf.parse::<Puzzle>());
@@ -61,14 +61,16 @@ fn solve<T: Read>(config: &Config, input: &mut T) -> AppResult<()> {
 }
 
 fn run() -> AppResult<()> {
-    let config = Config::parse();
-
-    if config.input_files.is_empty() {
-        try!(solve(&config, &mut io::stdin()));
-    } else {
-        for file in &config.input_files {
-            let mut f = try!(File::open(file));
-            try!(solve(&config, &mut f));
+    match Config::parse() {
+        Config::Solve(config) => {
+            if config.input_files.is_empty() {
+                try!(solve(&config, &mut io::stdin()));
+            } else {
+                for file in &config.input_files {
+                    let mut f = try!(File::open(file));
+                    try!(solve(&config, &mut f));
+                }
+            }
         }
     }
 

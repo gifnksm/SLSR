@@ -6,7 +6,7 @@ Slither Link Solver written in Rust
 
 ```
 $ cd cli
-$ cargo run < puzzle/example.txt
+$ cargo run -- solve puzzle/example.txt
 ```
 
 ## ToDos
