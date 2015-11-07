@@ -17,6 +17,7 @@ extern crate slsr_solver;
 
 use std::{fmt, io, process};
 use std::error::Error;
+use std::fs::File;
 use std::io::prelude::*;
 
 use slsr_core::puzzle::{Puzzle, ParsePuzzleError};
@@ -95,13 +96,10 @@ fn output(config: &Config, solution: Puzzle) -> io::Result<()> {
     Ok(())
 }
 
-fn run() -> AppResult<()> {
-    let config = Config::parse();
-
-    let mut input = String::new();
-    let _ = try!(io::stdin().read_to_string(&mut input));
-    let puzzle = try!(input.parse::<Puzzle>());
-
+fn solve<T: Read>(config: &Config, input: &mut T) -> AppResult<()> {
+    let mut buf = String::new();
+    let _ = try!(input.read_to_string(&mut buf));
+    let puzzle = try!(buf.parse::<Puzzle>());
 
     if config.derive_all {
         for solution in try!(Solutions::new(&puzzle)) {
@@ -110,6 +108,21 @@ fn run() -> AppResult<()> {
     } else {
         let solution = try!(solver::solve(&puzzle));
         try!(output(&config, solution));
+    }
+
+    Ok(())
+}
+
+fn run() -> AppResult<()> {
+    let config = Config::parse();
+
+    if config.input_files.is_empty() {
+        try!(solve(&config, &mut io::stdin()));
+    } else {
+        for file in &config.input_files {
+            let mut f = try!(File::open(file));
+            try!(solve(&config, &mut f));
+        }
     }
 
     Ok(())

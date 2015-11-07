@@ -1,14 +1,15 @@
 use std::str::FromStr;
-use argparse::{ArgumentParser, Store, StoreTrue};
+use argparse::{ArgumentParser, List, Store, StoreTrue};
 
 use pprint::{self, Config as PpConfig, Mode as PpMode};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 struct Args {
     derive_all: bool,
     output_mode: OutputModeArg,
     width: Size,
     height: Size,
+    input_files: Vec<String>,
 }
 
 impl Args {
@@ -24,6 +25,8 @@ impl Args {
                   .add_option(&["--width"], Store, "specify cell width [default: 2]");
         let _ = ap.refer(&mut self.height)
                   .add_option(&["--height"], Store, "specify cell width [default: 1]");
+        let _ = ap.refer(&mut self.input_files)
+                  .add_argument("input_files", List, "puzzle files to solve.");
     }
 }
 
@@ -34,6 +37,7 @@ impl Default for Args {
             output_mode: OutputModeArg::Auto,
             width: Size(2),
             height: Size(1),
+            input_files: vec![]
         }
     }
 }
@@ -43,6 +47,7 @@ impl Into<Config> for Args {
         Config {
             derive_all: self.derive_all,
             output_mode: self.output_mode(),
+            input_files: self.input_files,
         }
     }
 }
@@ -110,10 +115,11 @@ impl FromStr for OutputModeArg {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub struct Config {
     pub derive_all: bool,
     pub output_mode: OutputMode,
+    pub input_files: Vec<String>,
 }
 
 #[derive(Copy, Clone, Debug)]
