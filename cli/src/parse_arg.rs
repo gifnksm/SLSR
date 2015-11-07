@@ -37,7 +37,7 @@ impl Default for Args {
             output_mode: OutputModeArg::Auto,
             width: Size(2),
             height: Size(1),
-            input_files: vec![]
+            input_files: vec![],
         }
     }
 }
