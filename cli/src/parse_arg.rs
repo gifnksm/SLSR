@@ -7,6 +7,7 @@ use pprint::{self, Config as PpConfig, Mode as PpMode};
 #[derive(Copy, Clone, Debug)]
 enum CommandType {
     Solve,
+    Test,
 }
 
 impl CommandType {
@@ -16,7 +17,7 @@ impl CommandType {
         ap.set_description("Slither link solver - Command line interface");
         let _ = ap.refer(self)
                   .required()
-                  .add_argument("command", Store, "command to run (solve)");
+                  .add_argument("command", Store, "command to run (solve, test)");
         let _ = ap.refer(args)
                   .add_argument("arguments", List, "arguments for command");
         ap.stop_on_first_argument(true);
@@ -35,6 +36,7 @@ impl FromStr for CommandType {
     fn from_str(src: &str) -> Result<CommandType, ()> {
         match src {
             "solve" => Ok(CommandType::Solve),
+            "test" => Ok(CommandType::Test),
             _ => Err(()),
         }
     }
@@ -153,14 +155,55 @@ impl FromStr for OutputModeArg {
 }
 
 #[derive(Clone, Debug)]
+struct TestArgs {
+    derive_all: bool,
+    input_files: Vec<String>,
+}
+
+impl TestArgs {
+    fn setup_parser<'parser>(&'parser mut self, ap: &mut ArgumentParser<'parser>) {
+        ap.set_description("Test the given problem(s)");
+        let _ = ap.refer(&mut self.derive_all)
+                  .add_option(&["--all"], StoreTrue, "derive all solutions (if any).");
+        let _ = ap.refer(&mut self.input_files)
+                  .add_argument("input_files", List, "puzzle files to solve.");
+    }
+}
+
+impl Default for TestArgs {
+    fn default() -> TestArgs {
+        TestArgs {
+            derive_all: false,
+            input_files: vec![],
+        }
+    }
+}
+
+impl Into<TestConfig> for TestArgs {
+    fn into(self) -> TestConfig {
+        TestConfig {
+            derive_all: self.derive_all,
+            input_files: self.input_files,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum Config {
     Solve(SolveConfig),
+    Test(TestConfig),
 }
 
 #[derive(Clone, Debug)]
 pub struct SolveConfig {
     pub derive_all: bool,
     pub output_mode: OutputMode,
+    pub input_files: Vec<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TestConfig {
+    pub derive_all: bool,
     pub input_files: Vec<String>,
 }
 
@@ -194,6 +237,17 @@ impl Config {
                     }
                 }
                 Config::Solve(sub_args.into())
+            }
+            CommandType::Test => {
+                let mut sub_args = TestArgs::default();
+                {
+                    let mut ap = ArgumentParser::new();
+                    sub_args.setup_parser(&mut ap);
+                    if let Err(x) = ap.parse(args, &mut io::stdout(), &mut io::stderr()) {
+                        process::exit(x);
+                    }
+                }
+                Config::Test(sub_args.into())
             }
         }
     }

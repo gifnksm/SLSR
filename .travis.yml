@@ -31,6 +31,10 @@ script:
         ./target/release/slsr-cli solve --all ../puzzle/empty_2x2.txt
       fi
   - travis-cargo test
+  - |
+      if [ "${PKGDIR}" = "cli" ]; then
+        travis-cargo run -- --release -- test ../puzzle/*.txt
+      fi
   - travis-cargo bench
   - |
       if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
