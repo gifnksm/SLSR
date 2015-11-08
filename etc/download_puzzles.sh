@@ -2,33 +2,31 @@
 
 # download the puzzles from the Internet
 
-ETCDIR=$(readlink -f $(dirname $0))
-BASEDIR=$(readlink -f ${ETCDIR}/..)
+ETCDIR=$(cd $(dirname $0) && pwd -P)
+BASEDIR=$(cd ${ETCDIR}/.. && pwd -P)
 
 download_janko() {
-    local NUM=$1
+    local NUM="$1"
     local BASEURL="http://www.janko.at/Raetsel/Slitherlink"
 
     curl -s "${BASEURL}/${NUM}.a.htm" |
-        sed -n -e '1,/^problem/!p' |
-        sed -n -e '/^solution\|^unit/,$!p' |
-        sed 's/ //g'
+        perl -ne 'if (s/^problem\n// .. s/^solution\n|^unit \w+\n//) { s/ *//g; print; }'
 }
 
 download_java() {
-    local NUM=$1
+    local NUM="$1"
     local BASEURL="http://www.pro.or.jp/~fuji/java/puzzle/numline"
 
     curl -s "${BASEURL}/${NUM}.data" |
-        sed -n -e '1,/problem/!p' |
-        sed -n -e '/end/,$!p' |
-        sed 's/ //g'
+        perl -ne 'if (s/^problem\n// .. s/^end\n//) { s/ *//g; print; }'
 }
 
 main() {
+    local I
     local JANKO_DIR="${BASEDIR}/puzzle/janko"
     mkdir -pv "${JANKO_DIR}"
-    for NUM in {001..930}; do
+    for I in {1..930}; do
+        local NUM="$(printf "%03d" "${I}")"
         local FILE="${JANKO_DIR}/${NUM}.txt"
         if ! [ -s "${FILE}" ]; then
             download_janko "${NUM}" > "${FILE}"
@@ -39,7 +37,8 @@ main() {
     local JAVA_DIR="${BASEDIR}/puzzle/java"
     local TYPE=book1
     mkdir -pv "${JAVA_DIR}/${TYPE}"
-    for NUM in {001..085}; do
+    for I in {1..85}; do
+        local NUM="$(printf "%03d" "${I}")"
         local FILE="${JAVA_DIR}/${TYPE}/${NUM}.txt"
         if ! [ -s "${FILE}" ]; then
             download_java "${TYPE}/${NUM}" > "${FILE}"
@@ -49,7 +48,8 @@ main() {
 
     local TYPE=misc
     mkdir -pv "${JAVA_DIR}/${TYPE}"
-    for NUM in {001..034}; do
+    for I in {1..34}; do
+        local NUM="$(printf "%03d" "${I}")"
         local FILE="${JAVA_DIR}/${TYPE}/${NUM}.txt"
         if ! [ -s "${FILE}" ]; then
             download_java "${NUM}" > "${FILE}"
