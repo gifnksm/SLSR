@@ -13,6 +13,8 @@
 extern crate ansi_term;
 extern crate argparse;
 extern crate rustc_test;
+extern crate time;
+
 extern crate slsr_core;
 extern crate slsr_solver;
 
@@ -137,6 +139,7 @@ mod test {
 mod bench {
     use std::fs::File;
     use std::io::prelude::*;
+    use time;
     use rustc_test::{self as test, DynBenchFn, DynTestName, ShouldPanic, TestDesc, TestDescAndFn};
 
     use slsr_core::puzzle::Puzzle;
@@ -147,8 +150,12 @@ mod bench {
 
     pub fn run(config: BenchConfig) -> AppResult<()> {
         let derive_all = config.derive_all;
-        let tests = config.input_files
-                          .into_iter()
+        let inputs = if let Some(n) = config.only_hardest {
+            take_hardest(config.input_files, n, derive_all)
+        } else {
+            config.input_files
+        };
+        let tests = inputs.into_iter()
                           .map(|input| {
                               TestDescAndFn {
                                   desc: TestDesc {
@@ -166,6 +173,23 @@ mod bench {
         test::test_main(&["".to_string(), "--bench".to_string()], tests);
 
         Ok(())
+    }
+
+    fn get_elapse(input: &str, derive_all: bool) -> u64 {
+        let start = time::precise_time_ns();
+        let _ = test::black_box(solve(input, derive_all));
+        time::precise_time_ns() - start
+    }
+
+    fn take_hardest(inputs: Vec<String>, n: usize, derive_all: bool) -> Vec<String> {
+        let mut inputs = inputs.into_iter()
+                               .map(|input| (get_elapse(&input, derive_all), input))
+                               .collect::<Vec<_>>();
+        inputs.sort_by(|a, b| a.cmp(b).reverse());
+        inputs.into_iter()
+              .map(|pair| pair.1)
+              .take(n)
+              .collect()
     }
 
     fn solve(file: &str, derive_all: bool) -> AppResult<()> {
