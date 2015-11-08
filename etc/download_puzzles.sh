@@ -23,9 +23,16 @@ download_java() {
 
 main() {
     local I
+    local NUMS
+
     local JANKO_DIR="${BASEDIR}/puzzle/janko"
     mkdir -pv "${JANKO_DIR}"
-    for I in {1..930}; do
+    if [ -z "${ONLY_TOP10}" ]; then
+        NUMS=($(seq 1 930))
+    else
+        NUMS=(709 720 100 840 188 192 660 59 190)
+    fi
+    for I in "${NUMS[@]}"; do
         local NUM="$(printf "%03d" "${I}")"
         local FILE="${JANKO_DIR}/${NUM}.txt"
         if ! [ -s "${FILE}" ]; then
@@ -37,7 +44,12 @@ main() {
     local JAVA_DIR="${BASEDIR}/puzzle/java"
     local TYPE=book1
     mkdir -pv "${JAVA_DIR}/${TYPE}"
-    for I in {1..85}; do
+    if [ -z "${ONLY_TOP10}" ]; then
+        NUMS=($(seq 1 85))
+    else
+        NUMS=()
+    fi
+    for I in "${NUMS[@]}"; do
         local NUM="$(printf "%03d" "${I}")"
         local FILE="${JAVA_DIR}/${TYPE}/${NUM}.txt"
         if ! [ -s "${FILE}" ]; then
@@ -48,7 +60,12 @@ main() {
 
     local TYPE=misc
     mkdir -pv "${JAVA_DIR}/${TYPE}"
-    for I in {1..34}; do
+    if [ -z "${ONLY_TOP10}" ]; then
+        NUMS=($(seq 1 34))
+    else
+        NUMS=(34)
+    fi
+    for I in "${NUMS[@]}"; do
         local NUM="$(printf "%03d" "${I}")"
         local FILE="${JAVA_DIR}/${TYPE}/${NUM}.txt"
         if ! [ -s "${FILE}" ]; then

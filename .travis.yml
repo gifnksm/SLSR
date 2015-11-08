@@ -21,7 +21,14 @@ before_script:
       else
         export PATH=$HOME/.local/bin:$PATH
       fi
-  - ./etc/download_puzzles.sh
+  - |
+      # FIXME: travis-ci/travis-ci#4011
+      # Caching feature never works on osx, so we download only ten problems.
+      if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+        ONLY_TOP10=1 ./etc/download_puzzles.sh
+      else
+        ./etc/download_puzzles.sh
+      fi
 
 script:
   - cd "${TRAVIS_BUILD_DIR}/${PKGDIR}"
