@@ -53,7 +53,7 @@ script:
   - |
       if [ "${PKGDIR}" = "cli" ]; then
         # FIXME: huonw/travis-cargo#22
-        ./target/release/slsr-cli bench ../puzzle/*.txt
+        find ../puzzle -type f -name "*.txt" | xargs ./target/release/slsr-cli bench --only-hardest 10
       fi
   - |
       if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
