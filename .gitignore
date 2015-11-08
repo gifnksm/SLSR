@@ -3,3 +3,5 @@ core/target
 core/Cargo.lock
 solver/target
 solver/Cargo.lock
+puzzle/janko
+puzzle/java
