@@ -1,6 +1,6 @@
 use std::{io, process};
 use std::str::FromStr;
-use argparse::{ArgumentParser, List, Store, StoreTrue};
+use argparse::{ArgumentParser, List, Store, StoreOption, StoreTrue};
 
 use pprint::{self, Config as PpConfig, Mode as PpMode};
 
@@ -193,6 +193,7 @@ impl Into<TestConfig> for TestArgs {
 #[derive(Clone, Debug)]
 struct BenchArgs {
     derive_all: bool,
+    only_hardest: Option<usize>,
     input_files: Vec<String>,
 }
 
@@ -201,6 +202,11 @@ impl BenchArgs {
         ap.set_description("Bench the given problem(s)");
         let _ = ap.refer(&mut self.derive_all)
                   .add_option(&["--all"], StoreTrue, "derive all solutions (if any).");
+        let _ = ap.refer(&mut self.only_hardest)
+                  .add_option(&["--only-hardest"],
+                              StoreOption,
+                              "measure only hardest n problems.")
+                  .metavar("n");
         let _ = ap.refer(&mut self.input_files)
                   .add_argument("input_files", List, "puzzle files to solve.");
     }
@@ -210,6 +216,7 @@ impl Default for BenchArgs {
     fn default() -> BenchArgs {
         BenchArgs {
             derive_all: false,
+            only_hardest: None,
             input_files: vec![],
         }
     }
@@ -219,6 +226,7 @@ impl Into<BenchConfig> for BenchArgs {
     fn into(self) -> BenchConfig {
         BenchConfig {
             derive_all: self.derive_all,
+            only_hardest: self.only_hardest,
             input_files: self.input_files,
         }
     }
@@ -247,6 +255,7 @@ pub struct TestConfig {
 #[derive(Clone, Debug)]
 pub struct BenchConfig {
     pub derive_all: bool,
+    pub only_hardest: Option<usize>,
     pub input_files: Vec<String>,
 }
 

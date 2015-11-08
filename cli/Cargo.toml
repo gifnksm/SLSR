@@ -16,6 +16,7 @@ argparse = "*"
 kernel32-sys = "*"
 libc = "*"
 rustc-test = { git = "https://github.com/alexcrichton/rustc-test" }
+time = "*"
 winapi = "*"
 slsr_core = { path = "../core" }
 slsr_solver = { path = "../solver" }
