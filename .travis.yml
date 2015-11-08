@@ -15,31 +15,45 @@ rust:
 
 before_script:
   - pip install 'travis-cargo<0.2' --user
-  - export PATH=$HOME/.local/bin:$PATH
-  - ./etc/download_puzzles.sh
+  - |
+      if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+        export PATH=$HOME/Library/Python/2.7/bin:$PATH
+      else
+        export PATH=$HOME/.local/bin:$PATH
+      fi
+  - |
+      # FIXME: travis-ci/travis-ci#4011
+      # Caching feature never works on osx, so we download only ten problems.
+      if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+        ONLY_TOP10=1 ./etc/download_puzzles.sh
+      else
+        ./etc/download_puzzles.sh
+      fi
 
 script:
   - cd "${TRAVIS_BUILD_DIR}/${PKGDIR}"
   - travis-cargo build -- --release
   - |
       if [ "${PKGDIR}" = "cli" ]; then
-        travis-cargo run -- --release -- solve ../puzzle/example.txt
         # FIXME: huonw/travis-cargo#22
         # cannot pass arguments to slsr-cli
         # travis-cargo run -- --release -- solve --all ../puzzle/empty_2x1.txt
         # travis-cargo run -- --release -- solve --all ../puzzle/empty_2x2.txt
+        ./target/release/slsr-cli solve ../puzzle/example.txt
         ./target/release/slsr-cli solve --all ../puzzle/empty_2x1.txt
         ./target/release/slsr-cli solve --all ../puzzle/empty_2x2.txt
       fi
   - travis-cargo test
   - |
       if [ "${PKGDIR}" = "cli" ]; then
-        find ../puzzle -type f -name "*.txt" | xargs travis-cargo run -- --release -- test
+        # FIXME: huonw/travis-cargo#22
+        find ../puzzle -type f -name "*.txt" | xargs ./target/release/slsr-cli test
       fi
   - travis-cargo bench
   - |
       if [ "${PKGDIR}" = "cli" ]; then
-        travis-cargo run -- --release -- bench ../puzzle/*.txt
+        # FIXME: huonw/travis-cargo#22
+        ./target/release/slsr-cli bench ../puzzle/*.txt
       fi
   - |
       if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
@@ -67,3 +81,8 @@ cache:
   directories:
     - puzzle/janko
     - puzzle/java
+
+os:
+  - linux
+  - osx
+
