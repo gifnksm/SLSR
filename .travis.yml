@@ -16,6 +16,7 @@ rust:
 before_script:
   - pip install 'travis-cargo<0.2' --user
   - export PATH=$HOME/.local/bin:$PATH
+  - ./etc/download_puzzles.sh
 
 script:
   - cd "${TRAVIS_BUILD_DIR}/${PKGDIR}"
@@ -33,7 +34,7 @@ script:
   - travis-cargo test
   - |
       if [ "${PKGDIR}" = "cli" ]; then
-        travis-cargo run -- --release -- test ../puzzle/*.txt
+        find ../puzzle -type f -name "*.txt" | xargs travis-cargo run -- --release -- test
       fi
   - travis-cargo bench
   - |
@@ -61,3 +62,8 @@ env:
     - TRAVIS_CARGO_NIGHTLY_FEATURE=""
     - DOC_UPLOAD_VERSION=nightly
     - DOC_UPLOAD_PKG=cli
+
+cache:
+  directories:
+    - puzzle/janko
+    - puzzle/java
