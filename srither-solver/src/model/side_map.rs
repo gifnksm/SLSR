@@ -13,7 +13,7 @@ use srither_core::geom::{CellId, Geom, Move};
 use SolverResult;
 use model::State;
 
-trait Key {
+pub trait Key {
     fn key0(self) -> usize;
     fn key1(self) -> usize;
 }
@@ -26,6 +26,29 @@ impl Key for CellId {
         self.id() * 2 + 1
     }
 }
+
+impl Into<KeyPair> for CellId {
+    fn into(self) -> KeyPair {
+        KeyPair(self.key0(), self.key1())
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub struct KeyPair(usize, usize);
+
+impl Key for KeyPair {
+    fn key0(self) -> usize {
+        self.0
+    }
+
+    fn key1(self) -> usize {
+        self.1
+    }
+}
+
+// FIXME: use const fn (OUTSIDE_CELL_ID.key0())
+const OUTSIDE_KEY0: usize = 0;
+const OUTSIDE_KEY1: usize = 1;
 
 #[derive(Debug)]
 pub struct SideMap {
@@ -69,11 +92,9 @@ impl SideMap {
     }
 
     pub fn get_side(&mut self, p: CellId) -> State<Side> {
-        let q = CellId::OUTSIDE;
-
         let a = self.uf.find(p.key0());
-        let b = self.uf.find(q.key0());
-        let c = self.uf.find(q.key1());
+        let b = self.uf.find(OUTSIDE_KEY0);
+        let c = self.uf.find(OUTSIDE_KEY1);
 
         match (a == b, a == c) {
             (false, false) => State::Unknown,
@@ -83,7 +104,9 @@ impl SideMap {
         }
     }
 
-    pub fn get_edge(&mut self, p0: CellId, p1: CellId) -> State<Edge> {
+    pub fn get_edge<T>(&mut self, p0: T, p1: T) -> State<Edge>
+        where T: Key + Copy
+    {
         let a = self.uf.find(p0.key0());
         let b = self.uf.find(p1.key0());
         let c = self.uf.find(p1.key1());

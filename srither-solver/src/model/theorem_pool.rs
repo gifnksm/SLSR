@@ -13,13 +13,13 @@ use srither_core::geom::{CellId, Geom, Move};
 use srither_core::puzzle::{Edge, Puzzle};
 
 use {Error, SolverResult};
-use model::{SideMap, State};
+use model::{KeyPair, SideMap, State};
 use model::pattern::EdgePattern;
 use model::theorem::{Theorem, PartialTheorem, MatchResult};
 
 #[derive(Clone, Debug)]
 struct IndexByEdge {
-    points: (CellId, CellId),
+    points: (KeyPair, KeyPair),
     expect_line: Vec<usize>,
     expect_cross: Vec<usize>,
 }
@@ -88,7 +88,7 @@ impl TheoremPool {
         let edges = map.into_iter()
                        .map(|(points, ex)| {
                            IndexByEdge {
-                               points: points,
+                               points: (points.0.into(), points.1.into()),
                                expect_line: ex.0,
                                expect_cross: ex.1,
                            }

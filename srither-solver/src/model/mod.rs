@@ -9,7 +9,7 @@
 use {Error, SolverResult};
 
 pub use self::connect_map::ConnectMap;
-pub use self::side_map::SideMap;
+pub use self::side_map::{KeyPair, SideMap};
 pub use self::theorem::Theorem;
 pub use self::theorem_pool::TheoremPool;
 
