@@ -10,7 +10,7 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 
-extern crate ansi_term;
+extern crate term;
 extern crate argparse;
 extern crate rustc_test;
 extern crate time;
