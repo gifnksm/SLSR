@@ -15,7 +15,9 @@ term = "*"
 argparse = "*"
 kernel32-sys = "*"
 libc = "*"
-rustc-test = { git = "https://github.com/alexcrichton/rustc-test" }
+# FIXME (alexcrichton/rustc-test#1)
+# rustc-test = { git = "https://github.com/alexcrichton/rustc-test" }
+rustc-test = { git = "https://github.com/gifnksm/rustc-test", branch = "fix-mingw-build" }
 time = "*"
 winapi = "*"
 slsr_core = { path = "../core" }
