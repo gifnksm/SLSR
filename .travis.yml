@@ -14,12 +14,13 @@ rust:
   # - stable
 
 before_script:
-  - pip install 'travis-cargo<0.2' --user
   - |
-      if [ "${TRAVIS_OS_NAME}" = "osx" ]; then
+      if [ "${TRAVIS_OS_NAME}" = 'osx' ]; then
         export PATH=$HOME/Library/Python/2.7/bin:$PATH
+        export KCOV=""
       else
         export PATH=$HOME/.local/bin:$PATH
+        export KCOV="${TRAVIS_BUILD_DIR}/kcov/build/src/kcov --exclude-pattern=/.cargo --coveralls-id=${TRAVIS_JOB_ID} ${TRAVIS_BUILD_DIR}/coverage"
       fi
   - |
       # FIXME: travis-ci/travis-ci#4011
@@ -29,49 +30,52 @@ before_script:
       else
         ./etc/download_puzzles.sh
       fi
+  - |
+      if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+        wget https://github.com/SimonKagstrom/kcov/archive/master.zip
+        unzip master.zip
+        mv kcov-master kcov
+        mkdir kcov/build
+        cd kcov/build
+        cmake ..
+        make
+      fi
 
 script:
-  - cd "${TRAVIS_BUILD_DIR}/${PKGDIR}"
-  - travis-cargo build -- --release
-  - |
-      if [ "${PKGDIR}" = "cli" ]; then
-        # FIXME: huonw/travis-cargo#22
-        # cannot pass arguments to slsr-cli
-        # travis-cargo run -- --release -- solve --all ../puzzle/empty_2x1.txt
-        # travis-cargo run -- --release -- solve --all ../puzzle/empty_2x2.txt
-        ./target/release/slsr-cli solve ../puzzle/example.txt
-        ./target/release/slsr-cli solve --all ../puzzle/empty_2x1.txt
-        ./target/release/slsr-cli solve --all ../puzzle/empty_2x2.txt
-      fi
-  - travis-cargo test
-  - |
-      if [ "${PKGDIR}" = "cli" ]; then
-        # FIXME: huonw/travis-cargo#22
-        find ../puzzle -type f -name "*.txt" | xargs ./target/release/slsr-cli test
-      fi
-  - travis-cargo bench
-  - |
-      if [ "${PKGDIR}" = "cli" ]; then
-        # FIXME: huonw/travis-cargo#22
-        find ../puzzle -type f -name "*.txt" | xargs ./target/release/slsr-cli bench --only-hardest 10
-      fi
-  - |
-      if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
-        travis-cargo --only ${DOC_UPLOAD_VERSION} doc
-      fi
+  - cd "${TRAVIS_BUILD_DIR}/core"
+  - cargo build
+  - cargo test --no-run
+  - ${KCOV} ./target/debug/slsr_core-*
+  - cargo bench
+  - cd "${TRAVIS_BUILD_DIR}/solver"
+  - cargo build
+  - cargo test --no-run
+  - ${KCOV} ./target/debug/slsr_solver-*
+  - cargo bench
+  - cd "${TRAVIS_BUILD_DIR}/cli"
+  - cargo build
+  - ${KCOV} ./target/debug/slsr-cli solve ../puzzle/example.txt
+  - ${KCOV} ./target/debug/slsr-cli solve --all ../puzzle/empty_2x1.txt
+  - ${KCOV} ./target/debug/slsr-cli solve --all ../puzzle/empty_2x2.txt
+  - cargo test --no-run
+  - ${KCOV} ./target/debug/slsr_cli-*
+  - find ../puzzle -type f -name "*.txt" | xargs ${KCOV} ./target/debug/slsr-cli test
+  - cargo build --release
+  - cargo bench
+  - find ../puzzle -type f -name "*.txt" | xargs ./target/release/slsr-cli bench --only-hardest 10
+  - cargo doc
 
 after_success:
+  - cd "${TRAVIS_BUILD_DIR}/cli"
   - |
-      if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
-        travis-cargo --only ${DOC_UPLOAD_VERSION} doc-upload
-      fi
-  - travis-cargo coveralls --no-sudo
+      [ ${TRAVIS_BRANCH} = master ] &&
+      [ ${TRAVIS_PULL_REQUEST} = false ] &&
+      echo "<meta http-equiv=refresh content=0;url=$(echo ${TRAVIS_REPO_SLUG} | cut -d '/' -f 2)/index.html>" > target/doc/index.html &&
+      pip install 'ghp-import' --user &&
+      ghp-import -n target/doc &&
+      git push -fq https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
 
 env:
-  matrix:
-    - PKGDIR=cli
-    - PKGDIR=core
-    - PKGDIR=solver
   global:
     - TRAVIS_CARGO_NIGHTLY_FEATURE=""
     - DOC_UPLOAD_VERSION=nightly
@@ -85,4 +89,3 @@ cache:
 os:
   - linux
   - osx
-
