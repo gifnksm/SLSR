@@ -26,9 +26,18 @@ struct Style {
 
 fn side_to_style(ty: Option<Side>) -> Style {
     match ty {
-        Some(Side::In) => Style { fg: color::BLACK, bg: color::YELLOW },
-        Some(Side::Out) => Style { fg: color::WHITE, bg: color::BLACK },
-        None => Style { fg: color::BLACK, bg: color::WHITE },
+        Some(Side::In) => Style {
+            fg: color::BLACK,
+            bg: color::YELLOW,
+        },
+        Some(Side::Out) => Style {
+            fg: color::WHITE,
+            bg: color::BLACK,
+        },
+        None => Style {
+            fg: color::BLACK,
+            bg: color::WHITE,
+        },
     }
 }
 
@@ -93,7 +102,7 @@ impl StdoutPrinter {
 
         match term::stdout() {
             Some(t) => StdoutPrinter::Pretty(t),
-            None => StdoutPrinter::Raw(io::stdout())
+            None => StdoutPrinter::Raw(io::stdout()),
         }
     }
 }
@@ -145,7 +154,7 @@ impl LabelRow {
 
     fn pprint<P>(&self, printer: &mut P, puzzle: &Puzzle) -> io::Result<()>
         where P: Printer
-     {
+    {
         try!(printer.write_plain(&self.space_left));
         for x in 0..puzzle.column() {
             try!(printer.write_plain(&self.space_cross));
@@ -171,7 +180,7 @@ impl EdgeRow {
         }
     }
 
-    fn pprint<P>(&self, printer: &mut P, puzzle: &Puzzle, y: i32) -> io::Result<()> 
+    fn pprint<P>(&self, printer: &mut P, puzzle: &Puzzle, y: i32) -> io::Result<()>
         where P: Printer
     {
         let col = puzzle.column();
@@ -205,7 +214,7 @@ impl CellRow {
 
     fn pprint<P>(&self, printer: &mut P, puzzle: &Puzzle, y: i32) -> io::Result<()>
         where P: Printer
-     {
+    {
         let col = puzzle.column();
         for i in 0..self.cell_height {
             let num_line = (self.cell_height - 1) / 2 == i;
@@ -230,7 +239,7 @@ impl Corner {
 
     fn pprint<P>(&self, printer: &mut P, puzzle: &Puzzle, p: Point) -> io::Result<()>
         where P: Printer
-     {
+    {
         let l = p + Move::LEFT;
         let u = p + Move::UP;
         let eh_p = puzzle.edge_h(p);
@@ -280,7 +289,7 @@ impl EdgeH {
 
     fn pprint<P>(&self, printer: &mut P, puzzle: &Puzzle, p: Point) -> io::Result<()>
         where P: Printer
-     {
+    {
         let (s, side) = match puzzle.edge_h(p) {
             Some(Edge::Cross) => (&self.str_cross, puzzle.side(p)),
             Some(Edge::Line) => (&self.str_line, None),
@@ -308,7 +317,7 @@ impl Label {
 
     fn pprint<P>(&self, printer: &mut P, n: i32, num_line: bool) -> io::Result<()>
         where P: Printer
-     {
+    {
         if num_line {
             try!(printer.write_plain(&format!("{:^1$}", n % self.order, self.width)));
         } else {
@@ -327,7 +336,7 @@ impl EdgeV {
 
     fn pprint<P>(&self, printer: &mut P, puzzle: &Puzzle, p: Point) -> io::Result<()>
         where P: Printer
-     {
+    {
         let (s, side) = match puzzle.edge_v(p) {
             Some(Edge::Cross) => (" ", puzzle.side(p)),
             Some(Edge::Line) => ("|", None),
@@ -356,11 +365,11 @@ impl Cell {
     }
 
     fn pprint<P>(&self,
-              printer: &mut P,
-              puzzle: &Puzzle,
-              p: Point,
-              num_line: bool)
-              -> io::Result<()>
+                 printer: &mut P,
+                 puzzle: &Puzzle,
+                 p: Point,
+                 num_line: bool)
+                 -> io::Result<()>
         where P: Printer
     {
         let side = puzzle.side(p);
