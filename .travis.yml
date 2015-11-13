@@ -31,47 +31,37 @@ before_script:
       fi
 
 script:
-  - cd "${TRAVIS_BUILD_DIR}/${PKGDIR}"
-  - travis-cargo build -- --release
-  - |
-      if [ "${PKGDIR}" = "cli" ]; then
-        # FIXME: huonw/travis-cargo#22
-        # cannot pass arguments to slsr-cli
-        # travis-cargo run -- --release -- solve --all ../puzzle/empty_2x1.txt
-        # travis-cargo run -- --release -- solve --all ../puzzle/empty_2x2.txt
-        ./target/release/slsr-cli solve ../puzzle/example.txt
-        ./target/release/slsr-cli solve --all ../puzzle/empty_2x1.txt
-        ./target/release/slsr-cli solve --all ../puzzle/empty_2x2.txt
-      fi
+  - cd "${TRAVIS_BUILD_DIR}/core"
+  - travis-cargo build
   - travis-cargo test
-  - |
-      if [ "${PKGDIR}" = "cli" ]; then
-        # FIXME: huonw/travis-cargo#22
-        find ../puzzle -type f -name "*.txt" | xargs ./target/release/slsr-cli test
-      fi
   - travis-cargo bench
-  - |
-      if [ "${PKGDIR}" = "cli" ]; then
-        # FIXME: huonw/travis-cargo#22
-        find ../puzzle -type f -name "*.txt" | xargs ./target/release/slsr-cli bench --only-hardest 10
-      fi
-  - |
-      if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
-        travis-cargo --only ${DOC_UPLOAD_VERSION} doc
-      fi
+  - cd "${TRAVIS_BUILD_DIR}/solver"
+  - travis-cargo build
+  - travis-cargo test
+  - travis-cargo bench
+  - cd "${TRAVIS_BUILD_DIR}/cli"
+  - travis-cargo build -- --release
+  # FIXME: huonw/travis-cargo#22
+  # - cannot pass arguments to slsr-cli
+  # - travis-cargo run -- --release -- solve --all ../puzzle/empty_2x1.txt
+  # - travis-cargo run -- --release -- solve --all ../puzzle/empty_2x2.txt
+  - ./target/release/slsr-cli solve ../puzzle/example.txt
+  - ./target/release/slsr-cli solve --all ../puzzle/empty_2x1.txt
+  - ./target/release/slsr-cli solve --all ../puzzle/empty_2x2.txt
+  - travis-cargo test
+  # FIXME: huonw/travis-cargo#22
+  - find ../puzzle -type f -name "*.txt" | xargs ./target/release/slsr-cli test
+  - travis-cargo bench
+  # FIXME: huonw/travis-cargo#22
+  - find ../puzzle -type f -name "*.txt" | xargs ./target/release/slsr-cli bench --only-hardest 10
+  - travis-cargo --only ${DOC_UPLOAD_VERSION} doc
 
 after_success:
-  - |
-      if [ "${PKGDIR}" = "${DOC_UPLOAD_PKG}" ]; then
-        travis-cargo --only ${DOC_UPLOAD_VERSION} doc-upload
-      fi
+  - cd "${TRAVIS_BUILD_DIR}/cli"
+  - travis-cargo --only ${DOC_UPLOAD_VERSION} doc-upload
   - travis-cargo coveralls --no-sudo
 
 env:
-  matrix:
-    - PKGDIR=cli
-    - PKGDIR=core
-    - PKGDIR=solver
   global:
     - TRAVIS_CARGO_NIGHTLY_FEATURE=""
     - DOC_UPLOAD_VERSION=nightly
