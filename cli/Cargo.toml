@@ -11,7 +11,7 @@ description = "Slither Link Solver written in Rust."
 name = "slsr-cli"
 
 [dependencies]
-ansi_term = "*"
+term = "*"
 argparse = "*"
 kernel32-sys = "*"
 libc = "*"
