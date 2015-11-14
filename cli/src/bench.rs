@@ -1,0 +1,70 @@
+use std::fs::File;
+use std::io::prelude::*;
+use time;
+use rustc_test::{self as test, DynBenchFn, DynTestName, ShouldPanic, TestDesc, TestDescAndFn};
+
+use slsr_core::puzzle::Puzzle;
+use slsr_solver::{self as solver, Solutions};
+
+use error::AppResult;
+use parse_arg::BenchConfig;
+
+pub fn run(config: BenchConfig) -> AppResult<()> {
+    let derive_all = config.derive_all;
+    let inputs = if let Some(n) = config.only_hardest {
+        take_hardest(config.input_files, n, derive_all)
+    } else {
+        config.input_files
+    };
+    let tests = inputs.into_iter()
+                      .map(|input| {
+                          TestDescAndFn {
+                              desc: TestDesc {
+                                  name: DynTestName(input.clone()),
+                                  ignore: false,
+                                  should_panic: ShouldPanic::No,
+                              },
+                              testfn: DynBenchFn(Box::new(move |bencher| {
+                                  bencher.iter(|| solve(&input, derive_all))
+                              })),
+                          }
+                      })
+                      .collect();
+
+    test::test_main(&["".to_string(), "--bench".to_string()], tests);
+
+    Ok(())
+}
+
+fn get_elapse(input: &str, derive_all: bool) -> u64 {
+    let start = time::precise_time_ns();
+    let _ = test::black_box(solve(input, derive_all));
+    time::precise_time_ns() - start
+}
+
+fn take_hardest(inputs: Vec<String>, n: usize, derive_all: bool) -> Vec<String> {
+    let mut inputs = inputs.into_iter()
+                           .map(|input| (get_elapse(&input, derive_all), input))
+                           .collect::<Vec<_>>();
+    inputs.sort_by(|a, b| a.cmp(b).reverse());
+    inputs.into_iter()
+          .map(|pair| pair.1)
+          .take(n)
+          .collect()
+}
+
+fn solve(file: &str, derive_all: bool) -> AppResult<()> {
+    let mut buf = String::new();
+    let _ = try!(try!(File::open(file)).read_to_string(&mut buf));
+    let puzzle = try!(buf.parse::<Puzzle>());
+
+    if derive_all {
+        for solution in try!(Solutions::new(&puzzle)) {
+            let _ = test::black_box(solution);
+        }
+    } else {
+        let _ = test::black_box(try!(solver::solve(&puzzle)));
+    }
+
+    Ok(())
+}
