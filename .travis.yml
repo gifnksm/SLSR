@@ -42,27 +42,37 @@ before_script:
       fi
 
 script:
+  # core package
   - cd "${TRAVIS_BUILD_DIR}/core"
   - cargo build
   - cargo test --no-run
   - ${KCOV} ./target/debug/slsr_core-*
   - cargo bench
+
+  # solver package
   - cd "${TRAVIS_BUILD_DIR}/solver"
   - cargo build
   - cargo test --no-run
   - ${KCOV} ./target/debug/slsr_solver-*
   - cargo bench
+
+  # cli package
+  # build
   - cd "${TRAVIS_BUILD_DIR}/cli"
   - cargo build
+  - cargo build --release
+  # test and collect coverage
+  - cargo test --no-run
+  - ${KCOV} ./target/debug/slsr_cli-*
   - ${KCOV} ./target/debug/slsr-cli solve ../puzzle/example.txt
   - ${KCOV} ./target/debug/slsr-cli solve --all ../puzzle/empty_2x1.txt
   - ${KCOV} ./target/debug/slsr-cli solve --all ../puzzle/empty_2x2.txt
-  - cargo test --no-run
-  - ${KCOV} ./target/debug/slsr_cli-*
   - find ../puzzle -type f -name "*.txt" | xargs ${KCOV} ./target/debug/slsr-cli test
-  - cargo build --release
+  - ${KCOV} ./target/debug/slsr-cli bench ../puzzle/example.txt
+  # benchmark
   - cargo bench
   - find ../puzzle -type f -name "*.txt" | xargs ./target/release/slsr-cli bench --only-hardest 10
+  # generate doc
   - cargo doc
 
 after_success:
@@ -70,7 +80,7 @@ after_success:
   - |
       [ ${TRAVIS_BRANCH} = master ] &&
       [ ${TRAVIS_PULL_REQUEST} = false ] &&
-      echo "<meta http-equiv=refresh content=0;url=$(echo ${TRAVIS_REPO_SLUG} | cut -d '/' -f 2)/index.html>" > target/doc/index.html &&
+      echo "<meta http-equiv=refresh content=0;url=slsr_cli/index.html>" > target/doc/index.html &&
       pip install 'ghp-import' --user &&
       ghp-import -n target/doc &&
       git push -fq https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
