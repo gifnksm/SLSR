@@ -13,17 +13,23 @@ install:
 build: false
 
 test_script:
+  # core package
   - cd %APPVEYOR_BUILD_FOLDER%\core
   - cargo build
   - cargo test
   - cargo bench
+
+  # solver package
   - cd %APPVEYOR_BUILD_FOLDER%\solver
   - cargo build
   - cargo test
+  - cargo bench
+
+  # cli package
   - cd %APPVEYOR_BUILD_FOLDER%\cli
-  - cargo build --release
-  - cargo run --release -- solve ..\puzzle\example.txt
-  - cargo run --release -- solve --all ..\puzzle\empty_2x1.txt
-  - cargo run --release -- solve --all ..\puzzle\empty_2x2.txt
+  - cargo build
+  - cargo run -- solve ..\puzzle\example.txt
+  - cargo run -- solve --all ..\puzzle\empty_2x1.txt
+  - cargo run -- solve --all ..\puzzle\empty_2x2.txt
   - cargo test
   - cargo bench
