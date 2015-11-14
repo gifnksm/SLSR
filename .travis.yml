@@ -78,18 +78,13 @@ script:
 after_success:
   - cd "${TRAVIS_BUILD_DIR}/cli"
   - |
+      [ ${TRAVIS_RUST_VERSION} = nightly ] &&
       [ ${TRAVIS_BRANCH} = master ] &&
       [ ${TRAVIS_PULL_REQUEST} = false ] &&
       echo "<meta http-equiv=refresh content=0;url=slsr_cli/index.html>" > target/doc/index.html &&
       pip install 'ghp-import' --user &&
       ghp-import -n target/doc &&
       git push -fq https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages
-
-env:
-  global:
-    - TRAVIS_CARGO_NIGHTLY_FEATURE=""
-    - DOC_UPLOAD_VERSION=nightly
-    - DOC_UPLOAD_PKG=cli
 
 cache:
   directories:
