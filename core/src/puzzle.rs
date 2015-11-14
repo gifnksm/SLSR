@@ -120,6 +120,8 @@ pub struct ParsePuzzleError {
     kind: PuzzleErrorKind,
 }
 
+pub type ParsePuzzleResult<T> = Result<T, ParsePuzzleError>;
+
 #[derive(Copy, Clone, Debug)]
 enum PuzzleErrorKind {
     Empty,
@@ -279,13 +281,9 @@ mod from_str_impl {
 
     fn parse_pat2(mat: Vec<Vec<char>>) -> Result<Puzzle, Error> {
         let row = mat.len();
-        if row < 1 {
-            return Err(Error::too_small_rows());
-        }
+        assert!(row > 0);
         let col = mat[0].len();
-        if col < 1 {
-            return Err(Error::too_small_columns());
-        }
+        assert!(col > 0);
         if mat[1..].iter().any(|r| r.len() != col) {
             return Err(Error::length_mismatch());
         }
@@ -400,11 +398,19 @@ mod display_impl {
 
 #[cfg(test)]
 mod tests {
-    use super::Puzzle;
+    use std::fmt;
+    use std::error::Error;
+    use super::{Puzzle, ParsePuzzleError, ParsePuzzleResult};
     use geom::{Geom, Size, Point};
 
+    fn check_error<T>(result: ParsePuzzleResult<T>, error: ParsePuzzleError)
+        where T: fmt::Debug
+    {
+        assert_eq!(result.unwrap_err().description(), error.description());
+    }
+
     #[test]
-    fn parse() {
+    fn parse_pattern2() {
         let input = "123___
 ______
 3_____
@@ -431,27 +437,31 @@ ______
         assert_eq!(None, puzzle.hint(Point(2, 5)));
         assert_eq!(&puzzle,
                    puzzle.to_string().parse::<Puzzle>().as_ref().unwrap());
+    }
 
+    #[test]
+    fn parse_pattern2_numonly() {
         let puzzle = "1243".parse::<Puzzle>().unwrap();
         assert_eq!(Size(1, 4), puzzle.size());
         assert_eq!(Some(1), puzzle.hint(Point(0, 0)));
         assert_eq!(Some(2), puzzle.hint(Point(0, 1)));
         assert_eq!(Some(4), puzzle.hint(Point(0, 2)));
         assert_eq!(Some(3), puzzle.hint(Point(0, 3)));
+    }
 
-        assert!("1253".parse::<Puzzle>().is_err());
-
+    #[test]
+    fn parse_pattern1() {
         let input = "
 +--+ +-+!!+asdf
-+  + + +  +
-|  |1|    |
-|  | |  2 |
++  + + +xx+
+|  |1|    x
+|  | |  2 x
 +  + + +  +
 ";
         let output = "+-+ +-+ +
          
-+ + + + +
-| |1|  2|
++ + + +x+
+| |1|  2x
 + + + + +
 ";
 
@@ -459,9 +469,10 @@ ______
         assert_eq!(Some(1), puzzle.hint(Point(1, 1)));
         assert_eq!(Some(2), puzzle.hint(Point(1, 3)));
         assert_eq!(output, puzzle.to_string());
+    }
 
-        assert!("".parse::<Puzzle>().is_err());
-
+    #[test]
+    fn parse_pattern1_noedge() {
         let input = "
 + + + +
  1 2 3
@@ -471,5 +482,35 @@ ______
         assert_eq!(Some(1), puzzle.hint(Point(0, 0)));
         assert_eq!(Some(2), puzzle.hint(Point(0, 1)));
         assert_eq!(Some(3), puzzle.hint(Point(0, 2)));
+    }
+
+    #[test]
+    fn parse_empty() {
+        check_error("".parse::<Puzzle>(), ParsePuzzleError::empty());
+        check_error("\n".parse::<Puzzle>(), ParsePuzzleError::empty());
+        check_error("\n\n".parse::<Puzzle>(), ParsePuzzleError::empty());
+    }
+    #[test]
+    fn parse_space_only() {
+        check_error("  ".parse::<Puzzle>(), ParsePuzzleError::invalid_hint());
+        check_error("   \n   ".parse::<Puzzle>(),
+                    ParsePuzzleError::invalid_hint());
+    }
+    #[test]
+    fn parse_pattern1_too_small() {
+        check_error("+\n+".parse::<Puzzle>(),
+                    ParsePuzzleError::too_small_columns());
+        check_error("++".parse::<Puzzle>(), ParsePuzzleError::too_small_rows());
+    }
+    #[test]
+    fn parse_invalid_num() {
+        check_error("+ + + +\n 5 0 0 0\n+ + + +".parse::<Puzzle>(),
+                    ParsePuzzleError::invalid_hint());
+        check_error("1253".parse::<Puzzle>(), ParsePuzzleError::invalid_hint());
+    }
+    #[test]
+    fn parse_pattern2_length_mismatch() {
+        check_error("1111\n222".parse::<Puzzle>(),
+                    ParsePuzzleError::length_mismatch());
     }
 }
