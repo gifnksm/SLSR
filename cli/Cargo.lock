@@ -5,7 +5,7 @@ dependencies = [
  "argparse 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "kernel32-sys 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "rustc-test 0.1.0 (git+https://github.com/gifnksm/rustc-test?branch=fix-mingw-build)",
+ "rustc-test 0.1.0 (git+https://github.com/alexcrichton/rustc-test)",
  "slsr_core 0.0.1",
  "slsr_solver 0.0.1",
  "term 0.2.13 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -45,7 +45,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "rustc-test"
 version = "0.1.0"
-source = "git+https://github.com/gifnksm/rustc-test?branch=fix-mingw-build#3624661170f5a4ca0ee3d4ecadb9a68c5ba58eb9"
+source = "git+https://github.com/alexcrichton/rustc-test#2985641e886277412eb6668b51093f82599dff31"
 dependencies = [
  "getopts 0.2.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "kernel32-sys 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
