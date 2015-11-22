@@ -322,9 +322,7 @@ impl Theorem {
                 PatternMatchResult::Partial(m) => {
                     new_matcher.push(m);
                 }
-                PatternMatchResult::Conflict => {
-                    panic!()
-                }
+                PatternMatchResult::Conflict => panic!(),
             }
         }
 
@@ -356,9 +354,7 @@ impl TheoremMatchResult {
                     pat.apply(side_map);
                 }
             }
-            TheoremMatchResult::Partial(theo) => {
-                new_theorem.push(theo)
-            }
+            TheoremMatchResult::Partial(theo) => new_theorem.push(theo),
             TheoremMatchResult::Conflict => {}
         }
     }

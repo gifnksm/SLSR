@@ -26,18 +26,24 @@ struct Style {
 
 fn side_to_style(ty: Option<Side>) -> Style {
     match ty {
-        Some(Side::In) => Style {
-            fg: color::BLACK,
-            bg: color::YELLOW,
-        },
-        Some(Side::Out) => Style {
-            fg: color::WHITE,
-            bg: color::BLACK,
-        },
-        None => Style {
-            fg: color::BLACK,
-            bg: color::WHITE,
-        },
+        Some(Side::In) => {
+            Style {
+                fg: color::BLACK,
+                bg: color::YELLOW,
+            }
+        }
+        Some(Side::Out) => {
+            Style {
+                fg: color::WHITE,
+                bg: color::BLACK,
+            }
+        }
+        None => {
+            Style {
+                fg: color::BLACK,
+                bg: color::WHITE,
+            }
+        }
     }
 }
 
@@ -374,12 +380,8 @@ impl Cell {
     {
         let side = puzzle.side(p);
         match puzzle.hint(p) {
-            Some(x) if num_line => {
-                try!(printer.write_pretty(side, &self.nums[x as usize]))
-            }
-            _ => {
-                try!(printer.write_pretty(side, &self.space))
-            }
+            Some(x) if num_line => try!(printer.write_pretty(side, &self.nums[x as usize])),
+            _ => try!(printer.write_pretty(side, &self.space)),
         }
         Ok(())
     }
