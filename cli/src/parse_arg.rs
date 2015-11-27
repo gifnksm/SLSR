@@ -44,6 +44,10 @@ impl FromStr for CommandType {
     }
 }
 
+trait SetupParser {
+    fn setup_parser<'parser>(&'parser mut self, ap: &mut ArgumentParser<'parser>);
+}
+
 #[derive(Clone, Debug)]
 struct SolveArgs {
     derive_all: bool,
@@ -53,7 +57,7 @@ struct SolveArgs {
     input_files: Vec<String>,
 }
 
-impl SolveArgs {
+impl SetupParser for SolveArgs {
     fn setup_parser<'parser>(&'parser mut self, ap: &mut ArgumentParser<'parser>) {
         ap.set_description("Solve the given problem(s)");
         let _ = ap.refer(&mut self.derive_all)
@@ -70,7 +74,9 @@ impl SolveArgs {
         let _ = ap.refer(&mut self.input_files)
                   .add_argument("input_files", List, "puzzle files to solve.");
     }
+}
 
+impl SolveArgs {
     fn output_mode(&self) -> OutputMode {
         let ppmode = match self.output_mode {
             OutputModeArg::Auto => {
@@ -105,13 +111,13 @@ impl Default for SolveArgs {
     }
 }
 
-impl Into<SolveConfig> for SolveArgs {
-    fn into(self) -> SolveConfig {
-        SolveConfig {
+impl Into<Config> for SolveArgs {
+    fn into(self) -> Config {
+        Config::Solve(SolveConfig {
             derive_all: self.derive_all,
             output_mode: self.output_mode(),
             input_files: self.input_files,
-        }
+        })
     }
 }
 
@@ -162,7 +168,7 @@ struct TestArgs {
     input_files: Vec<String>,
 }
 
-impl TestArgs {
+impl SetupParser for TestArgs {
     fn setup_parser<'parser>(&'parser mut self, ap: &mut ArgumentParser<'parser>) {
         ap.set_description("Test the given problem(s)");
         let _ = ap.refer(&mut self.derive_all)
@@ -181,12 +187,12 @@ impl Default for TestArgs {
     }
 }
 
-impl Into<TestConfig> for TestArgs {
-    fn into(self) -> TestConfig {
-        TestConfig {
+impl Into<Config> for TestArgs {
+    fn into(self) -> Config {
+        Config::Test(TestConfig {
             derive_all: self.derive_all,
             input_files: self.input_files,
-        }
+        })
     }
 }
 
@@ -197,7 +203,7 @@ struct BenchArgs {
     input_files: Vec<String>,
 }
 
-impl BenchArgs {
+impl SetupParser for BenchArgs {
     fn setup_parser<'parser>(&'parser mut self, ap: &mut ArgumentParser<'parser>) {
         ap.set_description("Bench the given problem(s)");
         let _ = ap.refer(&mut self.derive_all)
@@ -222,13 +228,13 @@ impl Default for BenchArgs {
     }
 }
 
-impl Into<BenchConfig> for BenchArgs {
-    fn into(self) -> BenchConfig {
-        BenchConfig {
+impl Into<Config> for BenchArgs {
+    fn into(self) -> Config {
+        Config::Bench(BenchConfig {
             derive_all: self.derive_all,
             only_hardest: self.only_hardest,
             input_files: self.input_files,
-        }
+        })
     }
 }
 
@@ -279,39 +285,23 @@ impl Config {
         args.insert(0, format!("{:?}", command));
 
         match command {
-            CommandType::Solve => {
-                let mut sub_args = SolveArgs::default();
-                {
-                    let mut ap = ArgumentParser::new();
-                    sub_args.setup_parser(&mut ap);
-                    if let Err(x) = ap.parse(args, &mut io::stdout(), &mut io::stderr()) {
-                        process::exit(x);
-                    }
-                }
-                Config::Solve(sub_args.into())
-            }
-            CommandType::Test => {
-                let mut sub_args = TestArgs::default();
-                {
-                    let mut ap = ArgumentParser::new();
-                    sub_args.setup_parser(&mut ap);
-                    if let Err(x) = ap.parse(args, &mut io::stdout(), &mut io::stderr()) {
-                        process::exit(x);
-                    }
-                }
-                Config::Test(sub_args.into())
-            }
-            CommandType::Bench => {
-                let mut sub_args = BenchArgs::default();
-                {
-                    let mut ap = ArgumentParser::new();
-                    sub_args.setup_parser(&mut ap);
-                    if let Err(x) = ap.parse(args, &mut io::stdout(), &mut io::stderr()) {
-                        process::exit(x);
-                    }
-                }
-                Config::Bench(sub_args.into())
+            CommandType::Solve => Self::parse_subcommand::<SolveArgs>(args),
+            CommandType::Test => Self::parse_subcommand::<TestArgs>(args),
+            CommandType::Bench => Self::parse_subcommand::<BenchArgs>(args),
+        }
+    }
+
+    fn parse_subcommand<T>(args: Vec<String>) -> Config
+        where T: SetupParser + Default + Into<Config>
+    {
+        let mut sub_args = T::default();
+        {
+            let mut ap = ArgumentParser::new();
+            sub_args.setup_parser(&mut ap);
+            if let Err(x) = ap.parse(args, &mut io::stdout(), &mut io::stderr()) {
+                process::exit(x);
             }
         }
+        sub_args.into()
     }
 }
