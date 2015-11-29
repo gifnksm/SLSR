@@ -87,6 +87,7 @@ cache:
   directories:
     - puzzle/janko
     - puzzle/java
+    - puzzle/nikoli
 
 os:
   - linux

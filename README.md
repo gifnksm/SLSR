@@ -31,7 +31,7 @@ $ cargo run --release -- bench --only-hardest 10 ./puzzle/**/*.txt
 
 ## Download puzzles
 
-Downloads puzzles from [janko.at](http://www.janko.at/Raetsel/Slitherlink) and [ナンバーライン問題集](http://www.pro.or.jp/~fuji/java/puzzle/numline).
+Downloads puzzles from [janko.at](http://www.janko.at/Raetsel/Slitherlink), [ナンバーライン問題集](http://www.pro.or.jp/~fuji/java/puzzle/numline) and [nikoli](http://www.nikoli.com/en/puzzles/slitherlink/).
 
 ```
 $ ./etc/download_puzzles.sh
