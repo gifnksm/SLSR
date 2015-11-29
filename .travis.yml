@@ -43,35 +43,35 @@ before_script:
 
 script:
   # core package
-  - cd "${TRAVIS_BUILD_DIR}/core"
+  - cd "${TRAVIS_BUILD_DIR}/srither-core"
   - cargo build
   - cargo test --no-run
-  - ${KCOV} ./target/debug/slsr_core-*
+  - ${KCOV} ./target/debug/srither_core-*
   - cargo bench
 
   # solver package
-  - cd "${TRAVIS_BUILD_DIR}/solver"
+  - cd "${TRAVIS_BUILD_DIR}/srither-solver"
   - cargo build
   - cargo test --no-run
-  - ${KCOV} ./target/debug/slsr_solver-*
+  - ${KCOV} ./target/debug/srither_solver-*
   - cargo bench
 
   # cli package
   # build
-  - cd "${TRAVIS_BUILD_DIR}/cli"
+  - cd "${TRAVIS_BUILD_DIR}/srither-cli"
   - cargo build
   - cargo build --release
   # test and collect coverage
   - cargo test --no-run
-  - ${KCOV} ./target/debug/slsr_cli-*
-  - ${KCOV} ./target/debug/slsr-cli solve ../puzzle/example.txt
-  - ${KCOV} ./target/debug/slsr-cli solve --all ../puzzle/empty_2x1.txt
-  - ${KCOV} ./target/debug/slsr-cli solve --all ../puzzle/empty_2x2.txt
-  - find ../puzzle -type f -name "*.txt" | xargs ${KCOV} ./target/debug/slsr-cli test
-  - ${KCOV} ./target/debug/slsr-cli bench ../puzzle/example.txt
+  - ${KCOV} ./target/debug/srither_cli-*
+  - ${KCOV} ./target/debug/srither-cli solve ../puzzle/example.txt
+  - ${KCOV} ./target/debug/srither-cli solve --all ../puzzle/empty_2x1.txt
+  - ${KCOV} ./target/debug/srither-cli solve --all ../puzzle/empty_2x2.txt
+  - find ../puzzle -type f -name "*.txt" | xargs ${KCOV} ./target/debug/srither-cli test
+  - ${KCOV} ./target/debug/srither-cli bench ../puzzle/example.txt
   # benchmark
   - cargo bench
-  - find ../puzzle -type f -name "*.txt" | xargs ./target/release/slsr-cli bench --only-hardest 10
+  - find ../puzzle -type f -name "*.txt" | xargs ./target/release/srither-cli bench --only-hardest 10
   # generate doc
   - cargo doc
 
@@ -81,7 +81,7 @@ after_success:
       [ ${TRAVIS_RUST_VERSION} = nightly ] &&
       [ ${TRAVIS_BRANCH} = master ] &&
       [ ${TRAVIS_PULL_REQUEST} = false ] &&
-      echo "<meta http-equiv=refresh content=0;url=slsr_cli/index.html>" > target/doc/index.html &&
+      echo "<meta http-equiv=refresh content=0;url=srither_cli/index.html>" > target/doc/index.html &&
       pip install 'ghp-import' --user &&
       ghp-import -n target/doc &&
       git push -fq https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages

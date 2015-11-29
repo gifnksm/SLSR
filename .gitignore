@@ -1,7 +1,7 @@
-cli/target
-core/target
-core/Cargo.lock
-solver/target
-solver/Cargo.lock
+srither-cli/target
+srither-core/target
+srither-core/Cargo.lock
+srither-solver/target
+srither-solver/Cargo.lock
 puzzle/janko
 puzzle/java

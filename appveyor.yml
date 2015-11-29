@@ -14,19 +14,19 @@ build: false
 
 test_script:
   # core package
-  - cd %APPVEYOR_BUILD_FOLDER%\core
+  - cd %APPVEYOR_BUILD_FOLDER%\srither-core
   - cargo build
   - cargo test
   - cargo bench
 
   # solver package
-  - cd %APPVEYOR_BUILD_FOLDER%\solver
+  - cd %APPVEYOR_BUILD_FOLDER%\srither-solver
   - cargo build
   - cargo test
   - cargo bench
 
   # cli package
-  - cd %APPVEYOR_BUILD_FOLDER%\cli
+  - cd %APPVEYOR_BUILD_FOLDER%\srither-cli
   - cargo build
   - cargo run -- solve ..\puzzle\example.txt
   - cargo run -- solve --all ..\puzzle\empty_2x1.txt

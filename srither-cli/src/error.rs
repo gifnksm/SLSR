@@ -1,8 +1,8 @@
 use std::{fmt, io};
 use std::error::Error;
 
-use slsr_core::puzzle::ParsePuzzleError;
-use slsr_solver as solver;
+use srither_core::puzzle::ParsePuzzleError;
+use srither_solver as solver;
 
 #[derive(Debug)]
 pub enum AppError {

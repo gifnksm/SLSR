@@ -13,13 +13,13 @@
 #![warn(unused_results)]
 
 extern crate union_find;
-extern crate slsr_core;
+extern crate srither_core;
 
 use std::{fmt, mem};
 use std::error::Error as ErrorTrait;
 
-use slsr_core::puzzle::Puzzle;
-use slsr_core::geom::CellId;
+use srither_core::puzzle::Puzzle;
+use srither_core::geom::CellId;
 
 use solver::Solver;
 use theorem_define::THEOREM_DEFINE;

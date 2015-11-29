@@ -1,5 +1,5 @@
-use slsr_core::puzzle::{Puzzle, Side};
-use slsr_core::geom::{CellId, Geom};
+use srither_core::puzzle::{Puzzle, Side};
+use srither_core::geom::{CellId, Geom};
 
 use model::connect_map::ConnectMap;
 use model::side_map::SideMap;

@@ -1,13 +1,13 @@
 [package]
-name = "slsr_solver"
-version = "0.0.1"
+name = "srither-solver"
+version = "0.1.0"
 authors = ["gifnksm <makoto.nksm+github@gmail.com>"]
 license="MIT"
 readme = "README.md"
-repository = "https://github.com/gifnksm/SLSR"
+repository = "https://github.com/gifnksm/srither"
 description = "Slither Link Solver written in Rust."
 
 [dependencies]
-slsr_core = { path = "../core" }
+srither-core = { path = "../srither-core" }
 union-find = "*"
-# union-find = { path = "../../union-find-rs/" }
+
