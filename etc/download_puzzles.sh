@@ -21,6 +21,15 @@ download_java() {
         perl -ne 'if (s/^problem\n// .. s/^end\n//) { s/ *//g; print; }'
 }
 
+download_nikoli() {
+    local NUM="$1"
+    local BASEURL="http://www.nikoli.com/nfp/"
+
+    curl -s "${BASEURL}/sl-${NUM}.nfp" |
+        sed 's/&/\n/g' | sed -n 's/^dataQuestion=//p' | ${ETCDIR}/urldecode.py |
+        sed 's/+//g'
+}
+
 main() {
     local I
     local NUMS
@@ -70,6 +79,22 @@ main() {
         local FILE="${JAVA_DIR}/${TYPE}/${NUM}.txt"
         if ! [ -s "${FILE}" ]; then
             download_java "${NUM}" > "${FILE}"
+            sleep 1
+        fi
+    done
+
+    local NIKOLI_DIR="${BASEDIR}/puzzle/nikoli"
+    mkdir -pv "${NIKOLI_DIR}"
+    if [ -z "${ONLY_TOP10}" ]; then
+        NUMS=($(seq 1 10))
+    else
+        NUMS=()
+    fi
+    for I in "${NUMS[@]}"; do
+        local NUM="$(printf "%04d" "${I}")"
+        local FILE="${NIKOLI_DIR}/${NUM}.txt"
+        if ! [ -s "${FILE}" ]; then
+            download_nikoli "${NUM}" > "${FILE}"
             sleep 1
         fi
     done
