@@ -1,6 +1,6 @@
 use std::{cmp, usize};
-use slsr_core::puzzle::Side;
-use slsr_core::geom::{CellId, Geom};
+use srither_core::puzzle::Side;
+use srither_core::geom::{CellId, Geom};
 
 use {State, SolverResult};
 use model::connect_map::ConnectMap;

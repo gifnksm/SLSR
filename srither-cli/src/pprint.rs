@@ -3,8 +3,8 @@ use std::io::Stdout;
 use std::io::prelude::*;
 use term::{self, color, Terminal, StdoutTerminal};
 use term::color::Color;
-use slsr_core::puzzle::{Puzzle, Edge, Side};
-use slsr_core::geom::{Geom, Point, Move};
+use srither_core::puzzle::{Puzzle, Edge, Side};
+use srither_core::geom::{Geom, Point, Move};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Mode {

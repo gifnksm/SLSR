@@ -15,8 +15,8 @@ extern crate argparse;
 extern crate rustc_test;
 extern crate time;
 
-extern crate slsr_core;
-extern crate slsr_solver;
+extern crate srither_core;
+extern crate srither_solver;
 
 use std::{io, process};
 use std::io::prelude::*;

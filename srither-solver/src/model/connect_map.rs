@@ -1,8 +1,8 @@
 use std::iter::FromIterator;
 use std::mem;
 use union_find::{Union, UnionFind, UnionResult, QuickFindUf as Uf};
-use slsr_core::puzzle::{Edge, Puzzle, Side};
-use slsr_core::geom::{CellId, Geom, Point, Move, OUTSIDE_CELL_ID};
+use srither_core::puzzle::{Edge, Puzzle, Side};
+use srither_core::geom::{CellId, Geom, Point, Move, OUTSIDE_CELL_ID};
 
 use {Error, State, SolverResult};
 use model::side_map::SideMap;

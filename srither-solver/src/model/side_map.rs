@@ -1,6 +1,6 @@
 use union_find::{UnionFind, UnionBySizeRank as Union, QuickFindUf as Uf};
-use slsr_core::puzzle::{Puzzle, Edge, Side};
-use slsr_core::geom::{CellId, Geom, Move, OUTSIDE_CELL_ID};
+use srither_core::puzzle::{Puzzle, Edge, Side};
+use srither_core::geom::{CellId, Geom, Move, OUTSIDE_CELL_ID};
 
 use {SolverResult, State};
 

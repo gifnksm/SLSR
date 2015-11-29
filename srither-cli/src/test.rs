@@ -2,8 +2,8 @@ use std::fs::File;
 use std::io::prelude::*;
 use rustc_test::{self as test, DynTestFn, DynTestName, ShouldPanic, TestDesc, TestDescAndFn};
 
-use slsr_core::puzzle::Puzzle;
-use slsr_solver::{self as solver, Solutions};
+use srither_core::puzzle::Puzzle;
+use srither_solver::{self as solver, Solutions};
 
 use error::AppResult;
 use parse_arg::TestConfig;

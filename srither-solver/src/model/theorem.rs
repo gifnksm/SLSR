@@ -4,9 +4,9 @@ use std::iter::FromIterator;
 use std::slice::Iter as SliceIter;
 use std::str::FromStr;
 
-use slsr_core::puzzle::{Edge, Puzzle};
-use slsr_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
-use slsr_core::lattice_parser::{LatticeParser, ParseLatticeError};
+use srither_core::puzzle::{Edge, Puzzle};
+use srither_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
+use srither_core::lattice_parser::{LatticeParser, ParseLatticeError};
 
 use {Error, State, SolverResult};
 use model::side_map::SideMap;
@@ -706,7 +706,7 @@ impl FromStr for Theorem {
 
 #[cfg(test)]
 mod tests {
-    use slsr_core::geom::{Point, Size, Rotation};
+    use srither_core::geom::{Point, Size, Rotation};
     use super::{EdgePattern, Pattern, Theorem};
 
     #[test]

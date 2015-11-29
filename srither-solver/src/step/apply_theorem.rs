@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::mem;
-use slsr_core::geom::{CellId, Geom, Move};
-use slsr_core::puzzle::{Edge, Puzzle};
+use srither_core::geom::{CellId, Geom, Move};
+use srither_core::puzzle::{Edge, Puzzle};
 
 use {Error, State, SolverResult};
 use model::side_map::SideMap;

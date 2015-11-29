@@ -1,14 +1,11 @@
 [package]
-name = "slsr_cli"
-version = "0.0.1"
+name = "srither-cli"
+version = "0.1.0"
 authors = ["gifnksm <makoto.nksm+github@gmail.com>"]
 license="MIT"
 readme = "README.md"
-repository = "https://github.com/gifnksm/SLSR"
+repository = "https://github.com/gifnksm/srither"
 description = "Slither Link Solver written in Rust."
-
-[[bin]]
-name = "slsr-cli"
 
 [dependencies]
 term = "*"
@@ -18,8 +15,8 @@ libc = "*"
 rustc-test = { git = "https://github.com/alexcrichton/rustc-test" }
 time = "*"
 winapi = "*"
-slsr_core = { path = "../core" }
-slsr_solver = { path = "../solver" }
+srither-core = { path = "../srither-core" }
+srither-solver = { path = "../srither-solver" }
 
 [profile.release]
 lto = true

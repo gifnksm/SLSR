@@ -2,8 +2,8 @@ use std::io;
 use std::fs::File;
 use std::io::prelude::*;
 
-use slsr_core::puzzle::Puzzle;
-use slsr_solver::{self as solver, Solutions};
+use srither_core::puzzle::Puzzle;
+use srither_solver::{self as solver, Solutions};
 
 use error::AppResult;
 use parse_arg::{OutputMode, SolveConfig};
