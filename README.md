@@ -5,11 +5,28 @@
 [![Coverage Status](https://coveralls.io/repos/gifnksm/srither/badge.svg?branch=master&service=github)](https://coveralls.io/github/gifnksm/srither?branch=master)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-## CLI solver
+## Solve puzzle
+
+Solve and output the puzzle.
 
 ```
-$ cd srither-cli
-$ cargo run --release -- solve ../puzzle/example.txt
+$ cargo run --release -- solve ./puzzle/example.txt
+```
+
+## Test
+
+Test whether all given puzzles can be solved.
+
+```
+$ cargo run --release -- test ./puzzle/**/*.txt
+```
+
+## Benchmark
+
+Run the benchmark test that solves the 10 hardest puzzles.
+
+```
+$ cargo run --release -- bench --only-hardest 10 ./puzzle/**/*.txt
 ```
 
 ## Download puzzles
@@ -24,5 +41,5 @@ $ ./etc/download_puzzles.sh
 
   * Refactoring
   * Performance improvement
-  * Problem generator
+  * Puzzle generator
   * GUI interface (editor, player, solver)

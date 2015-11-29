@@ -39,49 +39,46 @@ before_script:
         cd kcov/build
         cmake ..
         make
+        cd ${TRAVIS_BUILD_DIR}
       fi
 
 script:
-  # core package
-  - cd "${TRAVIS_BUILD_DIR}/srither-core"
-  - cargo build
-  - cargo test --no-run
-  - ${KCOV} ./target/debug/srither_core-*
-  - cargo bench
+  # srither-core package
+  - cargo build -p srither-core
+  - cargo test --no-run -p srither-core
+  - ${KCOV} ./target/debug/deps/srither_core-*
+  - cargo bench -p srither-core
 
-  # solver package
-  - cd "${TRAVIS_BUILD_DIR}/srither-solver"
-  - cargo build
-  - cargo test --no-run
-  - ${KCOV} ./target/debug/srither_solver-*
-  - cargo bench
+  # srither-solver package
+  - cargo build -p srither-solver
+  - cargo test --no-run -p srither-solver
+  - ${KCOV} ./target/debug/deps/srither_solver-*
+  - cargo bench -p srither-solver
 
-  # cli package
+  # srither package
   # build
-  - cd "${TRAVIS_BUILD_DIR}/srither-cli"
   - cargo build
   - cargo build --release
   # test and collect coverage
   - cargo test --no-run
-  - ${KCOV} ./target/debug/srither_cli-*
-  - ${KCOV} ./target/debug/srither-cli solve ../puzzle/example.txt
-  - ${KCOV} ./target/debug/srither-cli solve --all ../puzzle/empty_2x1.txt
-  - ${KCOV} ./target/debug/srither-cli solve --all ../puzzle/empty_2x2.txt
-  - find ../puzzle -type f -name "*.txt" | xargs ${KCOV} ./target/debug/srither-cli test
-  - ${KCOV} ./target/debug/srither-cli bench ../puzzle/example.txt
+  - ${KCOV} ./target/debug/srither-*
+  - ${KCOV} ./target/debug/srither solve ./puzzle/example.txt
+  - ${KCOV} ./target/debug/srither solve --all ./puzzle/empty_2x1.txt
+  - ${KCOV} ./target/debug/srither solve --all ./puzzle/empty_2x2.txt
+  - find ./puzzle -type f -name "*.txt" | xargs ${KCOV} ./target/debug/srither test
+  - ${KCOV} ./target/debug/srither bench ./puzzle/example.txt
   # benchmark
   - cargo bench
-  - find ../puzzle -type f -name "*.txt" | xargs ./target/release/srither-cli bench --only-hardest 10
+  - find ./puzzle -type f -name "*.txt" | xargs ./target/release/srither bench --only-hardest 5
   # generate doc
   - cargo doc
 
 after_success:
-  - cd "${TRAVIS_BUILD_DIR}/cli"
   - |
       [ ${TRAVIS_RUST_VERSION} = nightly ] &&
       [ ${TRAVIS_BRANCH} = master ] &&
       [ ${TRAVIS_PULL_REQUEST} = false ] &&
-      echo "<meta http-equiv=refresh content=0;url=srither_cli/index.html>" > target/doc/index.html &&
+      echo "<meta http-equiv=refresh content=0;url=srither/index.html>" > target/doc/index.html &&
       pip install 'ghp-import' --user &&
       ghp-import -n target/doc &&
       git push -fq https://${GH_TOKEN}@github.com/${TRAVIS_REPO_SLUG}.git gh-pages

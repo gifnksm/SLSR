@@ -1,5 +1,5 @@
 [package]
-name = "srither-cli"
+name = "srither"
 version = "0.1.0"
 authors = ["gifnksm <makoto.nksm+github@gmail.com>"]
 license="MIT"
@@ -15,8 +15,8 @@ libc = "*"
 rustc-test = { git = "https://github.com/alexcrichton/rustc-test" }
 time = "*"
 winapi = "*"
-srither-core = { path = "../srither-core" }
-srither-solver = { path = "../srither-solver" }
+srither-core = { path = "./srither-core" }
+srither-solver = { path = "./srither-solver" }
 
 [profile.release]
 lto = true

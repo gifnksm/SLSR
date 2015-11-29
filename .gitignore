@@ -1,4 +1,4 @@
-srither-cli/target
+target
 srither-core/target
 srither-core/Cargo.lock
 srither-solver/target
