@@ -9,5 +9,5 @@ description = "Slither Link Solver written in Rust."
 
 [dependencies]
 srither-core = { path = "../srither-core" }
-union-find = "*"
+union-find = "0.3"
 
