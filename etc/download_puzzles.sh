@@ -23,10 +23,10 @@ download_java() {
 
 download_nikoli() {
     local NUM="$1"
-    local BASEURL="http://www.nikoli.com/nfp/"
+    local BASEURL="http://www.nikoli.com/nfp"
 
     curl -s "${BASEURL}/sl-${NUM}.nfp" |
-        sed 's/&/\n/g' | sed -n 's/^dataQuestion=//p' | ${ETCDIR}/urldecode.py |
+        sed 's/&/\'$'\n''/g' | sed -n 's/^dataQuestion=//p' | ${ETCDIR}/urldecode.py |
         sed 's/+//g'
 }
 
