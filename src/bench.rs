@@ -1,13 +1,34 @@
 use std::fs::File;
 use std::io::prelude::*;
 use time;
-use rustc_test::{self as test, DynBenchFn, DynTestName, ShouldPanic, TestDesc, TestDescAndFn};
+use rustc_test::{self as test, Bencher, DynBenchFn, DynTestName, ShouldPanic, TDynBenchFn,
+                 TestDesc, TestDescAndFn};
 
 use srither_core::puzzle::Puzzle;
 use srither_solver::{self as solver, Solutions};
 
 use error::AppResult;
 use parse_arg::BenchConfig;
+
+struct BenchFn {
+    input: String,
+    derive_all: bool,
+}
+
+impl TDynBenchFn for BenchFn {
+    fn run(&self, harness: &mut Bencher) {
+        harness.iter(|| solve(&self.input, self.derive_all))
+    }
+}
+
+impl BenchFn {
+    fn new(input: String, derive_all: bool) -> BenchFn {
+        BenchFn {
+            input: input,
+            derive_all: derive_all,
+        }
+    }
+}
 
 pub fn run(config: BenchConfig) -> AppResult<()> {
     let derive_all = config.derive_all;
@@ -24,9 +45,7 @@ pub fn run(config: BenchConfig) -> AppResult<()> {
                                   ignore: false,
                                   should_panic: ShouldPanic::No,
                               },
-                              testfn: DynBenchFn(Box::new(move |bencher| {
-                                  bencher.iter(|| solve(&input, derive_all))
-                              })),
+                              testfn: DynBenchFn(Box::new(BenchFn::new(input, derive_all))),
                           }
                       })
                       .collect();
