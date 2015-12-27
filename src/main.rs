@@ -10,9 +10,11 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 
+#![feature(test)]
+
 extern crate term;
 extern crate argparse;
-extern crate rustc_test;
+extern crate test as rustc_test;
 extern crate time;
 
 extern crate srither_core;
