@@ -1,7 +1,10 @@
+//! Parsing a lattice strings.
+
 use std::{iter, fmt};
 use std::error::Error;
 use geom::Point;
 
+/// An error type which is returned from parsing a string into lattice.
 #[derive(Copy, Clone, Debug)]
 pub struct ParseLatticeError {
     kind: LatticeErrorKind,
@@ -32,6 +35,7 @@ impl ParseLatticeError {
     }
 }
 
+/// A parser parsing a string into lattice.
 #[derive(Clone, Debug)]
 pub struct LatticeParser<'a> {
     mat: &'a [Vec<char>],
@@ -40,6 +44,7 @@ pub struct LatticeParser<'a> {
 }
 
 impl<'a> LatticeParser<'a> {
+    /// Creates a lattice parser from lines of strings.
     pub fn from_lines(lines: &'a [Vec<char>]) -> Result<LatticeParser<'a>, ParseLatticeError> {
         use self::ParseLatticeError as Error;
 
@@ -76,29 +81,38 @@ impl<'a> LatticeParser<'a> {
         })
     }
 
+    /// Returns the number of the rows.
     #[inline]
     pub fn num_rows(&self) -> usize {
         self.rows.len()
     }
+
+    /// Returns the number of the columns.
     #[inline]
     pub fn num_cols(&self) -> usize {
         self.cols.len()
     }
 
+    /// Returns an iterator iterating the vertical edges of the lattice.
     #[inline]
     pub fn v_edges(&self) -> VEdges {
         VEdges::new(self)
     }
+
+    /// Returns an iterator iterating the horizontal edges of the lattice.
     #[inline]
     pub fn h_edges(&self) -> HEdges {
         HEdges::new(self)
     }
+
+    /// Returns an iterator iterating the cells of the lattice.
     #[inline]
     pub fn cells(&self) -> Cells {
         Cells::new(self)
     }
 }
 
+/// An iterator iterating the vertical edges of the lattice.
 #[derive(Copy, Clone, Debug)]
 pub struct VEdges<'a> {
     row: usize,
@@ -151,6 +165,7 @@ impl<'a> Iterator for VEdges<'a> {
     }
 }
 
+/// An iterator iterating the horizontal edges of the lattice.
 #[derive(Copy, Clone, Debug)]
 pub struct HEdges<'a> {
     row: usize,
@@ -161,7 +176,7 @@ pub struct HEdges<'a> {
 }
 
 impl<'a> HEdges<'a> {
-    pub fn new(parser: &'a LatticeParser) -> HEdges<'a> {
+    fn new(parser: &'a LatticeParser) -> HEdges<'a> {
         HEdges {
             row: 0,
             col: 0,
@@ -197,6 +212,7 @@ impl<'a> Iterator for HEdges<'a> {
     }
 }
 
+/// An iterator iterating the cells of the lattice.
 #[derive(Copy, Clone, Debug)]
 pub struct Cells<'a> {
     row: usize,
@@ -207,7 +223,7 @@ pub struct Cells<'a> {
 }
 
 impl<'a> Cells<'a> {
-    pub fn new(parser: &'a LatticeParser) -> Cells<'a> {
+    fn new(parser: &'a LatticeParser) -> Cells<'a> {
         Cells {
             row: 0,
             col: 0,

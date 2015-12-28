@@ -100,9 +100,9 @@ impl EdgePattern<Point> {
         self.normalized()
     }
 
-    fn to_cellid(self, size: Size) -> EdgePattern<CellId> {
-        let p0 = size.point_to_cellid(self.points.0);
-        let p1 = size.point_to_cellid(self.points.1);
+    fn to_cellid(self, puzzle: &Puzzle) -> EdgePattern<CellId> {
+        let p0 = puzzle.point_to_cellid(self.points.0);
+        let p1 = puzzle.point_to_cellid(self.points.1);
         EdgePattern {
             edge: self.edge,
             points: (p0, p1),
@@ -110,10 +110,10 @@ impl EdgePattern<Point> {
     }
 
     fn matches(self,
-               size: Size,
+               puzzle: &Puzzle,
                side_map: &mut SideMap)
                -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
-        self.to_cellid(size).matches(side_map)
+        self.to_cellid(puzzle).matches(side_map)
     }
 }
 
@@ -183,7 +183,7 @@ impl Pattern {
                -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
         match self {
             Pattern::Hint(h) => h.matches(puzzle),
-            Pattern::Edge(e) => e.matches(puzzle.size(), side_map),
+            Pattern::Edge(e) => e.matches(puzzle, side_map),
         }
     }
 }
@@ -232,13 +232,13 @@ impl Theorem {
     }
 
     pub fn all_rotations(self) -> Vec<Theorem> {
-        let deg90 = self.rotate(Rotation::UCW90);
-        let deg180 = self.rotate(Rotation::UCW180);
-        let deg270 = self.rotate(Rotation::UCW270);
+        let deg90 = self.rotate(Rotation::CCW90);
+        let deg180 = self.rotate(Rotation::CCW180);
+        let deg270 = self.rotate(Rotation::CCW270);
         let h_deg0 = self.rotate(Rotation::H_FLIP);
-        let h_deg90 = h_deg0.rotate(Rotation::UCW90);
-        let h_deg180 = h_deg0.rotate(Rotation::UCW180);
-        let h_deg270 = h_deg0.rotate(Rotation::UCW270);
+        let h_deg90 = h_deg0.rotate(Rotation::CCW90);
+        let h_deg180 = h_deg0.rotate(Rotation::CCW180);
+        let h_deg270 = h_deg0.rotate(Rotation::CCW270);
         let mut rots = vec![self, deg90, deg180, deg270, h_deg0, h_deg90, h_deg180, h_deg270];
 
         rots.sort();
@@ -308,7 +308,7 @@ impl Theorem {
 
         let result = self.result
                          .iter()
-                         .map(|pat| pat.shift(shift).to_cellid(puzzle.size()))
+                         .map(|pat| pat.shift(shift).to_cellid(&puzzle))
                          .collect();
 
         if num_matcher == 0 {
@@ -862,22 +862,22 @@ mod tests {
                          .parse::<Theorem>()
                          .unwrap();
 
-        assert_eq!(deg0.clone(), deg0.clone().rotate(Rotation::UCW0));
-        assert_eq!(deg90.clone(), deg0.clone().rotate(Rotation::UCW90));
-        assert_eq!(deg180.clone(), deg0.clone().rotate(Rotation::UCW180));
-        assert_eq!(deg270.clone(), deg0.clone().rotate(Rotation::UCW270));
+        assert_eq!(deg0.clone(), deg0.clone().rotate(Rotation::CCW0));
+        assert_eq!(deg90.clone(), deg0.clone().rotate(Rotation::CCW90));
+        assert_eq!(deg180.clone(), deg0.clone().rotate(Rotation::CCW180));
+        assert_eq!(deg270.clone(), deg0.clone().rotate(Rotation::CCW270));
         assert_eq!(h_flip.clone(), deg0.clone().rotate(Rotation::H_FLIP));
         assert_eq!(v_flip.clone(), deg0.clone().rotate(Rotation::V_FLIP));
-        assert_eq!(v_flip.clone(), h_flip.clone().rotate(Rotation::UCW180));
+        assert_eq!(v_flip.clone(), h_flip.clone().rotate(Rotation::CCW180));
 
         let mut rots = &mut [deg0.clone(),
                              deg90,
                              deg180,
                              deg270,
                              h_flip.clone(),
-                             h_flip.clone().rotate(Rotation::UCW90),
-                             h_flip.clone().rotate(Rotation::UCW180),
-                             h_flip.clone().rotate(Rotation::UCW270)];
+                             h_flip.clone().rotate(Rotation::CCW90),
+                             h_flip.clone().rotate(Rotation::CCW180),
+                             h_flip.clone().rotate(Rotation::CCW270)];
         rots.sort();
         assert_eq!(rots, &deg0.all_rotations()[..]);
     }

@@ -3,7 +3,7 @@
 #![warn(bad_style)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
-// #![warn(missing_docs)]
+#![warn(missing_docs)]
 #![warn(trivial_casts)]
 #![warn(trivial_numeric_casts)]
 #![warn(unused)]
@@ -36,6 +36,7 @@ mod step {
 mod theorem_define;
 mod solver;
 
+/// An error type which is returned from solving a puzzle.
 #[derive(Copy, Clone, Debug)]
 pub struct Error {
     kind: ErrorKind,
@@ -66,6 +67,7 @@ impl Error {
     }
 }
 
+/// Solving puzzles result.
 pub type SolverResult<T> = Result<T, Error>;
 
 enum FillResult<'a> {
@@ -167,12 +169,14 @@ fn fill(mut solver: Solver) -> SolverResult<FillResult> {
     Ok(FillResult::Partial(solver, pts))
 }
 
+/// An iterator iterates all solutions of the puzzle.
 #[derive(Clone, Debug)]
 pub struct Solutions<'a> {
     queue: Vec<Solver<'a>>,
 }
 
 impl<'a> Solutions<'a> {
+    /// Creates an solutions iterator of the puzzle.
     pub fn new(puzzle: &'a Puzzle) -> SolverResult<Solutions<'a>> {
         let theorem = THEOREM_DEFINE.iter().map(|theo| theo.parse().unwrap());
         Ok(Solutions { queue: vec![try!(Solver::new(puzzle, theorem))] })
@@ -210,6 +214,7 @@ impl<'a> Iterator for Solutions<'a> {
     }
 }
 
+/// Returns the first solution of the puzzle.
 pub fn solve(puzzle: &Puzzle) -> SolverResult<Puzzle> {
     let mut it = try!(Solutions::new(puzzle));
     if let Some(solution) = it.next() {
