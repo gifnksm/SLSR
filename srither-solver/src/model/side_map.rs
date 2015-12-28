@@ -1,6 +1,6 @@
 use union_find::{UnionFind, UnionBySizeRank as Union, QuickFindUf as Uf};
 use srither_core::puzzle::{Puzzle, Edge, Side};
-use srither_core::geom::{CellId, Geom, Move, OUTSIDE_CELL_ID};
+use srither_core::geom::{CellId, Geom, Move};
 
 use {SolverResult, State};
 
@@ -60,7 +60,7 @@ impl SideMap {
     }
 
     pub fn get_side(&mut self, p: CellId) -> State<Side> {
-        let q = OUTSIDE_CELL_ID;
+        let q = CellId::OUTSIDE;
 
         let a = self.uf.find(p.key0());
         let b = self.uf.find(q.key0());
@@ -88,10 +88,10 @@ impl SideMap {
     }
 
     pub fn set_outside(&mut self, p: CellId) -> bool {
-        self.set_same(p, OUTSIDE_CELL_ID)
+        self.set_same(p, CellId::OUTSIDE)
     }
     pub fn set_inside(&mut self, p: CellId) -> bool {
-        self.set_different(p, OUTSIDE_CELL_ID)
+        self.set_different(p, CellId::OUTSIDE)
     }
     pub fn set_side(&mut self, p: CellId, ty: Side) -> bool {
         match ty {

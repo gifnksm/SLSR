@@ -1,20 +1,41 @@
+//! Geometric types for 2D lattice-shaped puzzles.
+
 use std::ops::{Add, Mul, Sub, Neg, Index, IndexMut, Range};
 
+/// A two-dimensional lattice point.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Point(pub i32, pub i32);
+
+/// A size of a rectangle.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct Size(pub i32, pub i32);
+
+/// A difference between two `Point`s.
+///
+/// `Point(y0, x0)` - `Point(y1, x1) == `Move(y0 - y1, x0 - x1)`
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Move(pub i32, pub i32);
+
+/// A 2x2 rotation matrix.
+///
+/// `Rotation(yy, yx, xy, xx) * Move(y, x) == Move(yy*y + yx*x, xy*y + xx*x)`
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub struct Rotation(i32, i32, i32, i32);
 
 impl Move {
+    /// An upward `Move` vector.
     pub const UP:    Move = Move(-1, 0);
+
+    /// A rightward `Move` vector.
     pub const RIGHT: Move = Move(0, 1);
+
+    /// A downward `Move` vector.
     pub const DOWN:  Move = Move(1, 0);
+
+    /// A leftward `Move` vector.
     pub const LEFT:  Move = Move(0, -1);
 
+    /// `Move` vectors that is toward four adjacent points.
     pub const ALL_DIRECTIONS: [Move; 4] = [Move::UP, Move::RIGHT, Move::DOWN, Move::LEFT];
 }
 
@@ -74,11 +95,22 @@ impl Mul<i32> for Move {
 }
 
 impl Rotation {
-    pub const UCW0:   Rotation = Rotation(1, 0, 0, 1);
-    pub const UCW90:  Rotation = Rotation(0, -1, 1, 0);
-    pub const UCW180: Rotation = Rotation(-1, 0, 0, -1);
-    pub const UCW270: Rotation = Rotation(0, 1, -1, 0);
+    /// A 0-degree `Rotation` to the left (counterclockwise).
+    pub const CCW0:   Rotation = Rotation(1, 0, 0, 1);
+
+    /// A 90-degree `Rotation` to the left (counterclockwise).
+    pub const CCW90:  Rotation = Rotation(0, -1, 1, 0);
+
+    /// A 180-degree `Rotation` to the left (counterclockwise).
+    pub const CCW180: Rotation = Rotation(-1, 0, 0, -1);
+
+    /// A 270-degree `Rotation` to the left (counterclockwise).
+    pub const CCW270: Rotation = Rotation(0, 1, -1, 0);
+
+    /// Flip horizontal.
     pub const H_FLIP: Rotation = Rotation(1, 0, 0, -1);
+
+    /// Flip vertical.
     pub const V_FLIP: Rotation = Rotation(-1, 0, 0, 1);
 }
 
@@ -104,52 +136,81 @@ impl Mul<Move> for Rotation {
     }
 }
 
+/// An ID identifying a cell in lattice rectangle.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct CellId(usize);
+
 impl CellId {
+    /// An ID being given to cells on outside the rectangle.
+    pub const OUTSIDE: CellId = CellId(0);
+
+    /// Creates a new `CellId` from an ID.
+    #[inline]
     pub fn new(id: usize) -> CellId {
         CellId(id)
     }
+
+    /// Gets an ID of the cell.
+    #[inline]
     pub fn id(self) -> usize {
         self.0
     }
-}
-pub const OUTSIDE_CELL_ID: CellId = CellId(0);
-pub const OUTSIDE_POINT: Point = Point(-1, -1);
 
+    /// Returns if the cell is on outside of the rectangle.
+    #[inline]
+    pub fn is_outside(self) -> bool {
+        self == CellId::OUTSIDE
+    }
+}
+
+/// A representative `Point` of points on outside the rectangle.
+const OUTSIDE_POINT: Point = Point(-1, -1);
+
+/// A rectangle area.
 pub trait Geom {
+    /// Returns the rectangle's size.
     #[inline]
     fn size(&self) -> Size;
+
+    /// Returns the number of the rectangle's rows.
     #[inline]
     fn row(&self) -> i32 {
         self.size().0
     }
+
+    /// Returns the number of the rectangle's columns.
     #[inline]
     fn column(&self) -> i32 {
         self.size().1
     }
+
+    /// Returns the cell length which is contained in the rectangle.
     #[inline]
     fn cell_len(&self) -> usize {
         (self.row() * self.column() + 1) as usize
     }
 
+    /// Returns true if the point is contained in the rectangle.
     #[inline]
     fn contains(&self, p: Point) -> bool {
         let size = self.size();
         0 <= p.0 && p.0 < size.0 && 0 <= p.1 && p.1 < size.1
     }
 
+    /// Convert a point to a corresponding cell ID.
     #[inline]
     fn point_to_cellid(&self, p: Point) -> CellId {
         if self.contains(p) {
-            CellId((p.0 * self.column() + p.1 + 1) as usize)
+            CellId::new((p.0 * self.column() + p.1 + 1) as usize)
         } else {
-            OUTSIDE_CELL_ID
+            CellId::OUTSIDE
         }
     }
+
+    /// Convert a cell ID to a corresponding point.
     #[inline]
     fn cellid_to_point(&self, id: CellId) -> Point {
-        if id == OUTSIDE_CELL_ID {
+        if id.is_outside() {
             OUTSIDE_POINT
         } else {
             let idx = id.id() - 1;
@@ -157,6 +218,7 @@ pub trait Geom {
         }
     }
 
+    /// Returns an iterator iterating all points.
     #[inline]
     fn points(&self) -> Points {
         if self.row() > 0 && self.column() > 0 {
@@ -172,6 +234,7 @@ pub trait Geom {
         }
     }
 
+    /// Returns an iterator iterating all points in the row.
     #[inline]
     fn points_in_row(&self, row: i32) -> PointsInRow {
         PointsInRow {
@@ -180,6 +243,7 @@ pub trait Geom {
         }
     }
 
+    /// Returns an iterator iterating all points in the column.
     #[inline]
     fn points_in_column(&self, column: i32) -> PointsInColumn {
         PointsInColumn {
@@ -189,6 +253,7 @@ pub trait Geom {
     }
 }
 
+/// An iterator iterating all points in the rectangle.
 #[derive(Copy, Clone, Debug)]
 pub struct Points {
     point: Option<Point>,
@@ -222,6 +287,7 @@ impl Iterator for Points {
     }
 }
 
+/// An iterator iterating all points in a row of the rectangle.
 #[derive(Clone, Debug)]
 pub struct PointsInRow {
     row: i32,
@@ -241,6 +307,7 @@ impl Iterator for PointsInRow {
     }
 }
 
+/// An iterator iterating all points in a column of the rectangle.
 #[derive(Clone, Debug)]
 pub struct PointsInColumn {
     rows: Range<i32>,
@@ -260,13 +327,7 @@ impl Iterator for PointsInColumn {
     }
 }
 
-impl Geom for Size {
-    #[inline]
-    fn size(&self) -> Size {
-        *self
-    }
-}
-
+/// A table that stores values for each cells.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Table<T> {
     size: Size,
@@ -274,6 +335,7 @@ pub struct Table<T> {
 }
 
 impl<T> Table<T> {
+    /// Creates a new table with data.
     #[inline]
     pub fn new(size: Size, outside: T, mut data: Vec<T>) -> Table<T> {
         assert_eq!((size.0 * size.1) as usize, data.len());
@@ -284,6 +346,7 @@ impl<T> Table<T> {
         }
     }
 
+    /// Creates a new empty table.
     #[inline]
     pub fn new_empty(size: Size, outside: T, init: T) -> Table<T>
         where T: Clone
@@ -323,6 +386,13 @@ impl<T> IndexMut<Point> for Table<T> {
 mod tests {
     use super::*;
 
+    struct Rect(Size);
+    impl Geom for Rect {
+        fn size(&self) -> Size {
+            self.0
+        }
+    }
+
     #[test]
     fn points() {
         let pts = [Point(0, 0),
@@ -337,13 +407,13 @@ mod tests {
                    Point(3, 0),
                    Point(3, 1),
                    Point(3, 2)];
-        let size = Size(4, 3);
-        assert_eq!(&pts[..], &size.points().collect::<Vec<_>>()[..]);
+        let rect = Rect(Size(4, 3));
+        assert_eq!(&pts[..], &rect.points().collect::<Vec<_>>()[..]);
     }
 
     #[test]
     fn rotate_mat() {
-        let mat = [Rotation::UCW0, Rotation::UCW90, Rotation::UCW180, Rotation::UCW270];
+        let mat = [Rotation::CCW0, Rotation::CCW90, Rotation::CCW180, Rotation::CCW270];
         for i in 0..mat.len() {
             for j in 0..mat.len() {
                 assert_eq!(mat[(i + j) % mat.len()], mat[i] * mat[j]);
@@ -353,7 +423,7 @@ mod tests {
 
     #[test]
     fn rotate_point() {
-        let mat = [Rotation::UCW0, Rotation::UCW90, Rotation::UCW180, Rotation::UCW270];
+        let mat = [Rotation::CCW0, Rotation::CCW90, Rotation::CCW180, Rotation::CCW270];
         let vec = [[Move::UP, Move::LEFT, Move::DOWN, Move::RIGHT],
                    [Move::UP + Move::RIGHT,
                     Move::LEFT + Move::UP,

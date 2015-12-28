@@ -2,7 +2,7 @@ use std::iter::FromIterator;
 use std::mem;
 use union_find::{Union, UnionFind, UnionResult, QuickFindUf as Uf};
 use srither_core::puzzle::{Edge, Puzzle, Side};
-use srither_core::geom::{CellId, Geom, Point, Move, OUTSIDE_CELL_ID};
+use srither_core::geom::{CellId, Geom, Point, Move};
 
 use {Error, State, SolverResult};
 use model::side_map::SideMap;
@@ -57,7 +57,7 @@ impl Area {
         let sum = puzzle.hint(p).unwrap_or(0) as u32;
 
         let mut edge = vec![];
-        if cp != OUTSIDE_CELL_ID {
+        if !cp.is_outside() {
             for &r in &Move::ALL_DIRECTIONS {
                 let cp_r = puzzle.point_to_cellid(p + r);
                 if side_map.get_edge(cp, cp_r) == State::Unknown {
@@ -152,12 +152,12 @@ impl Clone for ConnectMap {
 
 impl ConnectMap {
     pub fn new(puzzle: &Puzzle, side_map: &mut SideMap) -> ConnectMap {
-        let size = puzzle.size();
-        let cell_len = size.cell_len();
+        let cell_len = puzzle.cell_len();
 
         let mut uf = Uf::from_iter((0..cell_len)
-                                       .map(|id| size.cellid_to_point(CellId::new(id)))
-                                       .map(|p| Area::new(p, puzzle, side_map)));
+                                         .map(CellId::new)
+                                         .map(|id| puzzle.cellid_to_point(id))
+                                         .map(|p| Area::new(p, puzzle, side_map)));
 
         let mut sum_of_hint = 0;
         for i in 0..cell_len {
@@ -169,11 +169,11 @@ impl ConnectMap {
             uf: uf,
         };
 
-        for p in size.points() {
-            let cp = size.point_to_cellid(p);
+        for p in puzzle.points() {
+            let cp = puzzle.point_to_cellid(p);
             for &r in &Move::ALL_DIRECTIONS {
                 let p2 = p + r;
-                let cp2 = size.point_to_cellid(p2);
+                let cp2 = puzzle.point_to_cellid(p2);
                 if side_map.get_edge(cp, cp2) == State::Fixed(Edge::Cross) {
                     conn_map.union(cp, cp2);
                 }

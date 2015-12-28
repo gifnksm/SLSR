@@ -1,21 +1,33 @@
+//! Slither link puzzle data structure.
+
 use std::error::Error;
 use std::fmt;
 
 use geom::{Geom, Point, Size, Table};
 use lattice_parser::ParseLatticeError;
 
+/// A hint of the slither link puzzle.
 pub type Hint = Option<u8>;
+
+/// A cell's side.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Side {
+    /// A cell is inside.
     In,
+    /// A cell is outside.
     Out,
 }
+
+/// An edge between cells.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Edge {
+    /// An edge between cells is line (different side).
     Line,
+    /// An edge between cells is cross (same side).
     Cross,
 }
 
+/// Slither link puzzle data.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Puzzle {
     size: Size,
@@ -27,6 +39,7 @@ pub struct Puzzle {
 }
 
 impl Puzzle {
+    /// Creates an empty slither link puzzle.
     #[inline]
     pub fn new(size: Size) -> Puzzle {
         assert!(size.0 > 0 && size.1 > 0);
@@ -65,10 +78,13 @@ impl Puzzle {
         }
     }
 
+    /// Gets a hint at the point.
     #[inline]
     pub fn hint(&self, p: Point) -> Hint {
         self.hint[p]
     }
+
+    /// Sets a hint at the point.
     #[inline]
     pub fn set_hint(&mut self, p: Point, hint: Hint) {
         if let Some(n) = self.hint[p] {
@@ -80,28 +96,37 @@ impl Puzzle {
         self.hint[p] = hint;
     }
 
+    /// Gets a side at the point.
     #[inline]
     pub fn side(&self, p: Point) -> Option<Side> {
         self.side[p]
     }
+
+    /// Set a side at the point.
     #[inline]
     pub fn set_side(&mut self, p: Point, side: Option<Side>) {
         self.side[p] = side;
     }
 
+    /// Gets a horizontal edge above the point.
     #[inline]
     pub fn edge_h(&self, p: Point) -> Option<Edge> {
         self.edge_h[p]
     }
+
+    /// Sets a horizontal edge above the point.
     #[inline]
     pub fn set_edge_h(&mut self, p: Point, edge: Option<Edge>) {
         self.edge_h[p] = edge;
     }
 
+    /// Gets a vertical edge on the right of the point.
     #[inline]
     pub fn edge_v(&self, p: Point) -> Option<Edge> {
         self.edge_v[p]
     }
+
+    /// Sets a vertical edge on the right of the point.
     #[inline]
     pub fn set_edge_v(&mut self, p: Point, edge: Option<Edge>) {
         self.edge_v[p] = edge;
@@ -115,11 +140,13 @@ impl Geom for Puzzle {
     }
 }
 
+/// An error type which is returned from parsing a string into puzzle.
 #[derive(Copy, Clone, Debug)]
 pub struct ParsePuzzleError {
     kind: PuzzleErrorKind,
 }
 
+/// Puzzle parse result.
 pub type ParsePuzzleResult<T> = Result<T, ParsePuzzleError>;
 
 #[derive(Copy, Clone, Debug)]
