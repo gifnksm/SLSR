@@ -1,7 +1,9 @@
+//! Srither link solver command.
+
 #![warn(bad_style)]
 #![warn(missing_copy_implementations)]
 #![warn(missing_debug_implementations)]
-// #![warn(missing_docs)]
+#![warn(missing_docs)]
 #![warn(trivial_casts)]
 #![warn(trivial_numeric_casts)]
 #![warn(unused)]
