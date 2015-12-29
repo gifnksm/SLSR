@@ -6,3 +6,6 @@ license="MIT"
 readme = "README.md"
 repository = "https://github.com/gifnksm/srither"
 description = "Slither Link Solver written in Rust."
+
+[dependencies]
+board-game-geom = "0.1"

@@ -14,6 +14,8 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 
-pub mod geom;
+extern crate board_game_geom;
+
+pub use board_game_geom as geom;
 pub mod lattice_parser;
 pub mod puzzle;
