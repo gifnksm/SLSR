@@ -19,7 +19,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "board-game-geom"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -40,7 +40,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "srither-core"
 version = "0.1.0"
 dependencies = [
- "board-game-geom 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "board-game-geom 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
