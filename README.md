@@ -3,7 +3,6 @@
 [![Build Status (Travis CI)](https://travis-ci.org/gifnksm/srither.svg?branch=master)](https://travis-ci.org/gifnksm/srither)
 [![Build status (AppVeyor)](https://ci.appveyor.com/api/projects/status/lkmxu31s0pylrnhd/branch/master?svg=true)](https://ci.appveyor.com/project/gifnksm/srither/branch/master)
 [![Coverage Status](https://coveralls.io/repos/gifnksm/srither/badge.svg?branch=master&service=github)](https://coveralls.io/github/gifnksm/srither?branch=master)
-[![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 ## Solve puzzle
 
