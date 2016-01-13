@@ -12,7 +12,8 @@ use union_find::{Union, UnionFind, UnionResult, QuickFindUf as Uf};
 use srither_core::puzzle::{Edge, Puzzle, Side};
 use srither_core::geom::{CellId, Geom, Point, Move};
 
-use {Error, State, SolverResult};
+use {Error, SolverResult};
+use model::State;
 use model::side_map::SideMap;
 
 #[derive(Debug)]

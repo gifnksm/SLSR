@@ -10,9 +10,8 @@ use std::{cmp, usize};
 use srither_core::puzzle::Side;
 use srither_core::geom::{CellId, Geom};
 
-use {State, SolverResult};
-use model::connect_map::ConnectMap;
-use model::side_map::SideMap;
+use SolverResult;
+use model::{ConnectMap, State, SideMap};
 
 fn create_conn_graph(conn_map: &mut ConnectMap,
                      exclude_side: Side)

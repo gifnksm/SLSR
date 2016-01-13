@@ -12,9 +12,10 @@ use std::mem;
 use srither_core::geom::{CellId, Geom, Move};
 use srither_core::puzzle::{Edge, Puzzle};
 
-use {Error, State, SolverResult};
-use model::side_map::SideMap;
-use model::theorem::{EdgePattern, Pattern, Theorem, TheoremMatcher, TheoremMatchResult};
+use {Error, SolverResult};
+use model::{SideMap, State};
+use model::pattern::EdgePattern;
+use model::theorem::{Theorem, PartialTheorem, MatchResult};
 
 #[derive(Clone, Debug)]
 struct IndexByEdge {
@@ -71,9 +72,9 @@ impl TheoremPool {
 
         let mut map = HashMap::new();
         for (i, m) in matchers.iter().enumerate() {
-            for (edge, points) in m.matcher_edges() {
-                let e = map.entry(points).or_insert((vec![], vec![]));
-                match edge {
+            for pat in m.matcher_edges() {
+                let e = map.entry(pat.points()).or_insert((vec![], vec![]));
+                match pat.edge() {
                     Edge::Line => e.0.push(i),
                     Edge::Cross => e.1.push(i),
                 }
@@ -171,7 +172,7 @@ fn create_matcher_list<'a, T>(theo_defs: T,
                               puzzle: &Puzzle,
                               sum_of_hint: u32,
                               side_map: &mut SideMap)
-                              -> SolverResult<Vec<TheoremMatcher>>
+                              -> SolverResult<Vec<PartialTheorem>>
     where T: IntoIterator<Item = Theorem>
 {
     let it = theo_defs.into_iter().flat_map(|theo| theo.all_rotations());
@@ -180,9 +181,10 @@ fn create_matcher_list<'a, T>(theo_defs: T,
     let mut nonhint_theorem = vec![];
 
     for theo in it {
-        match theo.head() {
-            Pattern::Hint(h) => hint_theorem[h.hint() as usize].push(theo),
-            _ => nonhint_theorem.push(theo),
+        if let Some(h) = theo.head() {
+            hint_theorem[h.hint() as usize].push(theo)
+        } else {
+            nonhint_theorem.push(theo)
         }
     }
 
@@ -191,10 +193,7 @@ fn create_matcher_list<'a, T>(theo_defs: T,
     for p in puzzle.points() {
         if let Some(x) = puzzle.hint(p) {
             for theo in &hint_theorem[x as usize] {
-                let o = match theo.head() {
-                    Pattern::Hint(hint) => hint.point(),
-                    _ => panic!(),
-                };
+                let o = theo.head().unwrap().point();
                 try!(theo.shift_matches(p - o, puzzle, sum_of_hint, side_map))
                     .update(side_map, &mut data);
             }
@@ -214,7 +213,7 @@ fn create_matcher_list<'a, T>(theo_defs: T,
     Ok(data)
 }
 
-fn apply_all_theorem(matchers: &mut Vec<TheoremMatcher>,
+fn apply_all_theorem(matchers: &mut Vec<PartialTheorem>,
                      side_map: &mut SideMap)
                      -> SolverResult<()> {
     unsafe {
@@ -223,19 +222,19 @@ fn apply_all_theorem(matchers: &mut Vec<TheoremMatcher>,
         let mut w = 0;
         for r in 0..matchers.len() {
             let read = ptr.offset(r as isize);
-            let m = mem::replace(&mut *read, TheoremMatcher::dummy());
+            let m = mem::replace(&mut *read, PartialTheorem::dummy());
             match try!(m.matches(side_map)) {
-                TheoremMatchResult::Complete(result) => {
+                MatchResult::Complete(result) => {
                     for pat in &result {
                         pat.apply(side_map);
                     }
                 }
-                TheoremMatchResult::Partial(theo) => {
+                MatchResult::Partial(theo) => {
                     let write = ptr.offset(w as isize);
                     *write = theo;
                     w += 1;
                 }
-                TheoremMatchResult::Conflict => {}
+                MatchResult::Conflict => {}
             }
         }
 
@@ -245,7 +244,7 @@ fn apply_all_theorem(matchers: &mut Vec<TheoremMatcher>,
     Ok(())
 }
 
-fn merge_duplicate_matchers(matchers: &mut Vec<TheoremMatcher>) {
+fn merge_duplicate_matchers(matchers: &mut Vec<PartialTheorem>) {
     matchers.sort();
 
     // Merge elements that have same matchers.
