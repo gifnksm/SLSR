@@ -15,7 +15,7 @@ use srither_core::puzzle::{Edge, Puzzle};
 use {Error, SolverResult};
 use model::{SideMap, State};
 use model::pattern::EdgePattern;
-use model::theorem::{Theorem, TheoremMatcher, MatchResult};
+use model::theorem::{Theorem, PartialTheorem, MatchResult};
 
 #[derive(Clone, Debug)]
 struct IndexByEdge {
@@ -172,7 +172,7 @@ fn create_matcher_list<'a, T>(theo_defs: T,
                               puzzle: &Puzzle,
                               sum_of_hint: u32,
                               side_map: &mut SideMap)
-                              -> SolverResult<Vec<TheoremMatcher>>
+                              -> SolverResult<Vec<PartialTheorem>>
     where T: IntoIterator<Item = Theorem>
 {
     let it = theo_defs.into_iter().flat_map(|theo| theo.all_rotations());
@@ -213,7 +213,7 @@ fn create_matcher_list<'a, T>(theo_defs: T,
     Ok(data)
 }
 
-fn apply_all_theorem(matchers: &mut Vec<TheoremMatcher>,
+fn apply_all_theorem(matchers: &mut Vec<PartialTheorem>,
                      side_map: &mut SideMap)
                      -> SolverResult<()> {
     unsafe {
@@ -222,7 +222,7 @@ fn apply_all_theorem(matchers: &mut Vec<TheoremMatcher>,
         let mut w = 0;
         for r in 0..matchers.len() {
             let read = ptr.offset(r as isize);
-            let m = mem::replace(&mut *read, TheoremMatcher::dummy());
+            let m = mem::replace(&mut *read, PartialTheorem::dummy());
             match try!(m.matches(side_map)) {
                 MatchResult::Complete(result) => {
                     for pat in &result {
@@ -244,7 +244,7 @@ fn apply_all_theorem(matchers: &mut Vec<TheoremMatcher>,
     Ok(())
 }
 
-fn merge_duplicate_matchers(matchers: &mut Vec<TheoremMatcher>) {
+fn merge_duplicate_matchers(matchers: &mut Vec<PartialTheorem>) {
     matchers.sort();
 
     // Merge elements that have same matchers.

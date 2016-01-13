@@ -20,12 +20,12 @@ mod parse;
 #[derive(Clone, Debug)]
 pub enum MatchResult {
     Complete(Vec<EdgePattern<CellId>>),
-    Partial(TheoremMatcher),
+    Partial(PartialTheorem),
     Conflict,
 }
 
 impl MatchResult {
-    pub fn update(self, side_map: &mut SideMap, new_theorem: &mut Vec<TheoremMatcher>) {
+    pub fn update(self, side_map: &mut SideMap, new_theorem: &mut Vec<PartialTheorem>) {
         match self {
             MatchResult::Complete(result) => {
                 for pat in &result {
@@ -197,7 +197,7 @@ impl Theorem {
             }
         }
 
-        Ok(MatchResult::Partial(TheoremMatcher {
+        Ok(MatchResult::Partial(PartialTheorem {
             matcher: new_matcher,
             result: result,
         }))
@@ -205,20 +205,20 @@ impl Theorem {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct TheoremMatcher {
+pub struct PartialTheorem {
     matcher: Vec<EdgePattern<CellId>>,
     result: Vec<EdgePattern<CellId>>,
 }
 
-impl TheoremMatcher {
-    pub fn dummy() -> TheoremMatcher {
-        TheoremMatcher {
+impl PartialTheorem {
+    pub fn dummy() -> PartialTheorem {
+        PartialTheorem {
             matcher: vec![],
             result: vec![],
         }
     }
 
-    pub fn merge(&mut self, other: &TheoremMatcher) -> Result<(), ()> {
+    pub fn merge(&mut self, other: &PartialTheorem) -> Result<(), ()> {
         if self.matcher != other.matcher {
             return Err(());
         }
