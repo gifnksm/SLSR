@@ -15,7 +15,7 @@ use srither_core::puzzle::{Edge, Puzzle};
 use {Error, SolverResult};
 use model::{SideMap, State};
 use model::pattern::EdgePattern;
-use model::theorem::{Theorem, TheoremMatcher, TheoremMatchResult};
+use model::theorem::{Theorem, TheoremMatcher, MatchResult};
 
 #[derive(Clone, Debug)]
 struct IndexByEdge {
@@ -224,17 +224,17 @@ fn apply_all_theorem(matchers: &mut Vec<TheoremMatcher>,
             let read = ptr.offset(r as isize);
             let m = mem::replace(&mut *read, TheoremMatcher::dummy());
             match try!(m.matches(side_map)) {
-                TheoremMatchResult::Complete(result) => {
+                MatchResult::Complete(result) => {
                     for pat in &result {
                         pat.apply(side_map);
                     }
                 }
-                TheoremMatchResult::Partial(theo) => {
+                MatchResult::Partial(theo) => {
                     let write = ptr.offset(w as isize);
                     *write = theo;
                     w += 1;
                 }
-                TheoremMatchResult::Conflict => {}
+                MatchResult::Conflict => {}
             }
         }
 

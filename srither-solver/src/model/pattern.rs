@@ -12,7 +12,7 @@ use srither_core::geom::{CellId, Geom, Point, Rotation, Move};
 use {Error, SolverResult};
 use model::{SideMap, State};
 
-pub enum PatternMatchResult<T> {
+pub enum MatchResult<T> {
     Complete,
     Partial(T),
     Conflict,
@@ -51,11 +51,11 @@ impl HintPattern {
         Self::new(self.hint, p + d)
     }
 
-    pub fn matches<T>(self, puzzle: &Puzzle) -> SolverResult<PatternMatchResult<T>> {
+    pub fn matches<T>(self, puzzle: &Puzzle) -> SolverResult<MatchResult<T>> {
         if puzzle.hint(self.point) == Some(self.hint) {
-            Ok(PatternMatchResult::Complete)
+            Ok(MatchResult::Complete)
         } else {
-            Ok(PatternMatchResult::Conflict)
+            Ok(MatchResult::Conflict)
         }
     }
 }
@@ -123,25 +123,23 @@ impl EdgePattern<Point> {
     pub fn matches(self,
                    puzzle: &Puzzle,
                    side_map: &mut SideMap)
-                   -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
+                   -> SolverResult<MatchResult<EdgePattern<CellId>>> {
         self.to_cellid(puzzle).matches(side_map)
     }
 }
 
 impl EdgePattern<CellId> {
-    pub fn matches(self,
-                   side_map: &mut SideMap)
-                   -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
+    pub fn matches(self, side_map: &mut SideMap) -> SolverResult<MatchResult<EdgePattern<CellId>>> {
         let ps = self.points;
         match side_map.get_edge(ps.0, ps.1) {
             State::Fixed(edg) => {
                 if self.edge == edg {
-                    Ok(PatternMatchResult::Complete)
+                    Ok(MatchResult::Complete)
                 } else {
-                    Ok(PatternMatchResult::Conflict)
+                    Ok(MatchResult::Conflict)
                 }
             }
-            State::Unknown => Ok(PatternMatchResult::Partial(self)),
+            State::Unknown => Ok(MatchResult::Partial(self)),
             State::Conflict => Err(Error::invalid_board()),
         }
     }
