@@ -16,7 +16,8 @@ use srither_core::puzzle::{Edge, Puzzle};
 use srither_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
 use srither_core::lattice_parser::{LatticeParser, ParseLatticeError};
 
-use {Error, State, SolverResult};
+use {Error, SolverResult};
+use model::State;
 use model::side_map::SideMap;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]

@@ -29,14 +29,12 @@ use std::error::Error as ErrorTrait;
 use srither_core::puzzle::Puzzle;
 use srither_core::geom::CellId;
 
+use model::State;
 use solver::Solver;
 use theorem_define::THEOREM_DEFINE;
 
-mod model {
-    pub mod connect_map;
-    pub mod side_map;
-    pub mod theorem;
-}
+mod model;
+
 mod step {
     pub mod apply_theorem;
     pub mod connect_analysis;
@@ -81,23 +79,6 @@ pub type SolverResult<T> = Result<T, Error>;
 enum FillResult<'a> {
     Completed(Solver<'a>),
     Partial(Solver<'a>, Vec<CellId>),
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-enum State<T> {
-    Fixed(T),
-    Unknown,
-    Conflict,
-}
-
-impl<T> Into<SolverResult<Option<T>>> for State<T> {
-    fn into(self) -> SolverResult<Option<T>> {
-        match self {
-            State::Fixed(st) => Ok(Some(st)),
-            State::Unknown => Ok(None),
-            State::Conflict => Err(Error::invalid_board()),
-        }
-    }
 }
 
 fn fill_absolutely_fixed(solver: &mut Solver) -> SolverResult<()> {

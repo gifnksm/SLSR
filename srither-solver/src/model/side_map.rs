@@ -10,7 +10,8 @@ use union_find::{UnionFind, UnionBySizeRank as Union, QuickFindUf as Uf};
 use srither_core::puzzle::{Puzzle, Edge, Side};
 use srither_core::geom::{CellId, Geom, Move};
 
-use {SolverResult, State};
+use SolverResult;
+use model::State;
 
 trait Key {
     fn key0(self) -> usize;

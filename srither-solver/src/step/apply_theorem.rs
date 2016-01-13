@@ -12,8 +12,8 @@ use std::mem;
 use srither_core::geom::{CellId, Geom, Move};
 use srither_core::puzzle::{Edge, Puzzle};
 
-use {Error, State, SolverResult};
-use model::side_map::SideMap;
+use {Error, SolverResult};
+use model::{SideMap, State};
 use model::theorem::{EdgePattern, Pattern, Theorem, TheoremMatcher, TheoremMatchResult};
 
 #[derive(Clone, Debug)]
