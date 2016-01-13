@@ -302,7 +302,7 @@ x2    ! x2|
 
 #[cfg(test)]
 mod tests {
-    use model::theorem::Theorem;
+    use model::Theorem;
 
     #[test]
     fn parse() {
