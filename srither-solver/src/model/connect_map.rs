@@ -143,6 +143,7 @@ impl Union for Area {
 pub struct ConnectMap {
     sum_of_hint: u32,
     uf: Uf<Area>,
+    sync_revision: u32,
 }
 
 impl Clone for ConnectMap {
@@ -150,12 +151,14 @@ impl Clone for ConnectMap {
         ConnectMap {
             sum_of_hint: self.sum_of_hint,
             uf: self.uf.clone(),
+            sync_revision: self.sync_revision,
         }
     }
 
     fn clone_from(&mut self, other: &ConnectMap) {
         self.sum_of_hint = other.sum_of_hint;
         self.uf.clone_from(&other.uf);
+        self.sync_revision = other.sync_revision;
     }
 }
 
@@ -176,6 +179,7 @@ impl ConnectMap {
         let mut conn_map = ConnectMap {
             sum_of_hint: sum_of_hint,
             uf: uf,
+            sync_revision: 0,
         };
 
         for p in puzzle.points() {
@@ -199,6 +203,12 @@ impl ConnectMap {
     }
 
     pub fn sync(&mut self, side_map: &mut SideMap) -> SolverResult<()> {
+        let rev = side_map.revision();
+        if self.sync_revision == rev {
+            return Ok(());
+        }
+        self.sync_revision = rev;
+
         for i in 0..self.cell_len() {
             let c = CellId::new(i);
             update_conn(side_map, self, c);
