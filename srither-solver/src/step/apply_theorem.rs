@@ -72,9 +72,9 @@ impl TheoremPool {
 
         let mut map = HashMap::new();
         for (i, m) in matchers.iter().enumerate() {
-            for (edge, points) in m.matcher_edges() {
-                let e = map.entry(points).or_insert((vec![], vec![]));
-                match edge {
+            for pat in m.matcher_edges() {
+                let e = map.entry(pat.points()).or_insert((vec![], vec![]));
+                match pat.edge() {
                     Edge::Line => e.0.push(i),
                     Edge::Cross => e.1.push(i),
                 }

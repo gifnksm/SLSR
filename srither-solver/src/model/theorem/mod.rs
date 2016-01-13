@@ -7,9 +7,8 @@
 // modified, or distributed except according to those terms.
 
 use std::iter::FromIterator;
-use std::slice::Iter as SliceIter;
 
-use srither_core::puzzle::{Edge, Puzzle};
+use srither_core::puzzle::Puzzle;
 use srither_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
 
 use SolverResult;
@@ -265,24 +264,12 @@ impl TheoremMatcher {
         self.matcher.len()
     }
 
-    pub fn matcher_edges<'a>(&'a self) -> Edges<'a> {
-        Edges { iter: self.matcher.iter() }
+    pub fn matcher_edges(&self) -> &[EdgePattern<CellId>] {
+        &self.matcher
     }
 
     pub fn result_edges(self) -> Vec<EdgePattern<CellId>> {
         self.result
-    }
-}
-
-pub struct Edges<'a> {
-    iter: SliceIter<'a, EdgePattern<CellId>>,
-}
-
-impl<'a> Iterator for Edges<'a> {
-    type Item = (Edge, (CellId, CellId));
-
-    fn next(&mut self) -> Option<(Edge, (CellId, CellId))> {
-        self.iter.next().map(|pat| (pat.edge(), pat.points()))
     }
 }
 
