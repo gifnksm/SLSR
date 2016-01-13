@@ -200,8 +200,18 @@ fn splits(graph: &[Vec<usize>], v: usize, sides: &[State<Side>], set_side: Side)
     }
 }
 
-pub fn run(side_map: &mut SideMap, conn_map: &mut ConnectMap) -> SolverResult<()> {
+pub fn run(side_map: &mut SideMap,
+           conn_map: &mut ConnectMap,
+           last_rev: &mut Option<u32>)
+           -> SolverResult<()> {
     try!(conn_map.sync(side_map));
+
+    if let &mut Some(r) = last_rev {
+        if r == side_map.revision() {
+            return Ok(());
+        }
+    }
+    *last_rev = Some(side_map.revision());
 
     let sides = &[(Side::In, Side::Out), (Side::Out, Side::In)];
 

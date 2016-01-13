@@ -19,6 +19,7 @@ pub struct Solver<'a> {
     theorem_pool: TheoremPool,
     side_map: SideMap,
     connect_map: Option<ConnectMap>,
+    conn_analysis_revision: Option<u32>,
 }
 
 impl<'a> Clone for Solver<'a> {
@@ -29,6 +30,7 @@ impl<'a> Clone for Solver<'a> {
             theorem_pool: self.theorem_pool.clone(),
             side_map: self.side_map.clone(),
             connect_map: self.connect_map.clone(),
+            conn_analysis_revision: self.conn_analysis_revision,
         }
     }
 
@@ -38,6 +40,7 @@ impl<'a> Clone for Solver<'a> {
         self.theorem_pool.clone_from(&other.theorem_pool);
         self.side_map.clone_from(&other.side_map);
         self.connect_map.clone_from(&other.connect_map);
+        self.conn_analysis_revision = other.conn_analysis_revision;
     }
 }
 
@@ -61,6 +64,7 @@ impl<'a> Solver<'a> {
             theorem_pool: pool,
             side_map: side_map,
             connect_map: None,
+            conn_analysis_revision: None,
         })
     }
 
@@ -111,7 +115,9 @@ impl<'a> Solver<'a> {
     }
     pub fn connect_analysis(&mut self) -> SolverResult<()> {
         self.create_connect_map();
-        ::step::connect_analysis::run(&mut self.side_map, self.connect_map.as_mut().unwrap())
+        ::step::connect_analysis::run(&mut self.side_map,
+                                      self.connect_map.as_mut().unwrap(),
+                                      &mut self.conn_analysis_revision)
     }
 
     pub fn mark_common(&mut self, s0: &mut Solver, s1: &mut Solver) {
