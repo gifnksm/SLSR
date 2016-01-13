@@ -18,57 +18,6 @@ pub enum PatternMatchResult<T> {
     Conflict,
 }
 
-pub trait Transform {
-    fn rotate(self, rot: Rotation) -> Self;
-    fn shift(self, d: Move) -> Self;
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub enum Pattern {
-    Hint(HintPattern),
-    Edge(EdgePattern<Point>),
-}
-
-impl Pattern {
-    pub fn hint(h: u8, p: Point) -> Pattern {
-        Pattern::Hint(HintPattern::new(h, p))
-    }
-
-    pub fn cross(p0: Point, p1: Point) -> Pattern {
-        Pattern::Edge(EdgePattern::cross(p0, p1))
-    }
-
-    pub fn line(p0: Point, p1: Point) -> Pattern {
-        Pattern::Edge(EdgePattern::line(p0, p1))
-    }
-
-    pub fn matches(self,
-                   puzzle: &Puzzle,
-                   side_map: &mut SideMap)
-                   -> SolverResult<PatternMatchResult<EdgePattern<CellId>>> {
-        match self {
-            Pattern::Hint(h) => h.matches(puzzle),
-            Pattern::Edge(e) => e.matches(puzzle, side_map),
-        }
-    }
-}
-
-impl Transform for Pattern {
-    fn rotate(self, rot: Rotation) -> Pattern {
-        match self {
-            Pattern::Hint(h) => Pattern::Hint(h.rotate(rot)),
-            Pattern::Edge(e) => Pattern::Edge(e.rotate(rot)),
-        }
-    }
-
-    fn shift(self, d: Move) -> Pattern {
-        match self {
-            Pattern::Hint(h) => Pattern::Hint(h.shift(d)),
-            Pattern::Edge(e) => Pattern::Edge(e.shift(d)),
-        }
-    }
-}
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct HintPattern {
     hint: u8,
@@ -76,12 +25,11 @@ pub struct HintPattern {
 }
 
 impl HintPattern {
-    fn new(h: u8, p: Point) -> HintPattern {
+    pub fn new(h: u8, p: Point) -> HintPattern {
         HintPattern {
             hint: h,
             point: p,
         }
-        .normalized()
     }
 
     pub fn hint(&self) -> u8 {
@@ -92,8 +40,15 @@ impl HintPattern {
         self.point
     }
 
-    fn normalized(self) -> HintPattern {
-        self
+    pub fn rotate(self, rot: Rotation) -> HintPattern {
+        let o = Point(0, 0);
+        let p = self.point;
+        Self::new(self.hint, o + rot * (p - o))
+    }
+
+    pub fn shift(self, d: Move) -> HintPattern {
+        let p = self.point;
+        Self::new(self.hint, p + d)
     }
 
     pub fn matches<T>(self, puzzle: &Puzzle) -> SolverResult<PatternMatchResult<T>> {
@@ -102,21 +57,6 @@ impl HintPattern {
         } else {
             Ok(PatternMatchResult::Conflict)
         }
-    }
-}
-
-impl Transform for HintPattern {
-    fn rotate(mut self, rot: Rotation) -> HintPattern {
-        let o = Point(0, 0);
-        let p = self.point;
-        self.point = o + rot * (p - o);
-        self.normalized()
-    }
-
-    fn shift(mut self, d: Move) -> HintPattern {
-        let p = self.point;
-        self.point = p + d;
-        self.normalized()
     }
 }
 
@@ -139,31 +79,36 @@ impl<P> EdgePattern<P> {
 }
 
 impl EdgePattern<Point> {
-    fn cross(p0: Point, p1: Point) -> EdgePattern<Point> {
-        EdgePattern {
-            edge: Edge::Cross,
-            points: (p0, p1),
-        }
-        .normalized()
-    }
+    fn new(edge: Edge, p0: Point, p1: Point) -> EdgePattern<Point> {
+        let points = if p0 <= p1 {
+            (p0, p1)
+        } else {
+            (p1, p0)
+        };
 
-    fn line(p0: Point, p1: Point) -> EdgePattern<Point> {
         EdgePattern {
-            edge: Edge::Line,
-            points: (p0, p1),
-        }
-        .normalized()
-    }
-
-    fn normalized(self) -> EdgePattern<Point> {
-        let mut points = self.points;
-        if self.points.1 < self.points.0 {
-            points = (self.points.1, self.points.0);
-        }
-        EdgePattern {
-            edge: self.edge,
+            edge: edge,
             points: points,
         }
+    }
+
+    pub fn cross(p0: Point, p1: Point) -> EdgePattern<Point> {
+        EdgePattern::new(Edge::Cross, p0, p1)
+    }
+
+    pub fn line(p0: Point, p1: Point) -> EdgePattern<Point> {
+        EdgePattern::new(Edge::Line, p0, p1)
+    }
+
+    pub fn rotate(self, rot: Rotation) -> EdgePattern<Point> {
+        let o = Point(0, 0);
+        let ps = self.points;
+        Self::new(self.edge, o + rot * (ps.0 - o), o + rot * (ps.1 - o))
+    }
+
+    pub fn shift(self, d: Move) -> EdgePattern<Point> {
+        let ps = self.points;
+        Self::new(self.edge, ps.0 + d, ps.1 + d)
     }
 
     pub fn to_cellid(self, puzzle: &Puzzle) -> EdgePattern<CellId> {
@@ -204,20 +149,5 @@ impl EdgePattern<CellId> {
     pub fn apply(&self, side_map: &mut SideMap) {
         let ps = self.points;
         let _ = side_map.set_edge(ps.0, ps.1, self.edge);
-    }
-}
-
-impl Transform for EdgePattern<Point> {
-    fn rotate(mut self, rot: Rotation) -> EdgePattern<Point> {
-        let o = Point(0, 0);
-        let ps = self.points;
-        self.points = (o + rot * (ps.0 - o), o + rot * (ps.1 - o));
-        self.normalized()
-    }
-
-    fn shift(mut self, d: Move) -> EdgePattern<Point> {
-        let ps = self.points;
-        self.points = (ps.0 + d, ps.1 + d);
-        self.normalized()
     }
 }

@@ -14,7 +14,7 @@ use srither_core::puzzle::{Edge, Puzzle};
 
 use {Error, SolverResult};
 use model::{SideMap, State};
-use model::pattern::{EdgePattern, Pattern};
+use model::pattern::EdgePattern;
 use model::theorem::{Theorem, TheoremMatcher, TheoremMatchResult};
 
 #[derive(Clone, Debug)]
@@ -181,9 +181,10 @@ fn create_matcher_list<'a, T>(theo_defs: T,
     let mut nonhint_theorem = vec![];
 
     for theo in it {
-        match theo.head() {
-            Pattern::Hint(h) => hint_theorem[h.hint() as usize].push(theo),
-            _ => nonhint_theorem.push(theo),
+        if let Some(h) = theo.head() {
+            hint_theorem[h.hint() as usize].push(theo)
+        } else {
+            nonhint_theorem.push(theo)
         }
     }
 
@@ -192,10 +193,7 @@ fn create_matcher_list<'a, T>(theo_defs: T,
     for p in puzzle.points() {
         if let Some(x) = puzzle.hint(p) {
             for theo in &hint_theorem[x as usize] {
-                let o = match theo.head() {
-                    Pattern::Hint(hint) => hint.point(),
-                    _ => panic!(),
-                };
+                let o = theo.head().unwrap().point();
                 try!(theo.shift_matches(p - o, puzzle, sum_of_hint, side_map))
                     .update(side_map, &mut data);
             }

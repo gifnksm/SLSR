@@ -18,12 +18,13 @@ use srither_core::lattice_parser::{LatticeParser, ParseLatticeError};
 
 use SolverResult;
 use model::SideMap;
-use model::pattern::{Pattern, EdgePattern, HintPattern, PatternMatchResult, Transform};
+use model::pattern::{EdgePattern, HintPattern, PatternMatchResult};
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Theorem {
     size: Size,
-    matcher: Vec<Pattern>,
+    hint_matcher: Vec<HintPattern>,
+    edge_matcher: Vec<EdgePattern<Point>>,
     result: Vec<EdgePattern<Point>>,
     closed_hint: Option<(u32, Vec<HintPattern>)>,
 }
@@ -40,9 +41,17 @@ impl Theorem {
         }
         let size = Size(mv.0.abs(), mv.1.abs());
 
-        let mut matcher = Vec::from_iter(self.matcher.iter().map(|x| x.rotate(rot).shift(d)));
-        matcher.sort();
-        matcher.dedup();
+        let mut hint_matcher = Vec::from_iter(self.hint_matcher
+                                                  .iter()
+                                                  .map(|x| x.rotate(rot).shift(d)));
+        hint_matcher.sort();
+        hint_matcher.dedup();
+
+        let mut edge_matcher = Vec::from_iter(self.edge_matcher
+                                                  .iter()
+                                                  .map(|x| x.rotate(rot).shift(d)));
+        edge_matcher.sort();
+        edge_matcher.dedup();
 
         let mut result = Vec::from_iter(self.result.iter().map(|x| x.rotate(rot).shift(d)));
         result.sort();
@@ -57,7 +66,8 @@ impl Theorem {
 
         Theorem {
             size: size,
-            matcher: matcher,
+            hint_matcher: hint_matcher,
+            edge_matcher: edge_matcher,
             result: result,
             closed_hint: closed_hint,
         }
@@ -82,8 +92,9 @@ impl Theorem {
     pub fn size(&self) -> Size {
         self.size
     }
-    pub fn head(&self) -> Pattern {
-        self.matcher[0]
+
+    pub fn head(&self) -> Option<HintPattern> {
+        self.hint_matcher.get(0).map(|&x| x)
     }
 
     fn can_close(shift: Move,
@@ -120,7 +131,17 @@ impl Theorem {
                          side_map: &mut SideMap)
                          -> SolverResult<TheoremMatchResult> {
         let mut num_matcher = 0;
-        for matcher in &self.matcher {
+        for matcher in &self.hint_matcher {
+            match try!(matcher.shift(shift).matches::<Point>(puzzle)) {
+                PatternMatchResult::Complete => {}
+                PatternMatchResult::Conflict => {
+                    return Ok(TheoremMatchResult::Conflict);
+                }
+                PatternMatchResult::Partial(_) => panic!(),
+            }
+        }
+
+        for matcher in &self.edge_matcher {
             match try!(matcher.shift(shift).matches(puzzle, side_map)) {
                 PatternMatchResult::Complete => {}
                 PatternMatchResult::Partial(_) => {
@@ -148,7 +169,7 @@ impl Theorem {
         }
 
         let mut new_matcher = Vec::with_capacity(num_matcher);
-        for matcher in &self.matcher {
+        for matcher in &self.edge_matcher {
             match try!(matcher.shift(shift).matches(puzzle, side_map)) {
                 PatternMatchResult::Complete => {}
                 PatternMatchResult::Partial(m) => {
@@ -363,28 +384,32 @@ impl FromStr for Theorem {
             }
         }
 
-        let (m_size, m_pat) = try!(parse_lines(&matcher_lines));
-        let (r_size, mut r_pat) = try!(parse_lines(&result_lines));
+        let (m_size, m_hint_pat, m_edge_pat) = try!(parse_lines(&matcher_lines));
+        let (r_size, r_hint_pat, mut r_edge_pat) = try!(parse_lines(&result_lines));
         if m_size != r_size {
             return Err(Error::size_mismatch());
         }
 
-        let c_pat = if closed_lines.is_empty() {
+        let c_hint_pat = if closed_lines.is_empty() {
             None
         } else {
-            let (c_size, c_pat) = try!(parse_lines(&closed_lines));
+            let (c_size, c_hint_pat, _c_edge_pat) = try!(parse_lines(&closed_lines));
             if m_size != c_size {
                 return Err(Error::size_mismatch());
             }
-            Some(c_pat)
+            Some(c_hint_pat)
         };
 
+        if m_hint_pat != r_hint_pat {
+            return Err(Error::matcher_disappear());
+        }
+
         let mut idx = 0;
-        for &p in &m_pat {
-            match r_pat[idx..].iter().position(|&x| x == p) {
+        for &p in &m_edge_pat {
+            match r_edge_pat[idx..].iter().position(|&x| x == p) {
                 Some(i) => {
                     idx += i;
-                    let _ = r_pat.remove(idx);
+                    let _ = r_edge_pat.remove(idx);
                 }
                 None => {
                     return Err(Error::matcher_disappear());
@@ -392,37 +417,23 @@ impl FromStr for Theorem {
             }
         }
 
-        let r_pat = r_pat.into_iter()
-                         .map(|pat| {
-                             match pat {
-                                 Pattern::Edge(e) => e,
-                                 _ => panic!(),
-                             }
-                         })
-                         .collect();
-
-        let c_pat = c_pat.map(|pats| {
+        let c_pat = c_hint_pat.map(|pat| {
             use std::ops::Add;
-            let hints = pats.into_iter()
-                            .filter_map(|pat| {
-                                match pat {
-                                    Pattern::Hint(h) => Some(h),
-                                    _ => None,
-                                }
-                            })
-                            .collect::<Vec<_>>();
-            let sum = hints.iter().map(|h| h.hint() as u32).fold(0, Add::add);
-            (sum, hints)
+            let sum = pat.iter().map(|h| h.hint() as u32).fold(0, Add::add);
+            (sum, pat)
         });
 
         return Ok(Theorem {
             size: m_size,
-            matcher: m_pat,
-            result: r_pat,
+            hint_matcher: m_hint_pat,
+            edge_matcher: m_edge_pat,
+            result: r_edge_pat,
             closed_hint: c_pat,
         });
 
-        fn parse_lines(lines: &[Vec<char>]) -> Result<(Size, Vec<Pattern>), ParseTheoremError> {
+        fn parse_lines
+            (lines: &[Vec<char>])
+             -> Result<(Size, Vec<HintPattern>, Vec<EdgePattern<Point>>), ParseTheoremError> {
             let parser = try!(LatticeParser::from_lines(lines));
 
             let rows = parser.num_rows();
@@ -437,18 +448,19 @@ impl FromStr for Theorem {
 
             let size = Size((rows - 1) as i32, (cols - 1) as i32);
 
-            let mut pat = vec![];
+            let mut hint_pat = vec![];
+            let mut edge_pat = vec![];
 
             for (p, s) in parser.v_edges() {
                 if s.is_empty() {
                     continue;
                 }
                 if s.chars().all(|c| c == 'x') {
-                    pat.push(Pattern::cross(p + Move::LEFT, p));
+                    edge_pat.push(EdgePattern::cross(p + Move::LEFT, p));
                     continue;
                 }
                 if s.chars().all(|c| c == '|') {
-                    pat.push(Pattern::line(p + Move::LEFT, p));
+                    edge_pat.push(EdgePattern::line(p + Move::LEFT, p));
                     continue;
                 }
             }
@@ -458,11 +470,11 @@ impl FromStr for Theorem {
                     continue;
                 }
                 if s.chars().all(|c| c == 'x') {
-                    pat.push(Pattern::cross(p + Move::UP, p));
+                    edge_pat.push(EdgePattern::cross(p + Move::UP, p));
                     continue;
                 }
                 if s.chars().all(|c| c == '-') {
-                    pat.push(Pattern::line(p + Move::UP, p));
+                    edge_pat.push(EdgePattern::line(p + Move::UP, p));
                     continue;
                 }
             }
@@ -473,19 +485,19 @@ impl FromStr for Theorem {
                 for c in s.trim_matches(' ').chars() {
                     match c {
                         '0' => {
-                            pat.push(Pattern::hint(0, p));
+                            hint_pat.push(HintPattern::new(0, p));
                         }
                         '1' => {
-                            pat.push(Pattern::hint(1, p));
+                            hint_pat.push(HintPattern::new(1, p));
                         }
                         '2' => {
-                            pat.push(Pattern::hint(2, p));
+                            hint_pat.push(HintPattern::new(2, p));
                         }
                         '3' => {
-                            pat.push(Pattern::hint(3, p));
+                            hint_pat.push(HintPattern::new(3, p));
                         }
                         '4' => {
-                            pat.push(Pattern::hint(4, p));
+                            hint_pat.push(HintPattern::new(4, p));
                         }
                         _ if c.is_alphabetic() => {
                             let key = c.to_lowercase().next().unwrap();
@@ -514,24 +526,26 @@ impl FromStr for Theorem {
 
             for &(_, ref ps0, ref ps1) in &pairs {
                 if !ps0.is_empty() && !ps1.is_empty() {
-                    pat.push(Pattern::line(ps0[0], ps1[0]));
+                    edge_pat.push(EdgePattern::line(ps0[0], ps1[0]));
                 }
 
                 if ps0.len() > 0 {
                     for &p in &ps0[1..] {
-                        pat.push(Pattern::cross(ps0[0], p));
+                        edge_pat.push(EdgePattern::cross(ps0[0], p));
                     }
                 }
                 if ps1.len() > 0 {
                     for &p in &ps1[1..] {
-                        pat.push(Pattern::cross(ps1[0], p));
+                        edge_pat.push(EdgePattern::cross(ps1[0], p));
                     }
                 }
             }
 
-            pat.sort();
-            pat.dedup();
-            Ok((size, pat))
+            hint_pat.sort();
+            hint_pat.dedup();
+            edge_pat.sort();
+            edge_pat.dedup();
+            Ok((size, hint_pat, edge_pat))
         }
     }
 }
@@ -539,58 +553,60 @@ impl FromStr for Theorem {
 #[cfg(test)]
 mod tests {
     use srither_core::geom::{Point, Size, Rotation};
-    use model::pattern::Pattern;
+    use model::pattern::{EdgePattern, HintPattern};
     use super::Theorem;
 
     #[test]
     fn parse() {
-        fn check(size: Size, mut matcher: Vec<Pattern>, mut result: Vec<Pattern>, input: &str) {
-            matcher.sort();
-            matcher.dedup();
+        fn check(size: Size,
+                 mut hint_matcher: Vec<HintPattern>,
+                 mut edge_matcher: Vec<EdgePattern<Point>>,
+                 mut result: Vec<EdgePattern<Point>>,
+                 input: &str) {
+            hint_matcher.sort();
+            hint_matcher.dedup();
+            edge_matcher.sort();
+            edge_matcher.dedup();
             result.sort();
             result.dedup();
             let theo = Theorem {
                 size: size,
-                matcher: matcher,
-                result: result.into_iter()
-                              .map(|pat| {
-                                  match pat {
-                                      Pattern::Edge(e) => e,
-                                      _ => panic!(),
-                                  }
-                              })
-                              .collect(),
+                hint_matcher: hint_matcher,
+                edge_matcher: edge_matcher,
+                result: result,
                 closed_hint: None,
             };
             assert_eq!(theo, input.parse::<Theorem>().unwrap())
         }
 
         check(Size(1, 1),
-              vec![Pattern::hint(0, Point(0, 0))],
-              vec![Pattern::cross(Point(0, 0), Point(0, -1)),
-                   Pattern::cross(Point(0, 0), Point(0, 1)),
-                   Pattern::cross(Point(0, 0), Point(-1, 0)),
-                   Pattern::cross(Point(0, 0), Point(1, 0))],
+              vec![HintPattern::new(0, Point(0, 0))],
+              vec![],
+              vec![EdgePattern::cross(Point(0, 0), Point(0, -1)),
+                   EdgePattern::cross(Point(0, 0), Point(0, 1)),
+                   EdgePattern::cross(Point(0, 0), Point(-1, 0)),
+                   EdgePattern::cross(Point(0, 0), Point(1, 0))],
               r"
 + + ! +x+
  0  ! x0x
 + + ! +x+
 ");
         check(Size(3, 3),
-              vec![Pattern::hint(0, Point(1, 0)), Pattern::hint(3, Point(1, 1))],
-              vec![Pattern::cross(Point(1, 0), Point(1, -1)),
-                   Pattern::cross(Point(1, 0), Point(1, 1)),
-                   Pattern::cross(Point(1, 0), Point(0, 0)),
-                   Pattern::cross(Point(1, 0), Point(2, 0)),
-                   Pattern::cross(Point(0, 1), Point(0, 2)),
-                   Pattern::cross(Point(1, 2), Point(0, 2)),
-                   Pattern::cross(Point(1, 2), Point(2, 2)),
-                   Pattern::cross(Point(2, 1), Point(2, 2)),
-                   Pattern::line(Point(0, 0), Point(0, 1)),
-                   Pattern::line(Point(0, 1), Point(1, 1)),
-                   Pattern::line(Point(1, 1), Point(1, 2)),
-                   Pattern::line(Point(1, 1), Point(2, 1)),
-                   Pattern::line(Point(2, 0), Point(2, 1))],
+              vec![HintPattern::new(0, Point(1, 0)), HintPattern::new(3, Point(1, 1))],
+              vec![],
+              vec![EdgePattern::cross(Point(1, 0), Point(1, -1)),
+                   EdgePattern::cross(Point(1, 0), Point(1, 1)),
+                   EdgePattern::cross(Point(1, 0), Point(0, 0)),
+                   EdgePattern::cross(Point(1, 0), Point(2, 0)),
+                   EdgePattern::cross(Point(0, 1), Point(0, 2)),
+                   EdgePattern::cross(Point(1, 2), Point(0, 2)),
+                   EdgePattern::cross(Point(1, 2), Point(2, 2)),
+                   EdgePattern::cross(Point(2, 1), Point(2, 2)),
+                   EdgePattern::line(Point(0, 0), Point(0, 1)),
+                   EdgePattern::line(Point(0, 1), Point(1, 1)),
+                   EdgePattern::line(Point(1, 1), Point(1, 2)),
+                   EdgePattern::line(Point(1, 1), Point(2, 1)),
+                   EdgePattern::line(Point(2, 0), Point(2, 1))],
               r"
 + + + + ! + + + +
         !   | x
@@ -601,9 +617,10 @@ mod tests {
 + + + + ! + + + +
 ");
         check(Size(2, 2),
-              vec![Pattern::hint(1, Point(1, 1)), Pattern::line(Point(1, 0), Point(0, 1))],
-              vec![Pattern::cross(Point(1, 1), Point(1, 2)),
-                   Pattern::cross(Point(1, 1), Point(2, 1))],
+              vec![HintPattern::new(1, Point(1, 1))],
+              vec![EdgePattern::line(Point(1, 0), Point(0, 1))],
+              vec![EdgePattern::cross(Point(1, 1), Point(1, 2)),
+                   EdgePattern::cross(Point(1, 1), Point(2, 1))],
               r"
 + + + ! + + +
    a  !    a
@@ -612,12 +629,13 @@ mod tests {
 + + + ! + +x+
 ");
         check(Size(3, 3),
-              vec![Pattern::hint(3, Point(1, 1)), Pattern::cross(Point(1, 0), Point(0, 1))],
-              vec![Pattern::cross(Point(0, 0), Point(0, 1)),
-                   Pattern::cross(Point(0, 0), Point(1, 0)),
-                   Pattern::line(Point(0, 1), Point(1, 1)),
-                   Pattern::line(Point(1, 0), Point(1, 1)),
-                   Pattern::line(Point(1, 2), Point(2, 1))],
+              vec![HintPattern::new(3, Point(1, 1))],
+              vec![EdgePattern::cross(Point(1, 0), Point(0, 1))],
+              vec![EdgePattern::cross(Point(0, 0), Point(0, 1)),
+                   EdgePattern::cross(Point(0, 0), Point(1, 0)),
+                   EdgePattern::line(Point(0, 1), Point(1, 1)),
+                   EdgePattern::line(Point(1, 0), Point(1, 1)),
+                   EdgePattern::line(Point(1, 2), Point(2, 1))],
               r"
 + + + + ! + + + +
    a    !   xa
