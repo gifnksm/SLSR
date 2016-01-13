@@ -36,7 +36,6 @@ use theorem_define::THEOREM_DEFINE;
 mod model;
 
 mod step {
-    pub mod apply_theorem;
     pub mod connect_analysis;
 }
 mod theorem_define;

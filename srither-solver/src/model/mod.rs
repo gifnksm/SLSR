@@ -7,13 +7,17 @@
 // modified, or distributed except according to those terms.
 
 use {Error, SolverResult};
+
 pub use self::connect_map::ConnectMap;
 pub use self::side_map::SideMap;
+pub use self::theorem::Theorem;
+pub use self::theorem_pool::TheoremPool;
 
 mod connect_map;
-pub mod pattern;
+mod pattern;
 mod side_map;
-pub mod theorem;
+mod theorem;
+mod theorem_pool;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum State<T> {
