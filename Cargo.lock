@@ -48,7 +48,7 @@ name = "srither-solver"
 version = "0.1.0"
 dependencies = [
  "srither-core 0.1.0",
- "union-find 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "union-find 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -72,7 +72,7 @@ dependencies = [
 
 [[package]]
 name = "union-find"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
