@@ -14,7 +14,8 @@ use srither_core::puzzle::{Edge, Puzzle};
 
 use {Error, SolverResult};
 use model::{SideMap, State};
-use model::theorem::{EdgePattern, Pattern, Theorem, TheoremMatcher, TheoremMatchResult};
+use model::pattern::{EdgePattern, Pattern};
+use model::theorem::{Theorem, TheoremMatcher, TheoremMatchResult};
 
 #[derive(Clone, Debug)]
 struct IndexByEdge {

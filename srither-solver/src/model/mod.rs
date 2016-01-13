@@ -11,6 +11,7 @@ pub use self::connect_map::ConnectMap;
 pub use self::side_map::SideMap;
 
 mod connect_map;
+pub mod pattern;
 mod side_map;
 pub mod theorem;
 
