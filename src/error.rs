@@ -8,6 +8,7 @@
 
 use std::{fmt, io};
 use std::error::Error;
+use term;
 
 use srither_core::puzzle::ParsePuzzleError;
 use srither_solver as solver;
@@ -15,6 +16,7 @@ use srither_solver as solver;
 #[derive(Debug)]
 pub enum AppError {
     Io(io::Error),
+    Term(term::Error),
     ParsePuzzle(ParsePuzzleError),
     Solver(solver::Error),
 }
@@ -22,6 +24,12 @@ pub enum AppError {
 impl From<io::Error> for AppError {
     fn from(err: io::Error) -> AppError {
         AppError::Io(err)
+    }
+}
+
+impl From<term::Error> for AppError {
+    fn from(err: term::Error) -> AppError {
+        AppError::Term(err)
     }
 }
 
@@ -41,6 +49,7 @@ impl Error for AppError {
     fn description(&self) -> &str {
         match *self {
             AppError::Io(ref e) => e.description(),
+            AppError::Term(ref e) => e.description(),
             AppError::ParsePuzzle(ref e) => e.description(),
             AppError::Solver(ref e) => e.description(),
         }
@@ -48,6 +57,7 @@ impl Error for AppError {
     fn cause(&self) -> Option<&Error> {
         match *self {
             AppError::Io(ref e) => Some(e),
+            AppError::Term(ref e) => Some(e),
             AppError::ParsePuzzle(ref e) => Some(e),
             AppError::Solver(ref e) => Some(e),
         }
@@ -58,6 +68,7 @@ impl fmt::Display for AppError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             AppError::Io(ref e) => write!(f, "IO error: {}", e),
+            AppError::Term(ref e) => write!(f, "terminal error: {}", e),
             AppError::ParsePuzzle(ref e) => write!(f, "parse puzzle error: {}", e),
             AppError::Solver(ref e) => write!(f, "solver error: {}", e),
         }

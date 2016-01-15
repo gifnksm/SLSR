@@ -47,7 +47,7 @@ fn solve<T: Read>(config: &SolveConfig, input: &mut T) -> AppResult<()> {
     Ok(())
 }
 
-fn output(config: &SolveConfig, solution: Puzzle) -> io::Result<()> {
+fn output(config: &SolveConfig, solution: Puzzle) -> AppResult<()> {
     match config.output_mode {
         OutputMode::Pretty(conf) => {
             try!(pprint::print(&conf, &solution));
