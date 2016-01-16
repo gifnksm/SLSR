@@ -239,7 +239,7 @@ mod from_str_impl {
                 let _ = mat.pop();
             }
 
-            if mat.len() == 0 {
+            if mat.is_empty() {
                 return Err(Error::empty());
             }
 

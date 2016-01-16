@@ -20,6 +20,8 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 
+#![feature(stmt_expr_attributes)]
+
 #![cfg_attr(feature="dev", feature(plugin))]
 #![cfg_attr(feature="dev", plugin(clippy))]
 #![cfg_attr(feature="dev", warn(mut_mut))]

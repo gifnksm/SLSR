@@ -34,7 +34,7 @@ pub fn run(config: TestConfig) -> AppResult<()> {
                       })
                       .collect();
 
-    test::test_main(&["".to_string()], tests);
+    test::test_main(&["".to_owned()], tests);
 
     Ok(())
 }

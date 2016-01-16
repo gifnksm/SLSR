@@ -112,7 +112,7 @@ impl Theorem {
     }
 
     pub fn head(&self) -> Option<HintPattern> {
-        self.hint_matcher.get(0).map(|&x| x)
+        self.hint_matcher.get(0).cloned()
     }
 
     fn can_close(shift: Move,
@@ -139,7 +139,7 @@ impl Theorem {
             return false;
         }
 
-        return true;
+        true
     }
 
     pub fn shift_matches(&self,

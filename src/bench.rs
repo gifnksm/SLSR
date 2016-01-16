@@ -58,7 +58,7 @@ pub fn run(config: BenchConfig) -> AppResult<()> {
                       })
                       .collect();
 
-    test::test_main(&["".to_string(), "--bench".to_string()], tests);
+    test::test_main(&["".to_owned(), "--bench".to_owned()], tests);
 
     Ok(())
 }

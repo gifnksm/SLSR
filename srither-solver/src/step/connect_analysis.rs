@@ -206,7 +206,7 @@ pub fn run(side_map: &mut SideMap,
            -> SolverResult<()> {
     try!(conn_map.sync(side_map));
 
-    if let &mut Some(r) = last_rev {
+    if let Some(r) = *last_rev {
         if r == side_map.revision() {
             return Ok(());
         }
@@ -220,6 +220,8 @@ pub fn run(side_map: &mut SideMap,
 
         let mut arts = vec![];
         let mut gvisited = vec![false; graph.len()];
+
+        #[cfg_attr(feature="dev", allow(needless_range_loop))]
         for v in 0..graph.len() {
             if gvisited[v] {
                 continue;

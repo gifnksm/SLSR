@@ -16,6 +16,8 @@ use srither_core::geom::{Point, Move, Size};
 use model::pattern::{EdgePattern, HintPattern};
 use model::theorem::Theorem;
 
+pub type ParseTheoremResult<T> = Result<T, ParseTheoremError>;
+
 #[derive(Copy, Clone, Debug)]
 pub struct ParseTheoremError {
     kind: ParseTheoremErrorKind,
@@ -85,7 +87,7 @@ impl ParseTheoremError {
 impl FromStr for Theorem {
     type Err = ParseTheoremError;
 
-    fn from_str(s: &str) -> Result<Theorem, ParseTheoremError> {
+    fn from_str(s: &str) -> ParseTheoremResult<Theorem> {
         use self::ParseTheoremError as Error;
 
         let mut matcher_lines = vec![];
@@ -159,9 +161,8 @@ impl FromStr for Theorem {
             closed_hint: c_pat,
         });
 
-        fn parse_lines
-            (lines: &[Vec<char>])
-             -> Result<(Size, Vec<HintPattern>, Vec<EdgePattern<Point>>), ParseTheoremError> {
+        fn parse_lines(lines: &[Vec<char>])
+                       -> ParseTheoremResult<(Size, Vec<HintPattern>, Vec<EdgePattern<Point>>)> {
             let parser = try!(LatticeParser::from_lines(lines));
 
             let rows = parser.num_rows();
@@ -257,12 +258,12 @@ impl FromStr for Theorem {
                     edge_pat.push(EdgePattern::line(ps0[0], ps1[0]));
                 }
 
-                if ps0.len() > 0 {
+                if !ps0.is_empty() {
                     for &p in &ps0[1..] {
                         edge_pat.push(EdgePattern::cross(ps0[0], p));
                     }
                 }
-                if ps1.len() > 0 {
+                if !ps1.is_empty() {
                     for &p in &ps1[1..] {
                         edge_pat.push(EdgePattern::cross(ps1[0], p));
                     }
