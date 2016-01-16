@@ -50,12 +50,14 @@ name = "srither-core"
 version = "0.1.0"
 dependencies = [
  "board-game-geom 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clippy 0.0.35 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "srither-solver"
 version = "0.1.0"
 dependencies = [
+ "clippy 0.0.35 (registry+https://github.com/rust-lang/crates.io-index)",
  "srither-core 0.1.0",
  "union-find 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

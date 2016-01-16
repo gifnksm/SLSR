@@ -14,4 +14,4 @@ clippy = {version = "0.0", optional = true}
 
 [features]
 default = []
-dev = ["clippy"]
+dev = ["clippy", "srither-core/dev"]
