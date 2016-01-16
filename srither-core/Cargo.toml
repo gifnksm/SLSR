@@ -9,3 +9,8 @@ description = "Slither Link Solver written in Rust."
 
 [dependencies]
 board-game-geom = "0.1"
+clippy = {version = "0.0", optional = true}
+
+[features]
+default = []
+dev = ["clippy"]

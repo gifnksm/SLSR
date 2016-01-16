@@ -48,11 +48,11 @@ impl Clone for TheoremPool {
 }
 
 impl TheoremPool {
-    pub fn new<'a, T>(theo_defs: T,
-                      puzzle: &Puzzle,
-                      sum_of_hint: u32,
-                      side_map: &mut SideMap)
-                      -> SolverResult<TheoremPool>
+    pub fn new<T>(theo_defs: T,
+                  puzzle: &Puzzle,
+                  sum_of_hint: u32,
+                  side_map: &mut SideMap)
+                  -> SolverResult<TheoremPool>
         where T: IntoIterator<Item = Theorem>
     {
         let mut matchers = try!(create_matcher_list(theo_defs, puzzle, sum_of_hint, side_map));
@@ -168,11 +168,11 @@ impl TheoremPool {
     }
 }
 
-fn create_matcher_list<'a, T>(theo_defs: T,
-                              puzzle: &Puzzle,
-                              sum_of_hint: u32,
-                              side_map: &mut SideMap)
-                              -> SolverResult<Vec<PartialTheorem>>
+fn create_matcher_list<T>(theo_defs: T,
+                          puzzle: &Puzzle,
+                          sum_of_hint: u32,
+                          side_map: &mut SideMap)
+                          -> SolverResult<Vec<PartialTheorem>>
     where T: IntoIterator<Item = Theorem>
 {
     let it = theo_defs.into_iter().flat_map(|theo| theo.all_rotations());

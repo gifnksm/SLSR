@@ -10,4 +10,8 @@ description = "Slither Link Solver written in Rust."
 [dependencies]
 srither-core = { path = "../srither-core" }
 union-find = "0.3"
+clippy = {version = "0.0", optional = true}
 
+[features]
+default = []
+dev = ["clippy", "srither-core/dev"]
