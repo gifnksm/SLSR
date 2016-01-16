@@ -16,7 +16,11 @@ time = "0.1"
 winapi = "0.2"
 srither-core = { path = "./srither-core" }
 srither-solver = { path = "./srither-solver" }
+clippy = {version = "0.0", optional = true}
 
 [profile.release]
 lto = true
 
+[features]
+default = []
+dev = ["clippy"]

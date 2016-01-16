@@ -20,6 +20,12 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 
+#![cfg_attr(feature="dev", feature(plugin))]
+#![cfg_attr(feature="dev", plugin(clippy))]
+#![cfg_attr(feature="dev", warn(mut_mut))]
+#![cfg_attr(feature="dev", warn(string_add))]
+#![cfg_attr(feature="dev", warn(string_add_assign))]
+
 extern crate union_find;
 extern crate srither_core;
 
