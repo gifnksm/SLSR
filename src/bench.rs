@@ -9,11 +9,11 @@
 use std::fs::File;
 use std::io::prelude::*;
 use time;
-use rustc_test::{self as test, Bencher, DynBenchFn, DynTestName, ShouldPanic, TDynBenchFn,
-                 TestDesc, TestDescAndFn};
+use rustc_test::{Bencher, DynBenchFn, DynTestName, ShouldPanic, TDynBenchFn, TestDesc,
+                 TestDescAndFn, self as test};
 
 use srither_core::puzzle::Puzzle;
-use srither_solver::{self as solver, Solutions};
+use srither_solver::{Solutions, self as solver};
 
 use error::AppResult;
 use parse_arg::BenchConfig;

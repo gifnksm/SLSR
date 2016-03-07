@@ -9,7 +9,7 @@
 use std::iter::FromIterator;
 
 use srither_core::puzzle::Puzzle;
-use srither_core::geom::{CellId, Geom, Point, Rotation, Move, Size};
+use srither_core::geom::{CellId, Geom, Move, Point, Rotation, Size};
 
 use SolverResult;
 use model::SideMap;

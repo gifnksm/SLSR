@@ -8,10 +8,10 @@
 
 use std::fs::File;
 use std::io::prelude::*;
-use rustc_test::{self as test, DynTestFn, DynTestName, ShouldPanic, TestDesc, TestDescAndFn};
+use rustc_test::{DynTestFn, DynTestName, ShouldPanic, TestDesc, TestDescAndFn, self as test};
 
 use srither_core::puzzle::Puzzle;
-use srither_solver::{self as solver, Solutions};
+use srither_solver::{Solutions, self as solver};
 
 use error::AppResult;
 use parse_arg::TestConfig;

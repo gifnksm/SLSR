@@ -12,7 +12,7 @@ use std::str::FromStr;
 
 use srither_core::lattice_parser::{LatticeParser, ParseLatticeError};
 
-use srither_core::geom::{Point, Move, Size};
+use srither_core::geom::{Move, Point, Size};
 use model::pattern::{EdgePattern, HintPattern};
 use model::theorem::Theorem;
 

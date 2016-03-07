@@ -11,7 +11,7 @@ use std::fs::File;
 use std::io::prelude::*;
 
 use srither_core::puzzle::Puzzle;
-use srither_solver::{self as solver, Solutions};
+use srither_solver::{Solutions, self as solver};
 
 use error::AppResult;
 use parse_arg::{OutputMode, SolveConfig};
