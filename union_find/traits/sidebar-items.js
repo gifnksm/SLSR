@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["UnionResult","Return value of the `Union::merge`."]],"trait":[["Union","The value that can be contained with `Union`."],["UnionFind","APIs for Union-Find operation."]]});

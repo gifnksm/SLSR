@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="generator" content="rustdoc">
+    <meta name="description" content="API documentation for the Rust `Geom` trait in crate `board_game_geom`.">
+    <meta name="keywords" content="rust, rustlang, rust-lang, Geom">
+
+    <title>board_game_geom::Geom - Rust</title>
+
+    <link rel="stylesheet" type="text/css" href="../rustdoc.css">
+    <link rel="stylesheet" type="text/css" href="../main.css">
+
+    
+    
+</head>
+<body class="rustdoc">
+    <!--[if lte IE 8]>
+    <div class="warning">
+        This old browser is unsupported and will most likely display funky
+        things.
+    </div>
+    <![endif]-->
+
+    
+
+    <nav class="sidebar">
+        
+        <p class='location'><a href='index.html'>board_game_geom</a></p><script>window.sidebarCurrent = {name: 'Geom', ty: 'trait', relpath: ''};</script><script defer src="sidebar-items.js"></script>
+    </nav>
+
+    <nav class="sub">
+        <form class="search-form js-only">
+            <div class="search-container">
+                <input class="search-input" name="search"
+                       autocomplete="off"
+                       placeholder="Click or press ‘S’ to search, ‘?’ for more options…"
+                       type="search">
+            </div>
+        </form>
+    </nav>
+
+    <section id='main' class="content trait">
+<h1 class='fqn'><span class='in-band'>Trait <a href='index.html'>board_game_geom</a>::<wbr><a class='trait' href=''>Geom</a></span><span class='out-of-band'><span id='render-detail'>
+            <a id="toggle-all-docs" href="javascript:void(0)" title="collapse all docs">
+                [<span class='inner'>&#x2212;</span>]
+            </a>
+        </span><a id='src-439' class='srclink' href='../src/board_game_geom/lib.rs.html.html#177-261' title='goto source code'>[src]</a></span></h1>
+<pre class='rust trait'>pub trait Geom {
+    fn <a href='#tymethod.size' class='fnname'>size</a>(&amp;self) -&gt; <a class='struct' href='../board_game_geom/struct.Size.html' title='board_game_geom::Size'>Size</a>;
+
+    fn <a href='#method.row' class='fnname'>row</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a> { ... }
+    fn <a href='#method.column' class='fnname'>column</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a> { ... }
+    fn <a href='#method.cell_len' class='fnname'>cell_len</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a> { ... }
+    fn <a href='#method.contains' class='fnname'>contains</a>(&amp;self, p: <a class='struct' href='../board_game_geom/struct.Point.html' title='board_game_geom::Point'>Point</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a> { ... }
+    fn <a href='#method.point_to_cellid' class='fnname'>point_to_cellid</a>(&amp;self, p: <a class='struct' href='../board_game_geom/struct.Point.html' title='board_game_geom::Point'>Point</a>) -&gt; <a class='struct' href='../board_game_geom/struct.CellId.html' title='board_game_geom::CellId'>CellId</a> { ... }
+    fn <a href='#method.cellid_to_point' class='fnname'>cellid_to_point</a>(&amp;self, id: <a class='struct' href='../board_game_geom/struct.CellId.html' title='board_game_geom::CellId'>CellId</a>) -&gt; <a class='struct' href='../board_game_geom/struct.Point.html' title='board_game_geom::Point'>Point</a> { ... }
+    fn <a href='#method.points' class='fnname'>points</a>(&amp;self) -&gt; <a class='struct' href='../board_game_geom/struct.Points.html' title='board_game_geom::Points'>Points</a> { ... }
+    fn <a href='#method.points_in_row' class='fnname'>points_in_row</a>(&amp;self, row: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a>) -&gt; <a class='struct' href='../board_game_geom/struct.PointsInRow.html' title='board_game_geom::PointsInRow'>PointsInRow</a> { ... }
+    fn <a href='#method.points_in_column' class='fnname'>points_in_column</a>(&amp;self, column: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a>) -&gt; <a class='struct' href='../board_game_geom/struct.PointsInColumn.html' title='board_game_geom::PointsInColumn'>PointsInColumn</a> { ... }
+}</pre><div class='docblock'><p>A rectangle area.</p>
+</div>
+            <h2 id='required-methods'>Required Methods</h2>
+            <div class='methods'>
+        <h3 id='tymethod.size' class='method stab '><code>fn <a href='#tymethod.size' class='fnname'>size</a>(&amp;self) -&gt; <a class='struct' href='../board_game_geom/struct.Size.html' title='board_game_geom::Size'>Size</a></code></h3><div class='docblock'><p>Returns the rectangle&#39;s size.</p>
+</div></div>
+            <h2 id='provided-methods'>Provided Methods</h2>
+            <div class='methods'>
+        <h3 id='method.row' class='method stab '><code>fn <a href='#method.row' class='fnname'>row</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a></code></h3><div class='docblock'><p>Returns the number of the rectangle&#39;s rows.</p>
+</div><h3 id='method.column' class='method stab '><code>fn <a href='#method.column' class='fnname'>column</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a></code></h3><div class='docblock'><p>Returns the number of the rectangle&#39;s columns.</p>
+</div><h3 id='method.cell_len' class='method stab '><code>fn <a href='#method.cell_len' class='fnname'>cell_len</a>(&amp;self) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.usize.html'>usize</a></code></h3><div class='docblock'><p>Returns the cell length which is contained in the rectangle.</p>
+</div><h3 id='method.contains' class='method stab '><code>fn <a href='#method.contains' class='fnname'>contains</a>(&amp;self, p: <a class='struct' href='../board_game_geom/struct.Point.html' title='board_game_geom::Point'>Point</a>) -&gt; <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.bool.html'>bool</a></code></h3><div class='docblock'><p>Returns true if the point is contained in the rectangle.</p>
+</div><h3 id='method.point_to_cellid' class='method stab '><code>fn <a href='#method.point_to_cellid' class='fnname'>point_to_cellid</a>(&amp;self, p: <a class='struct' href='../board_game_geom/struct.Point.html' title='board_game_geom::Point'>Point</a>) -&gt; <a class='struct' href='../board_game_geom/struct.CellId.html' title='board_game_geom::CellId'>CellId</a></code></h3><div class='docblock'><p>Convert a point to a corresponding cell ID.</p>
+</div><h3 id='method.cellid_to_point' class='method stab '><code>fn <a href='#method.cellid_to_point' class='fnname'>cellid_to_point</a>(&amp;self, id: <a class='struct' href='../board_game_geom/struct.CellId.html' title='board_game_geom::CellId'>CellId</a>) -&gt; <a class='struct' href='../board_game_geom/struct.Point.html' title='board_game_geom::Point'>Point</a></code></h3><div class='docblock'><p>Convert a cell ID to a corresponding point.</p>
+</div><h3 id='method.points' class='method stab '><code>fn <a href='#method.points' class='fnname'>points</a>(&amp;self) -&gt; <a class='struct' href='../board_game_geom/struct.Points.html' title='board_game_geom::Points'>Points</a></code></h3><div class='docblock'><p>Returns an iterator iterating all points.</p>
+</div><h3 id='method.points_in_row' class='method stab '><code>fn <a href='#method.points_in_row' class='fnname'>points_in_row</a>(&amp;self, row: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a>) -&gt; <a class='struct' href='../board_game_geom/struct.PointsInRow.html' title='board_game_geom::PointsInRow'>PointsInRow</a></code></h3><div class='docblock'><p>Returns an iterator iterating all points in the row.</p>
+</div><h3 id='method.points_in_column' class='method stab '><code>fn <a href='#method.points_in_column' class='fnname'>points_in_column</a>(&amp;self, column: <a class='primitive' href='https://doc.rust-lang.org/nightly/std/primitive.i32.html'>i32</a>) -&gt; <a class='struct' href='../board_game_geom/struct.PointsInColumn.html' title='board_game_geom::PointsInColumn'>PointsInColumn</a></code></h3><div class='docblock'><p>Returns an iterator iterating all points in the column.</p>
+</div></div>
+        <h2 id='implementors'>Implementors</h2>
+        <ul class='item-list' id='implementors-list'>
+    <li><code>impl&lt;T&gt; <a class='trait' href='../board_game_geom/trait.Geom.html' title='board_game_geom::Geom'>Geom</a> for <a class='struct' href='../board_game_geom/struct.Table.html' title='board_game_geom::Table'>Table</a>&lt;T&gt;</code></li>
+</ul><script type="text/javascript" async
+                              src="../implementors/board_game_geom/trait.Geom.js">
+                      </script></section>
+    <section id='search' class="content hidden"></section>
+
+    <section class="footer"></section>
+
+    <aside id="help" class="hidden">
+        <div>
+            <h1 class="hidden">Help</h1>
+
+            <div class="shortcuts">
+                <h2>Keyboard Shortcuts</h2>
+
+                <dl>
+                    <dt>?</dt>
+                    <dd>Show this help dialog</dd>
+                    <dt>S</dt>
+                    <dd>Focus the search field</dd>
+                    <dt>&larrb;</dt>
+                    <dd>Move up in search results</dd>
+                    <dt>&rarrb;</dt>
+                    <dd>Move down in search results</dd>
+                    <dt>&#9166;</dt>
+                    <dd>Go to active search result</dd>
+                </dl>
+            </div>
+
+            <div class="infos">
+                <h2>Search Tricks</h2>
+
+                <p>
+                    Prefix searches with a type followed by a colon (e.g.
+                    <code>fn:</code>) to restrict the search to a given type.
+                </p>
+
+                <p>
+                    Accepted types are: <code>fn</code>, <code>mod</code>,
+                    <code>struct</code>, <code>enum</code>,
+                    <code>trait</code>, <code>type</code>, <code>macro</code>,
+                    and <code>const</code>.
+                </p>
+
+                <p>
+                    Search functions by type signature (e.g.
+                    <code>vec -> usize</code> or <code>* -> vec</code>)
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    
+
+    <script>
+        window.rootPath = "../";
+        window.currentCrate = "board_game_geom";
+        window.playgroundUrl = "";
+    </script>
+    <script src="../jquery.js"></script>
+    <script src="../main.js"></script>
+    
+    <script defer src="../search-index.js"></script>
+</body>
+</html>

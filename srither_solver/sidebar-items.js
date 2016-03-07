@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["solve","Returns the first solution of the puzzle."]],"struct":[["Error","An error type which is returned from solving a puzzle."],["Solutions","An iterator iterates all solutions of the puzzle."]],"type":[["SolverResult","Solving puzzles result."]]});

@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["QuickFindUf","Union-Find implementation with quick find operation."]]});

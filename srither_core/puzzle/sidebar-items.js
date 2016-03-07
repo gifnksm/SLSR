@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Edge","An edge between cells."],["Side","A cell's side."]],"struct":[["ParsePuzzleError","An error type which is returned from parsing a string into puzzle."],["Puzzle","Slither link puzzle data."]],"type":[["Hint","A hint of the slither link puzzle."],["ParsePuzzleResult","Puzzle parse result."]]});
