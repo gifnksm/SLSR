@@ -6,8 +6,8 @@
 // option. All files in the project carrying such notice may not be copied,
 // modified, or distributed except according to those terms.
 
-use union_find::{UnionFind, UnionBySizeRank as Union, QuickFindUf as Uf};
-use srither_core::puzzle::{Puzzle, Edge, Side};
+use union_find::{QuickFindUf as Uf, UnionBySizeRank as Union, UnionFind};
+use srither_core::puzzle::{Edge, Puzzle, Side};
 use srither_core::geom::{CellId, Geom, Move};
 
 use SolverResult;

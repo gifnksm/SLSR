@@ -10,7 +10,7 @@ use srither_core::puzzle::{Puzzle, Side};
 use srither_core::geom::{CellId, Geom};
 
 use {Error, SolverResult};
-use model::{ConnectMap, State, SideMap, Theorem, TheoremPool};
+use model::{ConnectMap, SideMap, State, Theorem, TheoremPool};
 
 #[derive(Debug)]
 pub struct Solver<'a> {

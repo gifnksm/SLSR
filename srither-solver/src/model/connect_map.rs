@@ -8,9 +8,9 @@
 
 use std::iter::FromIterator;
 use std::mem;
-use union_find::{Union, UnionFind, UnionResult, QuickFindUf as Uf};
+use union_find::{QuickFindUf as Uf, Union, UnionFind, UnionResult};
 use srither_core::puzzle::{Edge, Puzzle, Side};
-use srither_core::geom::{CellId, Geom, Point, Move};
+use srither_core::geom::{CellId, Geom, Move, Point};
 
 use {Error, SolverResult};
 use model::State;

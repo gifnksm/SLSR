@@ -8,7 +8,7 @@
 
 //! Parsing a lattice strings.
 
-use std::{iter, fmt};
+use std::{fmt, iter};
 use std::error::Error;
 use geom::Point;
 

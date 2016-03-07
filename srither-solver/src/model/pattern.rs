@@ -7,7 +7,7 @@
 // modified, or distributed except according to those terms.
 
 use srither_core::puzzle::{Edge, Puzzle};
-use srither_core::geom::{CellId, Geom, Point, Rotation, Move};
+use srither_core::geom::{CellId, Geom, Move, Point, Rotation};
 
 use {Error, SolverResult};
 use model::{SideMap, State};

@@ -11,7 +11,7 @@ use srither_core::puzzle::Side;
 use srither_core::geom::{CellId, Geom};
 
 use SolverResult;
-use model::{ConnectMap, State, SideMap};
+use model::{ConnectMap, SideMap, State};
 
 fn create_conn_graph(conn_map: &mut ConnectMap,
                      exclude_side: Side)

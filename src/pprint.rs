@@ -9,10 +9,10 @@
 use std::{io, iter};
 use std::io::Stdout;
 use std::io::prelude::*;
-use term::{self, color, Terminal, StdoutTerminal};
+use term::{self, StdoutTerminal, Terminal, color};
 use term::color::Color;
-use srither_core::puzzle::{Puzzle, Edge, Side};
-use srither_core::geom::{Geom, Point, Move};
+use srither_core::puzzle::{Edge, Puzzle, Side};
+use srither_core::geom::{Geom, Move, Point};
 
 use error::AppResult;
 

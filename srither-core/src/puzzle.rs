@@ -219,7 +219,7 @@ impl ParsePuzzleError {
 }
 
 mod from_str_impl {
-    use super::{Puzzle, Edge, ParsePuzzleError as Error};
+    use super::{Edge, ParsePuzzleError as Error, Puzzle};
     use std::str::FromStr;
     use geom::Size;
     use lattice_parser::LatticeParser;
@@ -351,7 +351,7 @@ mod from_str_impl {
 }
 
 mod display_impl {
-    use super::{Puzzle, Edge};
+    use super::{Edge, Puzzle};
     use std::fmt;
     use geom::{Geom, Point};
 
@@ -435,8 +435,8 @@ mod display_impl {
 mod tests {
     use std::fmt;
     use std::error::Error;
-    use super::{Puzzle, ParsePuzzleError, ParsePuzzleResult};
-    use geom::{Geom, Size, Point};
+    use super::{ParsePuzzleError, ParsePuzzleResult, Puzzle};
+    use geom::{Geom, Point, Size};
 
     fn check_error<T>(result: ParsePuzzleResult<T>, error: ParsePuzzleError)
         where T: fmt::Debug
